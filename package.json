@@ -11,6 +11,8 @@
   "workspaces": [
     "listener",
     "indexer",
-    "frontend"
+    "frontend",
+    "tasker",
+    "common"
   ]
 }

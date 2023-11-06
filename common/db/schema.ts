@@ -1,150 +1,303 @@
-export type DatabaseSchema = {
-  profiles: Profile
-  feedgens: FeedGenerator
-  posts: Post
-  blocks: Block
-  custom_lists: CustomList
-  follows: Follow
-  likes: Like
-  reposts: Repost
-  lists: List
-  listitems: ListItem
-  licks: Lick
-  circles: Circle
-  derived_data: DerivedData
-  lickable_people: LickablePeople
-  sub_state: SubState
+import { Schema, model } from "mongoose";
+
+// Profiles
+interface IProfile {
+  _id: string;
+  handle: string;
+  displayName: string;
+  avatar: string;
+  description: string;
+  indexedAt: string;
+  lastProfileUpdateAt: string;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type Profile = {
-  did: string
-  handle: string | null
-  displayName: string | null
-  avatar: string | null
-  description: string | null
-  indexedAt: string | null
-  updatedAt: string | null
-  lastActivity: string | null
+const profileSchema = new Schema<IProfile>(
+  {
+    _id: String,
+    handle: String,
+    displayName: String,
+    avatar: String,
+    description: String,
+    indexedAt: Date,
+    lastProfileUpdateAt: Date,
+    deleted: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+// Posts
+interface IPost {
+  _id: string;
+  author: string;
+  text: string;
+  replyParent: string | null;
+  replyRoot: string | null;
+  quoteUri: string | null;
+  langs: string[];
+  hasImages: number;
+  altText: string[];
+  textLength: number | null;
+  comments: number | null;
+  reposts: number | null;
+  likes: number | null;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type FeedGenerator = {
-  uri: string
-  author: string
-  name: string
-  feedDid: string
-  description: string
-  displayName: string
-  indexedAt: string
+const postSchema = new Schema<IPost>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    text: String,
+    replyParent: { type: String, ref: "Post" },
+    replyRoot: { type: String, ref: "Post" },
+    quoteUri: { type: String, ref: "Post" },
+    langs: [String],
+    hasImages: Number,
+    altText: [String],
+    textLength: Number,
+    comments: Number,
+    reposts: Number,
+    likes: Number,
+    deleted: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+// Follows
+interface IFollow {
+  _id: string;
+  author: string;
+  subject: string;
+  createdAt: string;
+  updatedAt: string;
+}
+const followSchema = new Schema<IFollow>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    subject: { type: String, ref: "Profile" },
+  },
+  { timestamps: true, expires: "3d" }
+);
+
+// Likes
+interface ILike {
+  _id: string;
+  author: string;
+  subject: string;
+  subjectUri: string;
+  createdAt: string;
+  updatedAt: string;
+}
+const likeSchema = new Schema<ILike>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    subject: { type: String, ref: "Profile" },
+    subjectUri: { type: String, ref: "Post" },
+  },
+  { timestamps: true, expires: "3d" }
+);
+
+// Reposts
+interface IRepost {
+  _id: string;
+  author: string;
+  subject: string;
+  subjectUri: string;
+  createdAt: string;
+  updatedAt: string;
+}
+const repostSchema = new Schema<IRepost>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    subject: { type: String, ref: "Profile" },
+    subjectUri: { type: String, ref: "Post" },
+  },
+  { timestamps: true }
+);
+
+// Blocks
+interface IBlock {
+  _id: string;
+  author: string;
+  subject: string;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type Post = {
-  uri: string
-  cid: string
-  author: string
-  text: string
-  replyParent: string | null
-  replyRoot: string | null
-  quoteUri: string | null
-  langs: string | null
-  hasImages: number
-  altText: string | null
-  textLength: number | null
-  comments: number | null
-  reposts: number | null
-  likes: number | null
-  indexedAt: string
+const blockSchema = new Schema<IBlock>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    subject: { type: String, ref: "Profile" },
+    deleted: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+// Feed generators
+interface IFeedGen {
+  _id: string;
+  author: string;
+  name: string;
+  feedDid: string;
+  description: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type Languages = {
-  [key : string] : number
-}[]
+const feedGenSchema = new Schema<IFeedGen>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    name: String,
+    feedDid: String,
+    description: String,
+    displayName: String,
+  },
+  { timestamps: true }
+);
 
-export type Block = {
-  uri: string
-  cid: string
-  author: string
-  subject: string
-  indexedAt: string
+// Lists
+interface IList {
+  _id: string;
+  author: string;
+  name: string;
+  purpose: string;
+  description: string | null;
+  items: IListItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type Follow = {
-  uri: string
-  cid: string
-  author: string
-  subject: string
-  indexedAt: string
+interface IListItem {
+  _id: string;
+  subject: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type Like = {
-  uri: string
-  cid: string
-  subjectUri: string
-  subjectCid: string
-  indexedAt: string
+const listItemSchema = new Schema<IListItem>(
+  {
+    _id: String,
+    subject: { type: String, ref: "Profile" },
+  },
+  { timestamps: true }
+);
+
+const listSchema = new Schema<IList>(
+  {
+    _id: String,
+    author: { type: String, ref: "Profile" },
+    name: String,
+    purpose: String,
+    description: String,
+    items: [listItemSchema],
+  },
+  { timestamps: true }
+);
+
+// Interactions
+interface IInteractionList {
+  _id: Date;
+  characters: number;
+  replies: number;
+  likes: number;
+  reposts: number;
 }
 
-export type Repost = {
-  uri: string
-  cid: string
-  subjectUri: string
-  subjectCid: string
-  indexedAt: string
+interface IInteraction {
+  _id: {
+    author: string;
+    subject: string;
+  };
+  list: IInteractionList[];
 }
 
-export type CustomList = {
-  owner: string
-  type: string
-  list: string
-  showReplies: boolean
-  showImages: boolean
-  indexedAt: string
+const interactionListSchema = new Schema<IInteractionList>({
+  _id: Date,
+  characters: { type: Number, default: 0 },
+  replies: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
+  reposts: { type: Number, default: 0 },
+});
+
+const interactionSchema = new Schema<IInteraction>({
+  _id: { 
+    author: { type: String, ref: "Profile" },
+    subject: { type: String, ref: "Profile" },
+  },
+  list: [interactionListSchema],
+});
+
+// Subscription state
+interface ISubState {
+  service: string;
+  cursor: number;
 }
 
-export type List = {
-  uri: string
-  cid: string
-  author: string
-  purpose: string
-  name: string
-  description: string | null
-  indexedAt: string
+const subStateSchema = new Schema<ISubState>({
+  service: String,
+  cursor: Number,
+});
+
+
+// Sync state
+interface ISyncState {
+  _id: string
+  repoCursor: string | undefined
+  repoIndex: number
+  repoDid: string
+  col: string
+  colCursor: string
 }
 
-export type ListItem = {
-  uri: string
-  cid: string
-  author: string
-  subject: string
-  list: string
-  indexedAt: string
+const syncStateSchema = new Schema<ISyncState>({
+  _id: String,
+  repoCursor: String,
+  repoIndex: Number,
+  repoDid: String,
+  col: String,
+  colCursor: String,
+})
+
+// Sync profile
+interface ISyncProfileState {
+  _id: string;
+  updated: boolean;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type DerivedData = {
-  name: string
-  data: string
-  updatedAt: string
-}
+const syncProfileSchema = new Schema<ISyncProfileState>({
+  _id: String,
+  status: String,
+  updated: Boolean,
+}, { timestamps: true })
 
-export type Lick = {
-  uri: string
-  author: string
-  indexedAt: string
-}
+// Models
+export const Profile = model<IProfile>("Profile", profileSchema);
+export const Follow = model<IFollow>("Follow", followSchema);
+export const Post = model<IPost>("Post", postSchema);
+export const Like = model<ILike>("Like", likeSchema);
+export const Repost = model<IRepost>("Repost", repostSchema);
+export const Block = model<IBlock>("Block", blockSchema);
+export const FeedGen = model<IFeedGen>("FeedGen", feedGenSchema);
+export const List = model<IList>("List", listSchema);
 
-export type Circle = {
-  did: string
-  interactions: string
-  image: Buffer | null
-  updatedAt: string | null
-  lastCreatedAt: string | null
-}
+export const Interaction = model<IInteraction>("Interaction", interactionSchema);
 
-export type LickablePeople = {
-  did: string
-  handle: string
-}
+export const SubState = model<ISubState>("SubState", subStateSchema);
 
-export type SubState = {
-  service: string
-  cursor: number
-}
+export const SyncState = model<ISyncState>("SyncState", syncStateSchema);
+export const SyncProfile = model<ISyncProfileState>("SyncStateProfile", syncProfileSchema);

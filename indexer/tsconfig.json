@@ -14,6 +14,9 @@
     "strictNullChecks": true,
     "skipLibCheck": true,
     "noImplicitAny": false,
+    "paths": {
+      "@common/*" : ["../common/*"]
+    },
   },
   "include": ["./src/**/*.ts"],
   "exclude": [

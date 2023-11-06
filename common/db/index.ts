@@ -1,19 +1,6 @@
-import { createPool } from 'mysql2'
-import { Kysely, MysqlDialect } from 'kysely'
-import { DatabaseSchema } from './schema'
+import { connect } from "mongoose";
+import 'dotenv/config';
 
-export const createDb = (database: string, host: string, port: number, user: string, password: string): Database => {
-  return new Kysely<DatabaseSchema>({
-    dialect: new MysqlDialect({
-      pool: createPool({
-        database: database,
-        host: host,
-        port: port,
-        user: user,
-        password: password,
-      })
-    })
-})
+export async function connectDb() {
+  await connect(process.env.MONGODB_URI ?? "")
 }
-
-export type Database = Kysely<DatabaseSchema>

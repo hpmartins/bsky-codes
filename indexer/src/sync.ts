@@ -19,8 +19,8 @@ import {
   Profile,
   SyncProfile,
   SyncState,
-} from "./db";
-import { connect } from "mongoose";
+  connectDb,
+} from "../../common";
 import { ProfileViewDetailed } from "../../lexicon/types/app/bsky/actor/defs";
 import express from "express";
 
@@ -281,7 +281,7 @@ async function syncOneProfile(did: string) {
 }
 
 async function main() {
-  await connect(process.env.APP_DB_CONN_STRING_SYNC ?? "", { minPoolSize: 10 });
+  await connectDb();
   await api.login({
     identifier: process.env.APP_BSKY_IDENTIFIER ?? "",
     password: process.env.APP_BSKY_PASSWORD ?? "",

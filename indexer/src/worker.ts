@@ -24,7 +24,7 @@ import {
   Post,
   Profile,
   Repost,
-} from "./db";
+} from "../../common";
 
 export const getUserHandle = async (idResolver: IdResolver, did: string) => {
   const userDoc = await idResolver.did.resolve(did);

@@ -5,16 +5,16 @@ import { BskyAgent } from '@atproto/api'
 import { DidResolver, MemoryCache } from '@atproto/did-resolver'
 import NodeCache  from 'node-cache'
 import { collectDefaultMetrics, register } from 'prom-client';
-import { connect } from 'mongoose'
 import { FirehoseWorker } from './worker'
 import dotenv from 'dotenv'
+
 export const SECOND = 1000
 export const MINUTE = SECOND * 60
 export const HOUR = MINUTE * 60
 export const DAY = HOUR * 24
 export const WEEK = DAY * 7
 
-import { maybeInt, maybeBoolean, maybeStr } from '../../common'
+import { maybeInt, maybeBoolean, maybeStr, connectDb } from '../../common'
 
 export type AppContext = {
   cfg: Config
@@ -97,7 +97,7 @@ export class Indexer {
   }
 
   async start(): Promise<http.Server> {
-    await connect(this.cfg.databaseString)
+    await connectDb()
     if (this.cfg.firehoseConnect) {
       await this.api.login({
         identifier: this.cfg.bskyIdentifier,
@@ -113,6 +113,7 @@ export class Indexer {
 
 const run = async () => {
   dotenv.config()
+  console.log(process.env)
   const hostname = maybeStr(process.env.APP_HOSTNAME) ?? 'example.com'
   const server = Indexer.create({
     devel: !!maybeInt(process.env.APP_DEVEL) ?? true,
