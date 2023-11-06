@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "lib": [
+      "ESNext",
+    ],
+    "outDir": "dist",
+    "module": "CommonJS",
+    "target": "ES6",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "alwaysStrict": true,
+    "allowUnreachableCode": false,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+  },
+  "include": ["./src/**/*.ts"],
+  "exclude": [
+    "node_modules"
+  ],
+  "references": [
+    { "path": "../lexicon/"},
+    { "path": "../common/" }
+  ]
+}
