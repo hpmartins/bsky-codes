@@ -10,10 +10,9 @@ import {
   AppBskyEmbedRecord,
 } from "@atproto/api";
 import { AppContext } from "./index";
-import { DAY } from "./index";
 import { ProfileViewDetailed } from "../../lexicon/types/app/bsky/actor/defs";
 
-import { getDateTime } from "../../common";
+import { getDateTime } from "@common/index";
 import {
   Block,
   FeedGen,
@@ -24,7 +23,7 @@ import {
   Post,
   Profile,
   Repost,
-} from "../../common";
+} from "@common/db";
 
 export const getUserHandle = async (idResolver: IdResolver, did: string) => {
   const userDoc = await idResolver.did.resolve(did);

@@ -14,7 +14,8 @@ export const HOUR = MINUTE * 60
 export const DAY = HOUR * 24
 export const WEEK = DAY * 7
 
-import { maybeInt, maybeBoolean, maybeStr, connectDb } from '../../common'
+import { maybeInt, maybeBoolean, maybeStr } from '@common/index';
+import { connectDb } from '@common/db';
 
 export type AppContext = {
   cfg: Config

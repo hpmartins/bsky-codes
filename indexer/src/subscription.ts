@@ -18,7 +18,7 @@ import {
 } from '../../lexicon/types/com/atproto/sync/subscribeRepos'
 import { AppContext } from './index'
 import client from 'prom-client'
-import { SubState } from '../../common'
+import { SubState } from '@common/db'
 
 const firehoseMetric = new client.Counter({
   name: 'app_firehose',

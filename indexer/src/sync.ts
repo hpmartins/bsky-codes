@@ -20,7 +20,7 @@ import {
   SyncProfile,
   SyncState,
   connectDb,
-} from "../../common";
+} from "@common/db";
 import { ProfileViewDetailed } from "../../lexicon/types/app/bsky/actor/defs";
 import express from "express";
 
