@@ -11,14 +11,6 @@ export const load: LayoutLoad = async () => {
                 href: "/blocks",
                 text: "Blocks",
             },
-            {
-                href: "/top/blocks",
-                text: "Top Blocks",
-            },
-            {
-                href: "/top/posters",
-                text: "Top Posters",
-            },
         ]
 	};
 };
