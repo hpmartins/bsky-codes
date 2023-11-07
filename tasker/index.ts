@@ -3,8 +3,8 @@ import express from 'express';
 import Bottleneck from 'bottleneck';
 import { connectDb } from '../common/db';
 import { DidResolver } from '@atproto/identity';
-import { syncOneProfile, syncWaitingProfiles } from './tasks';
 import { maybeInt } from '../common';
+import { syncOneProfile, syncWaitingProfiles } from './tasks/sync';
 
 export type AppContext = {
   app: express.Express;
