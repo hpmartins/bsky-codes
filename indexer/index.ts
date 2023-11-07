@@ -20,7 +20,7 @@ const run = async () => {
   await connectDb();
 
   const hostname = maybeStr(process.env.LISTENER_HOST) ?? 'localhost'
-  const port = maybeInt(process.env.LISTENER_PORT) ?? 6000
+  const port = maybeInt(process.env.LISTENER_PORT) ?? 6002
   const manager = new Manager(`ws://${hostname}:${port}`);
   const socket = manager.socket('/');
 
