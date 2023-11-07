@@ -2,11 +2,11 @@
   "name": "indexer",
   "version": "1.0.0",
   "description": "indexer",
-  "main": "src/index.ts",
+  "main": "index.ts",
   "author": "hpmartins <hpmartins@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node src/index.ts",
+    "start": "ts-node index.ts",
     "build": "tsc"
   },
   "dependencies": {

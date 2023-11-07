@@ -1,7 +1,7 @@
 import { Manager } from "socket.io-client";
 import NodeCache from "node-cache";
 import 'dotenv/config'
-import { connectDb } from "../../common/db";
+import { connectDb } from "../common/db";
 import { FirehoseData, processFirehoseStream } from "./worker";
 
 export const SECOND = 1000;

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "composite": true,
   },
-  "include": ["./src/**/*.ts"],
+  "include": ["./**/*.ts"],
   "references": [
     { "path": "../lexicon/"},
     { "path": "../common/" }
