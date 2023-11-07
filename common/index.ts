@@ -282,7 +282,6 @@ export async function updateProfile(
 ): Promise<ProfileViewDetailed | undefined> {
   try {
     const profile = await getProfile(did);
-    console.log(profile);
     if (!!profile) {
       const query = await Profile.findOne({ _id: did }, "indexedAt");
       if (!!query && !!query.indexedAt) {
