@@ -1,26 +1,10 @@
 {
-    "compilerOptions": {
-      "composite": true,
-      "lib": [
-        "ESNext",
-      ],
-      "outDir": "dist",
-      "module": "CommonJS",
-      "target": "ES6",
-      "esModuleInterop": true,
-      "moduleResolution": "node",
-      "alwaysStrict": true,
-      "allowUnreachableCode": false,
-      "strictNullChecks": true,
-      "skipLibCheck": true,
-      "noImplicitAny": false,
-    },
-    "include": ["./src/**/*.ts"],
-    "exclude": [
-      "node_modules"
-    ],
-    "references": [
-      { "path": "../common/" }
-    ]
-  }
-  
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+  },
+  "include": ["./src/**/*.ts"],
+  "references": [
+    { "path": "../common/" },
+  ]
+}

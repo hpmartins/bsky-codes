@@ -20,7 +20,7 @@ export type Config = {
 };
 
 const cfg = {
-  port: maybeInt(process.env.LISTENER_PORT) ?? 3000,
+  port: maybeInt(process.env.LISTENER_PORT) ?? 6002,
   listenhost: maybeStr(process.env.LISTENER_HOST) ?? 'localhost',
   subscriptionEndpoint: maybeStr(process.env.LISTENER_FIREHOSE_ENDPOINT) ?? 'wss://bsky.network',
   subscriptionReconnectDelay: maybeInt(process.env.LISTENER_FIREHOSE_RECONNECT_DELAY) ?? 3000

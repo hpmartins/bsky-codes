@@ -1,18 +1,25 @@
 {
-  "exclude": ["packages/**/tests/**", "packages/**/dist/**"],
-    "references": [
-      {
-        "path": "./common"
-      },
-      {
-        "path": "./indexer"
-      },
-      {
-        "path": "./listener"
-      },
-      {
-        "path": "./syncer"
-      },
-    ]
-  }
-  
+  "compilerOptions": {
+    "lib": [
+      "ESNext",
+    ],
+    "outDir": "dist",
+    "module": "CommonJS",
+    "target": "ES6",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "alwaysStrict": true,
+    "allowUnreachableCode": false,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+  },
+  "references": [
+    { "path": "./common" },
+    { "path": "./indexer" },
+    { "path": "./listener" },
+    { "path": "./replier" },
+    { "path": "./syncer" },
+    { "path": "./tasker" },
+  ]
+}
