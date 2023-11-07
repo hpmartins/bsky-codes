@@ -8,10 +8,10 @@ import {
   AppBskyGraphBlock
 } from '@atproto/api';
 import Bottleneck from 'bottleneck';
-import { updatePartition, listRecords, listRepos } from '../../common/index';
-import { Block, Post, Profile, SyncProfile, SyncState } from '../../common/db';
+import { updatePartition, listRecords, listRepos } from '../common/index';
+import { Block, Post, Profile, SyncProfile, SyncState } from '../common/db';
 import { AtprotoData, DidResolver } from '@atproto/identity';
-import { OutputSchema as ListRecordsSchema } from '../../lexicon/types/com/atproto/repo/listRecords';
+import { OutputSchema as ListRecordsSchema } from '../lexicon/types/com/atproto/repo/listRecords';
 
 export async function syncRecords(doc: AtprotoData, collection: string, start?: string, limiter?: Bottleneck, uptodate?: Date) {
   let cursor: string | undefined;
