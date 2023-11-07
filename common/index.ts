@@ -106,7 +106,7 @@ export async function syncRecords(
               author: doc.did,
               subject: record.value.subject,
               createdAt: new Date(record.value.createdAt),
-              updatedAt: new Date(record.value.createdAt)
+              updatedAt: new Date()
             },
             { upsert: true, timestamps: false, strict: false }
           );
@@ -178,7 +178,7 @@ export async function syncRecords(
                 hasImages: hasImages,
                 textLength: record.value.text.length,
                 createdAt: new Date(record.value.createdAt),
-                updatedAt: new Date(record.value.createdAt)
+                updatedAt: new Date()
               },
               { upsert: true, timestamps: false, strict: false }
             );
