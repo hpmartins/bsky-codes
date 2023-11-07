@@ -1,7 +1,7 @@
-import { Interaction, SyncProfile } from '../common/db';
-import { syncRecords } from '../common/index';
+import { Interaction, SyncProfile } from '../../common/db';
+import { syncRecords } from '../../common/index';
 import { AtprotoData } from '@atproto/identity';
-import { AppContext } from './index';
+import { AppContext } from '../index';
 
 export async function syncWaitingProfiles(ctx: AppContext) {
   const list = await SyncProfile.find(
