@@ -1,11 +1,10 @@
 var cron = require('node-cron');
 import express from 'express';
 import Bottleneck from 'bottleneck';
-import { updatePartition, getProfile, listRecords, listRepos } from '../../common/index';
-import { Block, Interaction, Post, Profile, SyncProfile, SyncState, connectDb } from '../../common/db';
-import { AtprotoData, DidResolver } from '@atproto/identity';
-
-// import { syncRecords } from '@sync/sync';
+import { getProfile } from '../common/index';
+import { Interaction, Profile, SyncProfile, connectDb } from '../common/db';
+import { DidResolver } from '@atproto/identity';
+import { syncRecords } from '../common/index';
 
 // did resolver
 const didres = new DidResolver({});

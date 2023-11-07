@@ -1,4 +1,15 @@
-import { Interaction, Profile } from "./db/schema";
+import {
+  AppBskyEmbedImages,
+  AppBskyEmbedRecord,
+  AppBskyEmbedRecordWithMedia,
+  AppBskyFeedLike,
+  AppBskyFeedPost,
+  AppBskyFeedRepost,
+  AppBskyGraphBlock
+} from '@atproto/api';
+import Bottleneck from 'bottleneck';
+import { Block, Post, Profile, Interaction, SyncProfile, SyncState } from '../common/db';
+import { AtprotoData } from '@atproto/identity';
 import { ProfileViewDetailed } from "../lexicon/types/app/bsky/actor/defs";
 import { OutputSchema as ListReposSchema } from "../lexicon/types/com/atproto/sync/listRepos";
 import { OutputSchema as ListRecordsSchema } from "../lexicon/types/com/atproto/repo/listRecords";
@@ -29,6 +40,178 @@ export const maybeInt = (val?: string) => {
   if (isNaN(int)) return undefined;
   return int;
 };
+
+export async function syncRecords(doc: AtprotoData, collection: string, start?: string, limiter?: Bottleneck, uptodate?: Date) {
+  let cursor: string | undefined;
+
+  if (!uptodate) {
+    uptodate = new Date('2023-11-01');
+  }
+
+  if (!!start) {
+    cursor = start;
+  }
+
+  await SyncProfile.findByIdAndUpdate(
+    doc.did,
+    {
+      updated: false,
+      status: `updating ${collection}`
+    },
+    { upsert: true }
+  );
+
+  do {
+    console.log(`[sync] ${doc.did}/${collection} @ ${cursor}`);
+    await SyncState.updateOne(
+      { _id: 'main' },
+      {
+        col: collection,
+        colCursor: cursor
+      }
+    );
+
+    let response: ListRecordsSchema | undefined;
+    if (limiter) {
+      response = await limiter.schedule(async () =>
+        listRecords(doc.pds, {
+          repo: doc.did,
+          collection: collection,
+          limit: 100,
+          cursor: cursor,
+          reverse: true
+        })
+      );
+    } else {
+      response = await listRecords(doc.pds, {
+        repo: doc.did,
+        collection: collection,
+        limit: 100,
+        cursor: cursor,
+        reverse: true
+      });
+    }
+
+    if (response && response.records.length > 0) {
+      for (const record of response.records) {
+        if (AppBskyGraphBlock.isRecord(record.value)) {
+          await Block.updateOne(
+            { _id: record.uri },
+            {
+              author: doc.did,
+              subject: record.value.subject,
+              createdAt: new Date(record.value.createdAt),
+              updatedAt: new Date(record.value.createdAt)
+            },
+            { upsert: true, timestamps: false, strict: false }
+          );
+        }
+        if (AppBskyFeedLike.isRecord(record.value)) {
+          if (new Date(record.value.createdAt) < uptodate && record.value.subject.uri.includes('app.bsky.feed.post')) {
+            const date = new Date(record.value.createdAt).toLocaleDateString('en-CA');
+            await updatePartition(
+              doc.did,
+              record.value.subject.uri.slice(5, 37),
+              date,
+              { 'list.$.likes': 1 },
+              { _id: date, likes: 1 }
+            );
+          }
+        }
+        if (AppBskyFeedRepost.isRecord(record.value)) {
+          if (new Date(record.value.createdAt) < uptodate && record.value.subject.uri.includes('app.bsky.feed.post')) {
+            const date = new Date(record.value.createdAt).toLocaleDateString('en-CA');
+            await updatePartition(
+              doc.did,
+              record.value.subject.uri.slice(5, 37),
+              date,
+              { 'list.$.reposts': 1 },
+              { _id: date, reposts: 1 }
+            );
+          }
+        }
+        if (AppBskyFeedPost.isRecord(record.value)) {
+          if (new Date(record.value.createdAt) < uptodate) {
+            const date = new Date(record.value.createdAt).toLocaleDateString('en-CA');
+
+            let hasImages = 0;
+            let altText: string[] | null = null;
+            let quoteUri: string | null = null;
+
+            // post with images
+            if (AppBskyEmbedImages.isMain(record.value.embed)) {
+              hasImages = record.value.embed.images.length;
+              altText = record.value.embed.images.map((x) => x.alt);
+            }
+
+            // text-only post quoting a post
+            if (AppBskyEmbedRecord.isMain(record.value.embed)) {
+              quoteUri = record.value.embed.record.uri;
+            }
+
+            // post with media quoting a post
+            if (AppBskyEmbedRecordWithMedia.isMain(record.value.embed)) {
+              if (AppBskyEmbedRecord.isMain(record.value.embed.record)) {
+                quoteUri = record.value.embed.record.record.uri;
+              }
+              if (AppBskyEmbedImages.isMain(record.value.embed?.media)) {
+                hasImages = record.value.embed.media.images.length;
+                altText = record.value.embed.media.images.map((x) => x.alt);
+              }
+            }
+
+            await Post.updateOne(
+              { _id: record.uri },
+              {
+                author: doc.did,
+                text: record.value.text,
+                replyParent: record.value.reply?.parent.uri ?? null,
+                replyRoot: record.value.reply?.root.uri ?? null,
+                quoteUri: quoteUri ?? null,
+                altText: altText ?? null,
+                langs: record.value.langs ?? null,
+                hasImages: hasImages,
+                textLength: record.value.text.length,
+                createdAt: new Date(record.value.createdAt),
+                updatedAt: new Date(record.value.createdAt)
+              },
+              { upsert: true, timestamps: false, strict: false }
+            );
+
+            if (!!record.value.reply?.parent.uri.length) {
+              const subject = record.value.reply.parent.uri.split('/')[2];
+              await updatePartition(
+                doc.did,
+                subject,
+                date,
+                {
+                  'list.$.replies': 1,
+                  'list.$.characters': record.value.text.length
+                },
+                { _id: date, replies: 1, characters: record.value.text.length }
+              );
+            }
+
+            if (!!quoteUri) {
+              const subject = quoteUri.split('/')[2];
+              await updatePartition(
+                doc.did,
+                subject,
+                date,
+                {
+                  'list.$.replies': 1,
+                  'list.$.characters': record.value.text.length
+                },
+                { _id: date, replies: 1, characters: record.value.text.length }
+              );
+            }
+          }
+        }
+      }
+    }
+    cursor = response?.cursor ?? undefined;
+  } while (!!cursor && cursor.length > 0);
+}
 
 export async function listRepos(params: {
   limit: number;

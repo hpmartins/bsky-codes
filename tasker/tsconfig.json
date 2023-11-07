@@ -7,7 +7,7 @@
       "@sync/*" : ["../syncer/*"]
     },
   },
-  "include": ["./src/**/*.ts"],
+  "include": ["./**/*.ts"],
   "references": [
     { "path": "../common/" },
   ]
