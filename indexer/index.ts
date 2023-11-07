@@ -3,6 +3,7 @@ import NodeCache from "node-cache";
 import 'dotenv/config'
 import { connectDb } from "../common/db";
 import { FirehoseData, processFirehoseStream } from "./worker";
+import { maybeInt, maybeStr } from "../common";
 
 export const SECOND = 1000;
 export const MINUTE = SECOND * 60;
@@ -18,8 +19,9 @@ export type AppContext = {
 const run = async () => {
   await connectDb();
 
-  const listener_uri = `ws://${process.env.LISTENER_HOST ?? 'localhost'}:${process.env.LISTENER_PORT ?? 6000}`
-  const manager = new Manager(listener_uri);
+  const hostname = maybeStr(process.env.LISTENER_HOST) ?? 'localhost'
+  const port = maybeInt(process.env.LISTENER_PORT) ?? 6000
+  const manager = new Manager(`ws://${hostname}:${port}`);
   const socket = manager.socket('/');
 
   const cache = new NodeCache({ stdTTL: (24 * HOUR) / 1000 });

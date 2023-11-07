@@ -1,11 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "paths": {
-      "@common/*" : ["../common/*"],
-      "@sync/*" : ["../syncer/*"]
-    },
+    "composite": true
   },
   "include": ["./**/*.ts"],
   "references": [

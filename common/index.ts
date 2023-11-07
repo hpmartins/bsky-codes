@@ -41,15 +41,20 @@ export const maybeInt = (val?: string) => {
   return int;
 };
 
-export async function syncRecords(doc: AtprotoData, collection: string, start?: string, limiter?: Bottleneck, uptodate?: Date) {
+export async function syncRecords(
+  doc: AtprotoData, 
+  collection: string, 
+  options?: {
+    start?: string;
+    limiter?: Bottleneck;
+    uptodate?: Date;
+    log?: (text: string) => void;
+}) {
   let cursor: string | undefined;
+  const uptodate = options?.uptodate ? options.uptodate : new Date('2023-11-01');
 
-  if (!uptodate) {
-    uptodate = new Date('2023-11-01');
-  }
-
-  if (!!start) {
-    cursor = start;
+  if (options?.start) {
+    cursor = options.start;
   }
 
   await SyncProfile.findByIdAndUpdate(
@@ -62,7 +67,7 @@ export async function syncRecords(doc: AtprotoData, collection: string, start?: 
   );
 
   do {
-    console.log(`[sync] ${doc.did}/${collection} @ ${cursor}`);
+    if (options?.log) options.log(`${doc.did}/${collection} @ ${cursor}`)
     await SyncState.updateOne(
       { _id: 'main' },
       {
@@ -72,8 +77,8 @@ export async function syncRecords(doc: AtprotoData, collection: string, start?: 
     );
 
     let response: ListRecordsSchema | undefined;
-    if (limiter) {
-      response = await limiter.schedule(async () =>
+    if (options?.limiter) {
+      response = await options.limiter.schedule(async () =>
         listRecords(doc.pds, {
           repo: doc.did,
           collection: collection,

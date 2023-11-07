@@ -1,10 +1,9 @@
-
-import Bottleneck from 'bottleneck';
 import { listRepos, syncRecords } from '../common/index';
 import { Profile, SyncProfile, SyncState } from '../common/db';
 import { DidResolver } from '@atproto/identity';
+import { AppContext } from './index';
 
-export async function runSync(limiter: Bottleneck) {
+export async function runSync(ctx: AppContext) {
   let repoIndex: number = 0;
   let repoCursor: string | undefined;
 
@@ -21,7 +20,7 @@ export async function runSync(limiter: Bottleneck) {
   }
 
   do {
-    const response = await limiter.schedule(async () =>
+    const response = await ctx.limiter.schedule(async () =>
       listRepos({
         limit: 200,
         cursor: repoCursor
@@ -44,7 +43,7 @@ export async function runSync(limiter: Bottleneck) {
 
         const syncProfile = await SyncProfile.findById(repo.did);
         if (!!syncProfile && syncProfile.updated) {
-          console.log(`Already updated: ${repo.did}`);
+          ctx.log(`Already updated: ${repo.did}`);
           repoIndex++;
           continue;
         } else {
@@ -68,7 +67,7 @@ export async function runSync(limiter: Bottleneck) {
           { upsert: true }
         );
 
-        console.log(doc.did, doc.handle);
+        ctx.log(`${doc.did} @${doc.handle}`);
 
         await SyncState.updateOne(
           { _id: 'main' },
@@ -81,25 +80,27 @@ export async function runSync(limiter: Bottleneck) {
         );
 
         if (!collection) {
-          await syncRecords(doc, 'app.bsky.graph.block', undefined, limiter);
-          await syncRecords(doc, 'app.bsky.feed.like', undefined, limiter);
-          await syncRecords(doc, 'app.bsky.feed.repost', undefined, limiter);
-          await syncRecords(doc, 'app.bsky.feed.post', undefined, limiter);
+          const options = { limiter: ctx.limiter, log: ctx.log };
+          await syncRecords(doc, 'app.bsky.graph.block', options);
+          await syncRecords(doc, 'app.bsky.feed.like', options);
+          await syncRecords(doc, 'app.bsky.feed.repost', options);
+          await syncRecords(doc, 'app.bsky.feed.post', options);
         } else {
+          const options = { start: collectionCursor, limiter: ctx.limiter, log: ctx.log };
           if (collection === 'app.bsky.graph.block') {
-            await syncRecords(doc, 'app.bsky.graph.block', collectionCursor, limiter);
-            await syncRecords(doc, 'app.bsky.feed.like', collectionCursor, limiter);
-            await syncRecords(doc, 'app.bsky.feed.repost', collectionCursor, limiter);
-            await syncRecords(doc, 'app.bsky.feed.post', collectionCursor, limiter);
+            await syncRecords(doc, 'app.bsky.graph.block', options);
+            await syncRecords(doc, 'app.bsky.feed.like', options);
+            await syncRecords(doc, 'app.bsky.feed.repost', options);
+            await syncRecords(doc, 'app.bsky.feed.post', options);
           } else if (collection === 'app.bsky.feed.like') {
-            await syncRecords(doc, 'app.bsky.feed.like', collectionCursor, limiter);
-            await syncRecords(doc, 'app.bsky.feed.repost', collectionCursor, limiter);
-            await syncRecords(doc, 'app.bsky.feed.post', collectionCursor, limiter);
+            await syncRecords(doc, 'app.bsky.feed.like', options);
+            await syncRecords(doc, 'app.bsky.feed.repost', options);
+            await syncRecords(doc, 'app.bsky.feed.post', options);
           } else if (collection === 'app.bsky.feed.repost') {
-            await syncRecords(doc, 'app.bsky.feed.repost', collectionCursor, limiter);
-            await syncRecords(doc, 'app.bsky.feed.post', collectionCursor, limiter);
+            await syncRecords(doc, 'app.bsky.feed.repost', options);
+            await syncRecords(doc, 'app.bsky.feed.post', options);
           } else if (collection === 'app.bsky.feed.post') {
-            await syncRecords(doc, 'app.bsky.feed.post', collectionCursor, limiter);
+            await syncRecords(doc, 'app.bsky.feed.post', options);
           }
           collection = undefined;
           collectionCursor = undefined;
