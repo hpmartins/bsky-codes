@@ -50,9 +50,9 @@ export async function syncRecords(
     uptodate?: Date;
     log?: (text: string) => void;
 }) {
-  let cursor: string | undefined;
   const uptodate = options?.uptodate ? options.uptodate : new Date('2023-11-01');
 
+  let cursor: string | undefined;
   if (options?.start) {
     cursor = options.start;
   }
