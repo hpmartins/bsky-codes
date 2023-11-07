@@ -3,7 +3,7 @@ import express from 'express';
 import { Server as SocketServer } from 'socket.io';
 import { collectDefaultMetrics, register } from 'prom-client';
 import 'dotenv/config';
-import { connectDb, maybeInt, maybeStr } from '../../common';
+import { connectDb, maybeInt, maybeStr } from '../common';
 import { FirehoseWorker } from './subscription';
 
 export type AppContext = {

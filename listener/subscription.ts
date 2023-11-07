@@ -1,24 +1,24 @@
 import { Subscription } from '@atproto/xrpc-server'
 import { cborToLexRecord, readCar } from '@atproto/repo'
 import { BlobRef } from '@atproto/lexicon'
-import { ids, lexicons } from '../../lexicon/lexicons'
-import { Record as ProfileRecord } from '../../lexicon/types/app/bsky/actor/profile'
-import { Record as GeneratorRecord } from '../../lexicon/types/app/bsky/feed/generator'
-import { Record as PostRecord } from '../../lexicon/types/app/bsky/feed/post'
-import { Record as RepostRecord } from '../../lexicon/types/app/bsky/feed/repost'
-import { Record as LikeRecord } from '../../lexicon/types/app/bsky/feed/like'
-import { Record as FollowRecord } from '../../lexicon/types/app/bsky/graph/follow'
-import { Record as BlockRecord } from '../../lexicon/types/app/bsky/graph/block'
-import { Record as ListRecord } from '../../lexicon/types/app/bsky/graph/list'
-import { Record as ListItemRecord } from '../../lexicon/types/app/bsky/graph/listitem'
+import { ids, lexicons } from '../lexicon/lexicons'
+import { Record as ProfileRecord } from '../lexicon/types/app/bsky/actor/profile'
+import { Record as GeneratorRecord } from '../lexicon/types/app/bsky/feed/generator'
+import { Record as PostRecord } from '../lexicon/types/app/bsky/feed/post'
+import { Record as RepostRecord } from '../lexicon/types/app/bsky/feed/repost'
+import { Record as LikeRecord } from '../lexicon/types/app/bsky/feed/like'
+import { Record as FollowRecord } from '../lexicon/types/app/bsky/graph/follow'
+import { Record as BlockRecord } from '../lexicon/types/app/bsky/graph/block'
+import { Record as ListRecord } from '../lexicon/types/app/bsky/graph/list'
+import { Record as ListItemRecord } from '../lexicon/types/app/bsky/graph/listitem'
 import {
   Commit,
   OutputSchema as RepoEvent,
   isCommit,
-} from '../../lexicon/types/com/atproto/sync/subscribeRepos'
+} from '../lexicon/types/com/atproto/sync/subscribeRepos'
 import { AppContext } from './index'
 import client from 'prom-client'
-import { SubState } from '../../common/db'
+import { SubState } from '../common/db'
 
 import {
   AppBskyEmbedImages,
