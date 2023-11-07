@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
-import { SyncProfile } from '$lib/server/db';
-import { getallDates } from '$lib/server/utils';
+import { SyncProfile } from '@common/db';
+import { getallDates } from '@common/queries';
 import { getProfile, resolveHandle } from '$lib/utils';
 
 export const actions = {

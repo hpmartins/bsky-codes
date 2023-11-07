@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { Profile } from '$lib/server/db';
+import { Profile } from '../../../../../common/db';
 import { getProfile } from '$lib/utils';
 
 export const POST: RequestHandler = async ({ request }) => {

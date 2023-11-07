@@ -8,6 +8,9 @@
   },
   "author": "hpmartins <hpmartins@gmail.com>",
   "license": "MIT",
+  "_moduleAliases": {
+    "@common": "common"
+  },
   "workspaces": [
     "listener",
     "indexer",
@@ -16,5 +19,9 @@
     "common",
     "replier",
     "syncer"
-  ]
+  ],
+  "dependencies": {
+    "@types/module-alias": "^2.0.4",
+    "module-alias": "^2.2.3"
+  }
 }

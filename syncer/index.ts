@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import Bottleneck from 'bottleneck';
-import { connectDb } from '../common/db';
+import { connectDb } from '@common/db';
 import { runSync } from './sync';
 
 export type AppContext = {

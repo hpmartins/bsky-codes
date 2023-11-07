@@ -13,6 +13,14 @@
     "strictNullChecks": true,
     "skipLibCheck": true,
     "noImplicitAny": false,
+    "paths": {
+			"@common": [
+				"../common"
+			],
+			"@common/*": [
+				"../common/*"
+			],
+    }
   },
   "references": [
     { "path": "./common" },

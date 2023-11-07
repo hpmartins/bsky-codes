@@ -1,9 +1,9 @@
 import { Manager } from "socket.io-client";
 import NodeCache from "node-cache";
 import 'dotenv/config'
-import { connectDb } from "../common/db";
+import { connectDb } from "@common/db";
 import { FirehoseData, processFirehoseStream } from "./worker";
-import { maybeInt, maybeStr } from "../common";
+import { maybeInt, maybeStr } from "@common";
 
 export const SECOND = 1000;
 export const MINUTE = SECOND * 60;

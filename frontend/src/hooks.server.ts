@@ -1,8 +1,8 @@
 import type { Handle } from "@sveltejs/kit";
-import { connect } from "mongoose";
 import { MONGODB_URI } from "$env/static/private";
+import { connectDb } from "../../common/db";
 
 export const handle: Handle = async ({event, resolve}) => {
-    await connect(MONGODB_URI ?? 'mongodb://localhost');
+    await connectDb(MONGODB_URI)
     return await resolve(event)
 }
