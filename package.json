@@ -13,6 +13,8 @@
     "indexer",
     "frontend",
     "tasker",
-    "common"
+    "common",
+    "replier",
+    "syncer"
   ]
 }

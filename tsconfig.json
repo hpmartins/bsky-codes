@@ -1,0 +1,18 @@
+{
+  "exclude": ["packages/**/tests/**", "packages/**/dist/**"],
+    "references": [
+      {
+        "path": "./common"
+      },
+      {
+        "path": "./indexer"
+      },
+      {
+        "path": "./listener"
+      },
+      {
+        "path": "./syncer"
+      },
+    ]
+  }
+  

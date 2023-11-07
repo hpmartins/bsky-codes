@@ -1,4 +1,4 @@
-var cron = require("node-cron");
+var cron = require('node-cron');
 import {
   AppBskyEmbedImages,
   AppBskyEmbedRecord,
@@ -6,53 +6,38 @@ import {
   AppBskyFeedLike,
   AppBskyFeedPost,
   AppBskyFeedRepost,
-  AppBskyGraphBlock,
-  BskyAgent,
-} from "@atproto/api";
-import "dotenv/config";
-import Bottleneck from "bottleneck";
-import { updatePartition } from "./worker";
-import {
-  Block,
-  Interaction,
-  Post,
-  Profile,
-  SyncProfile,
-  SyncState,
-  connectDb,
-} from "@common/db";
-import { ProfileViewDetailed } from "../../lexicon/types/app/bsky/actor/defs";
-import express from "express";
+  AppBskyGraphBlock
+} from '@atproto/api';
+import 'dotenv/config';
+import Bottleneck from 'bottleneck';
+import { updatePartition, getProfile, listRecords, listRepos } from '../../common/index';
+import { Block, Interaction, Post, Profile, SyncProfile, SyncState, connectDb } from '../../common/db';
+import express from 'express';
+import { AtprotoData, DidResolver } from '@atproto/identity';
 
 const app = express();
 
-const api = new BskyAgent({
-  service: "https://bsky.social",
-});
+const didres = new DidResolver({});
 
 const limiter = new Bottleneck({
   maxConcurrent: 10,
-  minTime: (5 * 60000) / 5000,
+  minTime: (5 * 60000) / 5000
 });
 
-limiter.on("failed", async (error, jobInfo) => {
+limiter.on('failed', async (error, jobInfo) => {
   console.log(error);
-  console.log("Retrying in 10s...");
+  console.log('Retrying in 10s...');
   return 10000;
 });
 
-limiter.on("retry", (error, jobInfo) => console.log("Retrying now"));
+limiter.on('retry', (error, jobInfo) => console.log('Retrying now'));
 
-const uptodate = new Date("2023-11-01");
+const uptodate = new Date('2023-11-01');
 
 let repoIndex: number = 0;
 let repoCursor: string | undefined;
 
-async function getRecords(
-  repo: string,
-  collection: string,
-  start?: string | undefined
-) {
+async function getRecords(doc: AtprotoData, collection: string, start?: string | undefined) {
   let cursor: string | undefined;
 
   if (!!start) {
@@ -60,87 +45,75 @@ async function getRecords(
   }
 
   await SyncProfile.findByIdAndUpdate(
-    repo,
+    doc.did,
     {
       updated: false,
-      status: `updating ${collection}`,
+      status: `updating ${collection}`
     },
     { upsert: true }
   );
 
   do {
-    console.log(`[sync] [${repoIndex}] ${repo}/${collection} @ ${cursor}`);
+    console.log(`[sync] [${repoIndex}] ${doc.did}/${collection} @ ${cursor}`);
     await SyncState.updateOne(
-      { _id: "main" },
+      { _id: 'main' },
       {
         col: collection,
-        colCursor: cursor,
+        colCursor: cursor
       }
     );
 
-    const res = await limiter.schedule(async () =>
-      api.com.atproto.repo.listRecords({
-        repo: repo,
+    const response = await limiter.schedule(async () =>
+      listRecords(doc.pds, {
+        repo: doc.did,
         collection: collection,
         limit: 100,
         cursor: cursor,
-        reverse: true,
+        reverse: true
       })
     );
 
-    if (res.success && res.data.cursor && res.data.records.length > 0) {
-      for (const record of res.data.records) {
+    if (response && response.records.length > 0) {
+      for (const record of response.records) {
         if (AppBskyGraphBlock.isRecord(record.value)) {
           await Block.updateOne(
             { _id: record.uri },
             {
-              author: repo,
+              author: doc.did,
               subject: record.value.subject,
               createdAt: new Date(record.value.createdAt),
-              updatedAt: new Date(record.value.createdAt),
+              updatedAt: new Date(record.value.createdAt)
             },
             { upsert: true, timestamps: false, strict: false }
           );
         }
         if (AppBskyFeedLike.isRecord(record.value)) {
-          if (
-            new Date(record.value.createdAt) < uptodate &&
-            record.value.subject.uri.includes("app.bsky.feed.post")
-          ) {
-            const date = new Date(record.value.createdAt).toLocaleDateString(
-              "en-CA"
-            );
+          if (new Date(record.value.createdAt) < uptodate && record.value.subject.uri.includes('app.bsky.feed.post')) {
+            const date = new Date(record.value.createdAt).toLocaleDateString('en-CA');
             await updatePartition(
-              repo,
+              doc.did,
               record.value.subject.uri.slice(5, 37),
               date,
-              { "list.$.likes": 1 },
+              { 'list.$.likes': 1 },
               { _id: date, likes: 1 }
             );
           }
         }
         if (AppBskyFeedRepost.isRecord(record.value)) {
-          if (
-            new Date(record.value.createdAt) < uptodate &&
-            record.value.subject.uri.includes("app.bsky.feed.post")
-          ) {
-            const date = new Date(record.value.createdAt).toLocaleDateString(
-              "en-CA"
-            );
+          if (new Date(record.value.createdAt) < uptodate && record.value.subject.uri.includes('app.bsky.feed.post')) {
+            const date = new Date(record.value.createdAt).toLocaleDateString('en-CA');
             await updatePartition(
-              repo,
+              doc.did,
               record.value.subject.uri.slice(5, 37),
               date,
-              { "list.$.reposts": 1 },
+              { 'list.$.reposts': 1 },
               { _id: date, reposts: 1 }
             );
           }
         }
         if (AppBskyFeedPost.isRecord(record.value)) {
           if (new Date(record.value.createdAt) < uptodate) {
-            const date = new Date(record.value.createdAt).toLocaleDateString(
-              "en-CA"
-            );
+            const date = new Date(record.value.createdAt).toLocaleDateString('en-CA');
 
             let hasImages = 0;
             let altText: string[] | null = null;
@@ -171,7 +144,7 @@ async function getRecords(
             await Post.updateOne(
               { _id: record.uri },
               {
-                author: repo,
+                author: doc.did,
                 text: record.value.text,
                 replyParent: record.value.reply?.parent.uri ?? null,
                 replyRoot: record.value.reply?.root.uri ?? null,
@@ -181,34 +154,34 @@ async function getRecords(
                 hasImages: hasImages,
                 textLength: record.value.text.length,
                 createdAt: new Date(record.value.createdAt),
-                updatedAt: new Date(record.value.createdAt),
+                updatedAt: new Date(record.value.createdAt)
               },
               { upsert: true, timestamps: false, strict: false }
             );
 
             if (!!record.value.reply?.parent.uri.length) {
-              const subject = record.value.reply.parent.uri.split("/")[2];
+              const subject = record.value.reply.parent.uri.split('/')[2];
               await updatePartition(
-                repo,
+                doc.did,
                 subject,
                 date,
                 {
-                  "list.$.replies": 1,
-                  "list.$.characters": record.value.text.length,
+                  'list.$.replies': 1,
+                  'list.$.characters': record.value.text.length
                 },
                 { _id: date, replies: 1, characters: record.value.text.length }
               );
             }
 
             if (!!quoteUri) {
-              const subject = quoteUri.split("/")[2];
+              const subject = quoteUri.split('/')[2];
               await updatePartition(
-                repo,
+                doc.did,
                 subject,
                 date,
                 {
-                  "list.$.replies": 1,
-                  "list.$.characters": record.value.text.length,
+                  'list.$.replies': 1,
+                  'list.$.characters': record.value.text.length
                 },
                 { _id: date, replies: 1, characters: record.value.text.length }
               );
@@ -217,7 +190,7 @@ async function getRecords(
         }
       }
     }
-    cursor = res.data.cursor ?? undefined;
+    cursor = response?.cursor ?? undefined;
   } while (!!cursor && cursor.length > 0);
 }
 
@@ -229,7 +202,7 @@ async function syncWaitingProfiles() {
   const list = await SyncProfile.find(
     {
       updated: false,
-      status: null,
+      status: null
     },
     {},
     { limit: 1 }
@@ -240,12 +213,10 @@ async function syncWaitingProfiles() {
 }
 
 async function syncOneProfile(did: string) {
-  const pRes = await limiter.schedule(async () =>
-    api.getProfile({ actor: did })
-  );
-  if (!pRes.success) return false;
+  const profile = await limiter.schedule(async () => getProfile(did));
+  const doc = await didres.resolveAtprotoData(did);
+  if (!profile || !doc) return false;
 
-  const profile = pRes.data as ProfileViewDetailed;
   await Profile.updateOne(
     { _id: profile.did },
     {
@@ -254,26 +225,23 @@ async function syncOneProfile(did: string) {
       avatar: profile.avatar,
       description: profile.description,
       indexedAt: profile.indexedAt,
-      lastProfileUpdateAt: new Date(),
+      lastProfileUpdateAt: new Date()
     },
     { upsert: true }
   );
 
   console.log(`[sync] Updating data of @${profile.handle} [${profile.did}]`);
 
-  await Interaction.updateMany(
-    { "_id.author": did },
-    { $pull: { list: { _id: { $lt: uptodate } } } }
-  );
+  await Interaction.updateMany({ '_id.author': did }, { $pull: { list: { _id: { $lt: uptodate } } } });
 
-  await getRecords(did, "app.bsky.graph.block");
-  await getRecords(did, "app.bsky.feed.like");
-  await getRecords(did, "app.bsky.feed.repost");
-  await getRecords(did, "app.bsky.feed.post");
+  await getRecords(doc, 'app.bsky.graph.block');
+  await getRecords(doc, 'app.bsky.feed.like');
+  await getRecords(doc, 'app.bsky.feed.repost');
+  await getRecords(doc, 'app.bsky.feed.post');
 
   await SyncProfile.findByIdAndUpdate(did, {
     updated: true,
-    status: "synced",
+    status: 'synced'
   });
   console.log(`Updated profile of @${profile.handle} [${profile.did}]`);
 
@@ -282,25 +250,21 @@ async function syncOneProfile(did: string) {
 
 async function main() {
   await connectDb();
-  await api.login({
-    identifier: process.env.APP_BSKY_IDENTIFIER ?? "",
-    password: process.env.APP_BSKY_PASSWORD ?? "",
-  });
 
-  app.get("/update/:did", async (req, res) => {
+  app.get('/update/:did', async (req, res) => {
     const couldUpdate = await syncOneProfile(req.params.did);
     if (!couldUpdate) {
-      return res.send("could not find did");
+      return res.send('could not find did');
     }
-    return res.send("done!");
+    return res.send('done!');
   });
 
   app.listen(6789, () => {
-    console.log("listening");
+    console.log('listening');
   });
 
   // Backfilling
-  const syncState = await SyncState.findById("main");
+  const syncState = await SyncState.findById('main');
   let collection: string | undefined;
   let collectionCursor: string | undefined;
   if (!!syncState) {
@@ -310,21 +274,23 @@ async function main() {
   }
 
   do {
-    const repoRes = await limiter.schedule(async () =>
-      api.com.atproto.sync.listRepos({
+    const response = await limiter.schedule(async () =>
+      listRepos({
         limit: 200,
-        cursor: repoCursor,
+        cursor: repoCursor
       })
     );
     repoIndex = 0;
 
-    if (repoRes.success && repoRes.data.repos.length > 0) {
-      for (const [idx, repo] of repoRes.data.repos.entries()) {
-        if (
-          syncState &&
-          repoCursor === syncState.repoCursor &&
-          idx < syncState.repoIndex
-        ) {
+    if (response && response.repos) {
+      for (const [idx, repo] of response.repos.entries()) {
+        if (syncState && repoCursor === syncState.repoCursor && idx < syncState.repoIndex) {
+          repoIndex++;
+          continue;
+        }
+
+        const doc = await didres.resolveAtprotoData(repo.did);
+        if (!doc) {
           repoIndex++;
           continue;
         }
@@ -339,78 +305,54 @@ async function main() {
             repo.did,
             {
               updated: false,
-              status: "updating",
+              status: 'updating'
             },
             { upsert: true }
           );
         }
 
-        const profileExists = await Profile.exists({ _id: repo.did });
-        if (!profileExists) {
-          const pRes = await limiter.schedule(async () =>
-            api.getProfile({ actor: repo.did })
-          );
-          if (pRes.success) {
-            const profile = pRes.data as ProfileViewDetailed;
-            console.log(profile);
-            await Profile.create({
-              _id: profile.did,
-              handle: profile.handle,
-              displayName: profile.displayName,
-              avatar: profile.avatar,
-              description: profile.description,
-              indexedAt: profile.indexedAt,
-              lastProfileUpdateAt: new Date(),
-            });
-          }
-        }
+        await Profile.findByIdAndUpdate(
+          {
+            _id: repo.did
+          },
+          {
+            handle: doc.handle
+          },
+          { upsert: true }
+        );
+
+        console.log(doc.did, doc.handle);
 
         await SyncState.updateOne(
-          { _id: "main" },
+          { _id: 'main' },
           {
             repoCursor: repoCursor,
             repoIndex: idx,
-            repoDid: repo.did,
+            repoDid: repo.did
           },
           { upsert: true }
         );
 
         if (!collection) {
-          await getRecords(repo.did, "app.bsky.graph.block");
-          await getRecords(repo.did, "app.bsky.feed.like");
-          await getRecords(repo.did, "app.bsky.feed.repost");
-          await getRecords(repo.did, "app.bsky.feed.post");
+          await getRecords(doc, 'app.bsky.graph.block');
+          await getRecords(doc, 'app.bsky.feed.like');
+          await getRecords(doc, 'app.bsky.feed.repost');
+          await getRecords(doc, 'app.bsky.feed.post');
         } else {
-          if (collection === "app.bsky.graph.block") {
-            await getRecords(
-              repo.did,
-              "app.bsky.graph.block",
-              collectionCursor
-            );
-            await getRecords(repo.did, "app.bsky.feed.like", collectionCursor);
-            await getRecords(
-              repo.did,
-              "app.bsky.feed.repost",
-              collectionCursor
-            );
-            await getRecords(repo.did, "app.bsky.feed.post", collectionCursor);
-          } else if (collection === "app.bsky.feed.like") {
-            await getRecords(repo.did, "app.bsky.feed.like", collectionCursor);
-            await getRecords(
-              repo.did,
-              "app.bsky.feed.repost",
-              collectionCursor
-            );
-            await getRecords(repo.did, "app.bsky.feed.post", collectionCursor);
-          } else if (collection === "app.bsky.feed.repost") {
-            await getRecords(
-              repo.did,
-              "app.bsky.feed.repost",
-              collectionCursor
-            );
-            await getRecords(repo.did, "app.bsky.feed.post", collectionCursor);
-          } else if (collection === "app.bsky.feed.post") {
-            await getRecords(repo.did, "app.bsky.feed.post", collectionCursor);
+          if (collection === 'app.bsky.graph.block') {
+            await getRecords(doc, 'app.bsky.graph.block', collectionCursor);
+            await getRecords(doc, 'app.bsky.feed.like', collectionCursor);
+            await getRecords(doc, 'app.bsky.feed.repost', collectionCursor);
+            await getRecords(doc, 'app.bsky.feed.post', collectionCursor);
+          } else if (collection === 'app.bsky.feed.like') {
+            await getRecords(doc, 'app.bsky.feed.like', collectionCursor);
+            await getRecords(doc, 'app.bsky.feed.repost', collectionCursor);
+            await getRecords(doc, 'app.bsky.feed.post', collectionCursor);
+          } else if (collection === 'app.bsky.feed.repost') {
+            await getRecords(doc, 'app.bsky.feed.repost', collectionCursor);
+            await getRecords(doc, 'app.bsky.feed.post', collectionCursor);
+          } else if (collection === 'app.bsky.feed.post') {
+            await getRecords(doc, 'app.bsky.feed.post', collectionCursor);
           }
           collection = undefined;
           collectionCursor = undefined;
@@ -418,13 +360,13 @@ async function main() {
 
         await SyncProfile.findByIdAndUpdate(repo.did, {
           updated: true,
-          status: "backfilled",
+          status: 'backfilled'
         });
 
         repoIndex++;
       }
     }
-    repoCursor = repoRes.data.cursor ?? undefined;
+    repoCursor = response?.cursor ?? undefined;
   } while (!!repoCursor && repoCursor.length > 0);
 }
 

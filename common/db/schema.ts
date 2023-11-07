@@ -1,7 +1,7 @@
-import { Schema, model } from "mongoose";
+import { Schema, model } from 'mongoose';
 
 // Profiles
-interface IProfile {
+export interface IProfile {
   _id: string;
   handle: string;
   displayName: string;
@@ -23,13 +23,13 @@ const profileSchema = new Schema<IProfile>(
     description: String,
     indexedAt: Date,
     lastProfileUpdateAt: Date,
-    deleted: { type: Boolean, default: false },
+    deleted: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
 
 // Posts
-interface IPost {
+export interface IPost {
   _id: string;
   author: string;
   text: string;
@@ -51,11 +51,11 @@ interface IPost {
 const postSchema = new Schema<IPost>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
+    author: { type: String, ref: 'Profile' },
     text: String,
-    replyParent: { type: String, ref: "Post" },
-    replyRoot: { type: String, ref: "Post" },
-    quoteUri: { type: String, ref: "Post" },
+    replyParent: { type: String, ref: 'Post' },
+    replyRoot: { type: String, ref: 'Post' },
+    quoteUri: { type: String, ref: 'Post' },
     langs: [String],
     hasImages: Number,
     altText: [String],
@@ -63,13 +63,13 @@ const postSchema = new Schema<IPost>(
     comments: Number,
     reposts: Number,
     likes: Number,
-    deleted: { type: Boolean, default: false },
+    deleted: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
 
 // Follows
-interface IFollow {
+export interface IFollow {
   _id: string;
   author: string;
   subject: string;
@@ -79,14 +79,14 @@ interface IFollow {
 const followSchema = new Schema<IFollow>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
-    subject: { type: String, ref: "Profile" },
+    author: { type: String, ref: 'Profile' },
+    subject: { type: String, ref: 'Profile' }
   },
-  { timestamps: true, expires: "3d" }
+  { timestamps: true, expires: '3d' }
 );
 
 // Likes
-interface ILike {
+export interface ILike {
   _id: string;
   author: string;
   subject: string;
@@ -97,15 +97,15 @@ interface ILike {
 const likeSchema = new Schema<ILike>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
-    subject: { type: String, ref: "Profile" },
-    subjectUri: { type: String, ref: "Post" },
+    author: { type: String, ref: 'Profile' },
+    subject: { type: String, ref: 'Profile' },
+    subjectUri: { type: String, ref: 'Post' }
   },
-  { timestamps: true, expires: "3d" }
+  { timestamps: true, expires: '3d' }
 );
 
 // Reposts
-interface IRepost {
+export interface IRepost {
   _id: string;
   author: string;
   subject: string;
@@ -116,15 +116,15 @@ interface IRepost {
 const repostSchema = new Schema<IRepost>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
-    subject: { type: String, ref: "Profile" },
-    subjectUri: { type: String, ref: "Post" },
+    author: { type: String, ref: 'Profile' },
+    subject: { type: String, ref: 'Profile' },
+    subjectUri: { type: String, ref: 'Post' }
   },
   { timestamps: true }
 );
 
 // Blocks
-interface IBlock {
+export interface IBlock {
   _id: string;
   author: string;
   subject: string;
@@ -136,15 +136,15 @@ interface IBlock {
 const blockSchema = new Schema<IBlock>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
-    subject: { type: String, ref: "Profile" },
-    deleted: { type: Boolean, default: false },
+    author: { type: String, ref: 'Profile' },
+    subject: { type: String, ref: 'Profile' },
+    deleted: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
 
 // Feed generators
-interface IFeedGen {
+export interface IFeedGen {
   _id: string;
   author: string;
   name: string;
@@ -158,17 +158,17 @@ interface IFeedGen {
 const feedGenSchema = new Schema<IFeedGen>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
+    author: { type: String, ref: 'Profile' },
     name: String,
     feedDid: String,
     description: String,
-    displayName: String,
+    displayName: String
   },
   { timestamps: true }
 );
 
 // Lists
-interface IList {
+export interface IList {
   _id: string;
   author: string;
   name: string;
@@ -179,8 +179,9 @@ interface IList {
   updatedAt: string;
 }
 
-interface IListItem {
+export interface IListItem {
   _id: string;
+  list: string;
   subject: string;
   createdAt: string;
   updatedAt: string;
@@ -189,7 +190,8 @@ interface IListItem {
 const listItemSchema = new Schema<IListItem>(
   {
     _id: String,
-    subject: { type: String, ref: "Profile" },
+    list: { type: String, ref: 'List' },
+    subject: { type: String, ref: 'Profile' }
   },
   { timestamps: true }
 );
@@ -197,11 +199,11 @@ const listItemSchema = new Schema<IListItem>(
 const listSchema = new Schema<IList>(
   {
     _id: String,
-    author: { type: String, ref: "Profile" },
+    author: { type: String, ref: 'Profile' },
     name: String,
     purpose: String,
     description: String,
-    items: [listItemSchema],
+    items: [listItemSchema]
   },
   { timestamps: true }
 );
@@ -228,15 +230,15 @@ const interactionListSchema = new Schema<IInteractionList>({
   characters: { type: Number, default: 0 },
   replies: { type: Number, default: 0 },
   likes: { type: Number, default: 0 },
-  reposts: { type: Number, default: 0 },
+  reposts: { type: Number, default: 0 }
 });
 
 const interactionSchema = new Schema<IInteraction>({
-  _id: { 
-    author: { type: String, ref: "Profile" },
-    subject: { type: String, ref: "Profile" },
+  _id: {
+    author: { type: String, ref: 'Profile' },
+    subject: { type: String, ref: 'Profile' }
   },
-  list: [interactionListSchema],
+  list: [interactionListSchema]
 });
 
 // Subscription state
@@ -247,18 +249,17 @@ interface ISubState {
 
 const subStateSchema = new Schema<ISubState>({
   service: String,
-  cursor: Number,
+  cursor: Number
 });
-
 
 // Sync state
 interface ISyncState {
-  _id: string
-  repoCursor: string | undefined
-  repoIndex: number
-  repoDid: string
-  col: string
-  colCursor: string
+  _id: string;
+  repoCursor: string | undefined;
+  repoIndex: number;
+  repoDid: string;
+  col: string;
+  colCursor: string;
 }
 
 const syncStateSchema = new Schema<ISyncState>({
@@ -267,8 +268,8 @@ const syncStateSchema = new Schema<ISyncState>({
   repoIndex: Number,
   repoDid: String,
   col: String,
-  colCursor: String,
-})
+  colCursor: String
+});
 
 // Sync profile
 interface ISyncProfileState {
@@ -279,25 +280,28 @@ interface ISyncProfileState {
   updatedAt: string;
 }
 
-const syncProfileSchema = new Schema<ISyncProfileState>({
-  _id: String,
-  status: String,
-  updated: Boolean,
-}, { timestamps: true })
+const syncProfileSchema = new Schema<ISyncProfileState>(
+  {
+    _id: String,
+    status: String,
+    updated: Boolean
+  },
+  { timestamps: true }
+);
 
 // Models
-export const Profile = model<IProfile>("Profile", profileSchema);
-export const Follow = model<IFollow>("Follow", followSchema);
-export const Post = model<IPost>("Post", postSchema);
-export const Like = model<ILike>("Like", likeSchema);
-export const Repost = model<IRepost>("Repost", repostSchema);
-export const Block = model<IBlock>("Block", blockSchema);
-export const FeedGen = model<IFeedGen>("FeedGen", feedGenSchema);
-export const List = model<IList>("List", listSchema);
+export const Profile = model<IProfile>('Profile', profileSchema);
+export const Follow = model<IFollow>('Follow', followSchema);
+export const Post = model<IPost>('Post', postSchema);
+export const Like = model<ILike>('Like', likeSchema);
+export const Repost = model<IRepost>('Repost', repostSchema);
+export const Block = model<IBlock>('Block', blockSchema);
+export const FeedGen = model<IFeedGen>('FeedGen', feedGenSchema);
+export const List = model<IList>('List', listSchema);
 
-export const Interaction = model<IInteraction>("Interaction", interactionSchema);
+export const Interaction = model<IInteraction>('Interaction', interactionSchema);
 
-export const SubState = model<ISubState>("SubState", subStateSchema);
+export const SubState = model<ISubState>('SubState', subStateSchema);
 
-export const SyncState = model<ISyncState>("SyncState", syncStateSchema);
-export const SyncProfile = model<ISyncProfileState>("SyncStateProfile", syncProfileSchema);
+export const SyncState = model<ISyncState>('SyncState', syncStateSchema);
+export const SyncProfile = model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);

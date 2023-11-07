@@ -18,7 +18,13 @@ import {
 } from '../../lexicon/types/com/atproto/sync/subscribeRepos'
 import { AppContext } from './index'
 import client from 'prom-client'
-import { SubState } from '@common/db'
+import { SubState } from '../../common/db'
+
+import {
+  AppBskyEmbedImages,
+  AppBskyEmbedRecordWithMedia,
+  AppBskyEmbedRecord,
+} from "@atproto/api";
 
 const firehoseMetric = new client.Counter({
   name: 'app_firehose',
@@ -26,7 +32,7 @@ const firehoseMetric = new client.Counter({
   labelNames: ['action', 'collection'],
 })
 
-export abstract class FirehoseSubscriptionBase {
+export abstract class FirehoseSubscription {
   public sub: Subscription<RepoEvent>
   public service: string
 
@@ -179,6 +185,174 @@ export const getOpsByType = async (evt: Commit): Promise<OperationsByType> => {
   }
 
   return opsByType
+}
+
+export class FirehoseWorker extends FirehoseSubscription {
+  async handleEvent(evt: RepoEvent) {
+    if (!isCommit(evt)) return;
+    const ops = await getOpsByType(evt);
+
+    const res = {
+      repo: evt.repo,
+      profiles: {
+        create: ops.profiles.creates.map((create) => {
+          return {
+            _id: create.author,
+            description: create.record.description,
+            displayName: create.record.displayName,
+          };
+        }),
+        delete: ops.profiles.deletes,
+        update: ops.profiles.updates?.map((create) => {
+          return {
+            _id: create.author,
+            description: create.record.description,
+            displayName: create.record.displayName,
+          };
+        }),
+      },
+      feedgens: {
+        create: ops.feedgens.creates.map((create) => {
+          return {
+            _id: create.uri,
+            author: create.author,
+            name: create.uri.split("/").slice(-1)[0],
+            feedDid: create.record.did,
+            description: create.record.description ?? "",
+            displayName: create.record.displayName,
+          };
+        }),
+        delete: ops.feedgens.deletes,
+        update: ops.feedgens.updates?.map((update) => {
+          return {
+            _id: update.uri,
+            author: update.author,
+            name: update.uri.split("/").slice(-1)[0],
+            feedDid: update.record.did,
+            description: update.record.description ?? "",
+            displayName: update.record.displayName,
+          };
+        }),
+      },
+      posts: {
+        create: ops.posts.creates.map((create) => {
+          let hasImages = 0;
+          let altText: string[] | null = null;
+          let quoteUri: string | null = null;
+    
+          // post with images
+          if (AppBskyEmbedImages.isMain(create.record.embed)) {
+            hasImages = create.record.embed.images.length;
+            altText = create.record.embed.images.map((x) => x.alt);
+          }
+    
+          // text-only post quoting a post
+          if (AppBskyEmbedRecord.isMain(create.record.embed)) {
+            quoteUri = create.record.embed.record.uri;
+          }
+    
+          // post with media quoting a post
+          if (AppBskyEmbedRecordWithMedia.isMain(create.record.embed)) {
+            if (AppBskyEmbedRecord.isMain(create.record.embed.record)) {
+              quoteUri = create.record.embed.record.record.uri;
+            }
+            if (AppBskyEmbedImages.isMain(create.record.embed.media)) {
+              hasImages = create.record.embed.media.images.length;
+              altText = create.record.embed.media.images.map((x) => x.alt);
+            }
+          }
+    
+          return {
+            _id: create.uri,
+            author: create.author,
+            text: create.record.text,
+            replyParent: create.record?.reply?.parent.uri ?? null,
+            replyRoot: create.record?.reply?.root.uri ?? null,
+            quoteUri: quoteUri ?? null,
+            altText: altText ?? null,
+            langs: create.record.langs ?? null,
+            hasImages: hasImages,
+            textLength: create.record?.text.length,
+          };
+        }),
+        delete: ops.posts.deletes,
+      },
+      blocks: {
+        create: ops.blocks.creates.map((create) => {
+          return {
+            _id: create.uri,
+            author: create.author,
+            subject: create.record.subject,
+          };
+        }),
+        delete: ops.blocks.deletes,
+      },
+      follows: {
+        create: ops.follows.creates.map((create) => {
+          return {
+            _id: create.uri,
+            author: create.author,
+            subject: create.record.subject,
+          };
+        }),
+        delete: ops.follows.deletes,
+      },
+      likes: {
+        create: ops.likes.creates.map((create) => {
+          return {
+            _id: create.uri,
+            author: create.author,
+            subject: create.record.subject.uri.split("/")[2],
+            subjectUri: create.record.subject.uri,
+          };
+        }),
+        delete: ops.likes.deletes,
+      },
+      reposts: {
+        create: ops.reposts.creates.map((create) => {
+          return {
+            _id: create.uri,
+            author: create.author,
+            subject: create.record.subject.uri.split("/")[2],
+            subjectUri: create.record.subject.uri,
+          };
+        }),
+        delete: ops.reposts.deletes,
+      },
+      lists: {
+        create: ops.lists.creates.map((create) => {
+          return {
+            _id: create.uri,
+            author: create.author,
+            name: create.record.name,
+            purpose: create.record.purpose,
+            description: create.record.description,
+          };
+        }),
+        delete: ops.lists.deletes,
+        update: ops.lists.updates?.map((update) => {
+          return {
+            _id: update.uri,
+            name: update.record.name,
+            purpose: update.record.purpose,
+            description: update.record.description,
+          };
+        }),
+      },
+      listitems: {
+        create: ops.listitems.creates.map((create) => {
+          return {
+            _id: create.uri,
+            list: create.record.list,
+            subject: create.record.subject,
+          };
+        }),
+        delete: ops.listitems.deletes,
+      }
+    }
+
+    this.ctx.io.emit("data", res)
+  }
 }
 
 type OperationsByType = {
