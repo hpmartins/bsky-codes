@@ -1,4 +1,4 @@
-import { getInteractions } from '$lib/server/utils';
+import { getInteractions } from "@common/queries";
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler =  async( { request }) => {
