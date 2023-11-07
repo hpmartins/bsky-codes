@@ -1,3 +1,4 @@
+import 'module-alias/register';
 import 'dotenv/config';
 import Bottleneck from 'bottleneck';
 import { connectDb } from '@common/db';

@@ -21,6 +21,9 @@
     "syncer"
   ],
   "dependencies": {
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
     "@types/module-alias": "^2.0.4",
     "module-alias": "^2.2.3"
   }

@@ -1,6 +1,7 @@
+import 'module-alias/register';
+import 'dotenv/config';
 import { Manager } from "socket.io-client";
 import NodeCache from "node-cache";
-import 'dotenv/config'
 import { connectDb } from "@common/db";
 import { FirehoseData, processFirehoseStream } from "./worker";
 import { maybeInt, maybeStr } from "@common";
