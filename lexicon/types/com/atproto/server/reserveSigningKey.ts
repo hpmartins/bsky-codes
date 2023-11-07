@@ -11,22 +11,14 @@ import { HandlerAuth } from '@atproto/xrpc-server'
 export interface QueryParams {}
 
 export interface InputSchema {
-  email?: string
-  handle: string
+  /** The did to reserve a new did:key for */
   did?: string
-  inviteCode?: string
-  password?: string
-  recoveryKey?: string
-  plcOp?: {}
   [k: string]: unknown
 }
 
 export interface OutputSchema {
-  accessJwt: string
-  refreshJwt: string
-  handle: string
-  did: string
-  didDoc?: {}
+  /** Public signing key in the form of a did:key. */
+  signingKey: string
   [k: string]: unknown
 }
 
@@ -44,14 +36,6 @@ export interface HandlerSuccess {
 export interface HandlerError {
   status: number
   message?: string
-  error?:
-    | 'InvalidHandle'
-    | 'InvalidPassword'
-    | 'InvalidInviteCode'
-    | 'HandleNotAvailable'
-    | 'UnsupportedDomain'
-    | 'UnresolvableDid'
-    | 'IncompatibleDidDoc'
 }
 
 export type HandlerOutput = HandlerError | HandlerSuccess
