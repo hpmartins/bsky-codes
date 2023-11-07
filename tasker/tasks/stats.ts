@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Block, Post } from '../../common';
+import { Block, Post } from '@common/db';
 
 export const getTopBlocked = async () => {
   return await Block.aggregate([

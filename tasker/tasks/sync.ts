@@ -1,5 +1,5 @@
-import { Interaction, SyncProfile } from '../../common/db';
-import { syncRecords } from '../../common/index';
+import { Interaction, SyncProfile } from '@common/db';
+import { syncRecords } from '@common';
 import { AtprotoData } from '@atproto/identity';
 import { AppContext } from '../index';
 
