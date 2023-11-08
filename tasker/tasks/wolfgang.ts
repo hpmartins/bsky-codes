@@ -1,5 +1,5 @@
 import { Post, WolfgangLick } from '../../common/db';
-import { AppContext } from 'index';
+import { AppContext } from '../index';
 import dayjs from 'dayjs';
 
 export async function updateLickablePosts(ctx: AppContext, lickablePeople: ILickablePeople[]) {
@@ -65,7 +65,7 @@ export async function updateLickablePosts(ctx: AppContext, lickablePeople: ILick
   // }
 }
 
-async function getAllFollowers(ctx: AppContext, actor: string) {
+async function getAllFollowers(ctx: AppContext) {
   let cursor: string | undefined;
   let followers: { uri: string | undefined; did: string; handle: string }[] = [];
   do {
@@ -83,7 +83,7 @@ async function getAllFollowers(ctx: AppContext, actor: string) {
   return followers;
 }
 
-async function getAllFollows(ctx: AppContext, actor: string) {
+async function getAllFollows(ctx: AppContext) {
   let cursor: string | undefined;
   let follows: { uri: string | undefined; did: string; handle: string }[] = [];
   do {
@@ -113,8 +113,8 @@ export async function updateLickablePeople(ctx: AppContext): Promise<ILickablePe
   const unlickableListUri = 'at://did:plc:y4rd5hesgwwbkblvkkidfs73/app.bsky.graph.list/3k3jnxzkl322v';
   const unlickableList = await ctx.api.app.bsky.graph.getList({ list: unlickableListUri });
   const unlickablePeople = unlickableList.data.items.map((x) => ({ did: x.subject.did, handle: x.subject.handle }));
-  const followers = await getAllFollowers(ctx, ctx.cfg.bskyDid);
-  const follows = await getAllFollows(ctx, ctx.cfg.bskyDid);
+  const followers = await getAllFollowers(ctx);
+  const follows = await getAllFollows(ctx);
 
   const they_dont_follow_me_back = follows.filter((x) => !followers.map((y) => y.did).includes(x.did));
   const i_follow_but_shouldnt = follows.filter((x) => unlickablePeople.map((y) => y.did).includes(x.did));
