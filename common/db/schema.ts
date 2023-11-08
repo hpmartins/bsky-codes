@@ -329,6 +329,27 @@ export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', n
   }]
 }));
 
+// Wolfgang licks
+interface IWolfgangLick {
+  _id: string;
+  cid: string;
+  handle: string;
+  points: number;
+  reposted: boolean;
+  postedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const wolfgangLickSchema = new Schema<IWolfgangLick>({
+  _id: { type: String, ref: 'Post' },
+  cid: String,
+  handle: String,
+  points: Number,
+  reposted: { type: Boolean, default: false },
+  postedAt: Date,
+}, { timestamps: true })
+
 // Models
 export const Profile = model<IProfile>('Profile', profileSchema);
 export const Follow = model<IFollow>('Follow', followSchema);
@@ -345,3 +366,5 @@ export const SubState = model<ISubState>('SubState', subStateSchema);
 
 export const SyncState = model<ISyncState>('SyncState', syncStateSchema);
 export const SyncProfile = model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);
+
+export const WolfgangLick = model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');

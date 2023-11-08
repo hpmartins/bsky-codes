@@ -8,6 +8,7 @@ import { DidResolver } from '@atproto/identity';
 import { maybeInt } from '@common';
 import { syncOneProfile, syncWaitingProfiles } from './tasks/sync';
 import { storeTopBlocked, storeTopPosters } from './tasks/stats';
+import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
 
 type AppConfig = {
   bskyDid: string;
@@ -35,6 +36,11 @@ function scheduleTasks(ctx: AppContext) {
   cron.schedule('0 */6 * * *', async () => {
     await storeTopPosters();
   });
+
+  cron.schedule('*/5 * * * *', async () => {
+    const lickablePeople = await updateLickablePeople(ctx)
+    await updateLickablePosts(ctx, lickablePeople)
+  })
 }
 
 async function run() {
