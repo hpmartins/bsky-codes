@@ -5,10 +5,18 @@ import Bottleneck from 'bottleneck';
 import { connectDb } from '../common/db';
 import { BskyAgent } from '@atproto/api';
 import { DidResolver } from '@atproto/identity';
-import { maybeBoolean, maybeInt } from '../common';
-import { syncOneProfile, syncWaitingProfiles } from './tasks/sync';
+import { maybeBoolean, maybeInt, maybeStr } from '../common';
+import { syncBlockRecords, syncOneProfile, syncWaitingProfiles } from './tasks/sync';
 import { storeTopBlocked, storeTopPosters } from './tasks/stats';
 import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
+import { Manager } from "socket.io-client";
+import NodeCache from "node-cache";
+
+export const SECOND = 1000;
+export const MINUTE = SECOND * 60;
+export const HOUR = MINUTE * 60;
+export const DAY = HOUR * 24;
+export const WEEK = DAY * 7;
 
 type AppConfig = {
   bskyDid: string;
@@ -21,6 +29,7 @@ export type AppContext = {
   api: BskyAgent;
   didres: DidResolver;
   limiter: Bottleneck;
+  cache: NodeCache;
   log: (text: string) => void;
 };
 
@@ -45,6 +54,21 @@ function scheduleTasks(ctx: AppContext) {
 
 async function run() {
   await connectDb();
+
+  const listenerHost = maybeStr(process.env.LISTENER_HOST) ?? 'localhost'
+  const listenerPort = maybeInt(process.env.LISTENER_PORT) ?? 6002
+  const manager = new Manager(`ws://${listenerHost}:${listenerPort}`);
+  const socket = manager.socket('/');
+  const cache = new NodeCache({ stdTTL: (48 * HOUR) / 1000 });
+  socket.on("connect", () => {
+    log('connected to listener')
+  })
+  socket.io.on("reconnect", (attempt: number) => {
+    log(`reconnected to listener [${attempt}]`)
+  })
+  socket.io.on("reconnect_attempt", (attempt: number) => {
+    log(`reconnecting to listener... [${attempt}]`)
+  })
 
   const cfg = {
     bskyDid: process.env.WOLFGANG_BSKY_DID ?? '',
@@ -77,6 +101,7 @@ async function run() {
     api,
     didres,
     limiter,
+    cache,
     log,
   };
 
@@ -84,6 +109,9 @@ async function run() {
     log('starting tasks');
     scheduleTasks(ctx);
   }
+
+  // Sync blocks
+  socket.on("data", async (data: { repo: string }): Promise<void> => await syncBlockRecords(ctx, data.repo));
 
   app.get('/update/:did', async (req, res) => {
     const doc = await didres.resolveAtprotoData(req.params.did);
