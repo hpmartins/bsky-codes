@@ -6,6 +6,9 @@ export const getAllBlocks = async (actor: string, which: 'author' | 'subject') =
       $match: which === 'author' ? { author: actor } : { subject: actor }
     },
     {
+      $match: { deleted: false },
+    },
+    {
       $lookup: {
         from: 'profiles',
         localField: which === 'author' ? 'subject' : 'author',
