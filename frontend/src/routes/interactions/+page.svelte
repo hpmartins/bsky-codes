@@ -95,6 +95,7 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css" />
+  <title>Wolfgang - Interactions</title>
 </svelte:head>
 
 <h3 class="text-center">Interactions</h3>
