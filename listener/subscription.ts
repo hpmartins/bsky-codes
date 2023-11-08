@@ -264,6 +264,7 @@ export class FirehoseWorker extends FirehoseSubscription {
     
           return {
             _id: create.uri,
+            cid: create.cid,
             author: create.author,
             text: create.record.text,
             replyParent: create.record?.reply?.parent.uri ?? null,

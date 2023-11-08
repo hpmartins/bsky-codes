@@ -165,6 +165,7 @@ export async function syncRecords(
             await Post.updateOne(
               { _id: record.uri },
               {
+                cid: record.cid,
                 author: doc.did,
                 text: record.value.text,
                 replyParent: record.value.reply?.parent.uri ?? null,

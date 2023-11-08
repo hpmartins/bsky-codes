@@ -31,6 +31,7 @@ const profileSchema = new Schema<IProfile>(
 // Posts
 export interface IPost {
   _id: string;
+  cid: string;
   author: string;
   text: string;
   replyParent: string | null;
@@ -51,6 +52,7 @@ export interface IPost {
 const postSchema = new Schema<IPost>(
   {
     _id: String,
+    cid: String,
     author: { type: String, ref: 'Profile' },
     text: String,
     replyParent: { type: String, ref: 'Post' },
