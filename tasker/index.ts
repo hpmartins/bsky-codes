@@ -3,13 +3,21 @@ import 'module-alias/register';
 import express from 'express';
 import Bottleneck from 'bottleneck';
 import { connectDb } from '@common/db';
+import { BskyAgent } from '@atproto/api';
 import { DidResolver } from '@atproto/identity';
 import { maybeInt } from '@common';
 import { syncOneProfile, syncWaitingProfiles } from './tasks/sync';
 import { storeTopBlocked, storeTopPosters } from './tasks/stats';
 
+type AppConfig = {
+  bskyDid: string;
+  bskyPwd: string;
+}
+
 export type AppContext = {
+  cfg: AppConfig;
   app: express.Express;
+  api: BskyAgent;
   didres: DidResolver;
   limiter: Bottleneck;
   log: (text: string) => void;
@@ -32,6 +40,11 @@ function scheduleTasks(ctx: AppContext) {
 async function run() {
   await connectDb();
 
+  const cfg = {
+    bskyDid: process.env.WOLFGANG_BSKY_DID ?? '',
+    bskyPwd: process.env.WOLFGANG_BSKY_PASSWORD ?? ''
+  }
+
   const app = express();
   const didres = new DidResolver({});
   const limiter = new Bottleneck({
@@ -42,6 +55,9 @@ async function run() {
     console.log(`[${new Date().toLocaleTimeString()}] [tasker] ${text}`);
   };
 
+  const api = new BskyAgent({ service: 'https://bsky.social/' })
+  await api.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
+
   limiter.on('failed', async (error, jobInfo) => {
     ctx.log(error);
     ctx.log('Retrying in 10s...');
@@ -50,17 +66,18 @@ async function run() {
   limiter.on('retry', (error, jobInfo) => ctx.log('Retrying now'));
 
   const ctx: AppContext = {
+    cfg,
     app,
+    api,
     didres,
     limiter,
     log,
   };
 
   if (!process.env.TASKER_DEVEL) {
+    log('starting tasks');
     scheduleTasks(ctx);
   }
-
-  await storeTopBlocked();
 
   app.get('/update/:did', async (req, res) => {
     const doc = await didres.resolveAtprotoData(req.params.did);
