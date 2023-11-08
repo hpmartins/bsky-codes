@@ -1,4 +1,4 @@
-import { Post, WolfgangLick } from '@common/db';
+import { Post, WolfgangLick } from '../../common/db';
 import { AppContext } from 'index';
 import dayjs from 'dayjs';
 

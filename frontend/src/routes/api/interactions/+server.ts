@@ -1,4 +1,4 @@
-import { getInteractions } from "@common/queries";
+import { getInteractions } from "../../../../../common/queries";
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler =  async( { request }) => {

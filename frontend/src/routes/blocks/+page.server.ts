@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
-import { SyncProfile } from '@common/db';
-import { getAllBlocks } from '@common/queries'
+import { SyncProfile } from '../../../../common/db';
+import { getAllBlocks } from '../../../../common/queries'
 import type { BlockType } from '$lib/types';
 import { getProfile, resolveHandle } from '$lib/utils';
 

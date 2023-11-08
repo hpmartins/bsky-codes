@@ -4,8 +4,8 @@ import { createServer } from 'http';
 import express from 'express';
 import { Server as SocketServer } from 'socket.io';
 import { collectDefaultMetrics, register } from 'prom-client';
-import { maybeInt, maybeStr } from '@common';
-import { connectDb } from '@common/db';
+import { maybeInt, maybeStr } from '../common';
+import { connectDb } from '../common/db';
 import { FirehoseWorker } from './subscription';
 
 export type AppContext = {

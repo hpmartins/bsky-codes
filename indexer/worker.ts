@@ -15,9 +15,9 @@ import {
   IRepost,
   IList,
   IListItem
-} from '@common/db';
-import { IPost, IFeedGen } from '@common/db';
-import { updatePartition, updateProfile } from '@common';
+} from '../common/db';
+import { IPost, IFeedGen } from '../common/db';
+import { updatePartition, updateProfile } from '../common';
 
 type IDelete = {
   uri: string;

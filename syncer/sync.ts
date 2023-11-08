@@ -1,5 +1,5 @@
-import { listRepos, syncRecords } from '@common';
-import { Profile, SyncProfile, SyncState } from '@common/db';
+import { listRepos, syncRecords } from '../common';
+import { Profile, SyncProfile, SyncState } from '../common/db';
 import { DidResolver } from '@atproto/identity';
 import { AppContext } from './index';
 

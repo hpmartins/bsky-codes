@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Block, ITopBlocked, ITopPosters, Post, TopBlocked, TopPosters } from '@common/db';
+import { Block, ITopBlocked, ITopPosters, Post, TopBlocked, TopPosters } from '../../common/db';
 
 export const storeTopBlocked = async () => {
   const [ query ] = await Block.aggregate<ITopBlocked>()
