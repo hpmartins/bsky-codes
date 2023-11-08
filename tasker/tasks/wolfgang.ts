@@ -38,7 +38,7 @@ export async function updateLickablePosts(ctx: AppContext, lickablePeople: ILick
       }
     })
     .match({
-      points: { $gte: 6 }
+      points: { $gte: 8 }
     })
 
   for (const post of possiblePosts) {
@@ -50,19 +50,19 @@ export async function updateLickablePosts(ctx: AppContext, lickablePeople: ILick
     reposted: false,
   }).deleteMany()
 
-  // const repostablePosts = await WolfgangLick.find({
-  //   points: { $gte: 6, $lte: 25 },
-  //   reposted: false,
-  // })
-  // for (const post of repostablePosts) {
-  //   try {
-  //     ctx.log(`reposting: ${post.postedAt} @${post.handle} ${post.points}p ${post._id}`)
-  //     await ctx.api.repost(post._id, post.cid)
-  //     await WolfgangLick.findByIdAndUpdate(post._id, { reposted: true })
-  //   } catch (e) {
-  //     ctx.log(`[ERROR] reposting: ${post.postedAt} @${post.handle} ${post.points}p ${post._id}`)
-  //   }
-  // }
+  const repostablePosts = await WolfgangLick.find({
+    points: { $gte: 8, $lte: 25 },
+    reposted: false,
+  })
+  for (const post of repostablePosts) {
+    try {
+      ctx.log(`reposting: ${post.postedAt} @${post.handle} ${post.points}p ${post._id}`)
+      await ctx.api.repost(post._id, post.cid)
+      await WolfgangLick.findByIdAndUpdate(post._id, { reposted: true })
+    } catch (e) {
+      ctx.log(`[ERROR] reposting: ${post.postedAt} @${post.handle} ${post.points}p ${post._id}`)
+    }
+  }
 }
 
 async function getAllFollowers(ctx: AppContext) {
@@ -125,21 +125,21 @@ export async function updateLickablePeople(ctx: AppContext): Promise<ILickablePe
   for (const to_unfollow of they_dont_follow_me_back) {
     if (to_unfollow.uri) {
       ctx.log(`[wolfgang] unfollowing (unfollow-based): ${to_unfollow.handle}`);
-      //   await ctx.api.deleteFollow(to_unfollow.uri);
+        await ctx.api.deleteFollow(to_unfollow.uri);
     }
   }
 
   for (const to_unfollow of i_follow_but_shouldnt) {
     if (to_unfollow.uri) {
       ctx.log(`[wolfgang] unfollowing (list-based): ${to_unfollow.handle}`);
-      //   await ctx.api.deleteFollow(to_unfollow.uri);
+        await ctx.api.deleteFollow(to_unfollow.uri);
     }
   }
 
   for (const to_follow of i_dont_follow_them_back) {
     if (to_follow.uri) {
       ctx.log(`[wolfgang] following: ${to_follow.handle}`);
-      //   await ctx.api.follow(to_follow.did);
+        await ctx.api.follow(to_follow.did);
     }
   }
 
