@@ -5,7 +5,7 @@ import Bottleneck from 'bottleneck';
 import { connectDb } from '@common/db';
 import { BskyAgent } from '@atproto/api';
 import { DidResolver } from '@atproto/identity';
-import { maybeInt } from '@common';
+import { maybeBoolean, maybeInt } from '@common';
 import { syncOneProfile, syncWaitingProfiles } from './tasks/sync';
 import { storeTopBlocked, storeTopPosters } from './tasks/stats';
 import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
@@ -80,7 +80,7 @@ async function run() {
     log,
   };
 
-  if (!process.env.TASKER_DEVEL) {
+  if (!maybeBoolean(process.env.TASKER_DEVEL)) {
     log('starting tasks');
     scheduleTasks(ctx);
   }
