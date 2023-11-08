@@ -14,9 +14,6 @@ import { ProfileViewDetailed } from "./lexicon/types/app/bsky/actor/defs";
 import { OutputSchema as ListReposSchema } from "./lexicon/types/com/atproto/sync/listRepos";
 import { OutputSchema as ListRecordsSchema } from "./lexicon/types/com/atproto/repo/listRecords";
 
-export * from "./db/index";
-export * from "./db/schema";
-
 export const getDateTime = (date?: number | Date) => {
   if (!date) return new Date().toISOString().slice(0, 19).replace("T", " ");
   return new Date(date).toISOString().slice(0, 19).replace("T", " ");
