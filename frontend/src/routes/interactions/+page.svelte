@@ -3,13 +3,14 @@
   import dayjs from 'dayjs';
   import isoWeek from 'dayjs/plugin/isoWeek';
   import localizedFormat from 'dayjs/plugin/localizedFormat';
-  import type { ActionData } from './$types';
+  import type { ActionData, PageData } from './$types';
   import CalHeatmap from 'cal-heatmap';
   import { getDateOfIsoWeek } from '$lib/utils';
   import InteractionsTable from '../InteractionsTable.svelte';
   import type { CirclesOptionsType, InteractionsDataType, InteractionsType } from '$lib/types';
   import Circles from '../Circles.svelte';
 
+  export let data: PageData;
   export let form: ActionData;
 
   let interactionsData: InteractionsDataType = { found: false };
@@ -99,6 +100,8 @@
 </svelte:head>
 
 <h3 class="text-center">Interactions</h3>
+
+<h5 class="text-center">{data.count} unique interactions</h5>
 
 <div class="row align-items-center justify-content-center my-3">
   <div class="col-sm-12 col-md-5">

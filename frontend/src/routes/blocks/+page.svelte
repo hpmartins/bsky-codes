@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { ActionData } from './$types';
+  import type { ActionData, PageData } from './$types';
   import BlocksTable from '../BlocksTable.svelte';
   
+  export let data: PageData;
   export let form: ActionData;
 </script>
 
@@ -13,6 +14,8 @@
 </svelte:head>
 
 <h3 class="text-center">List of blocks</h3>
+
+<h5 class="text-center">{data.count} blocks indexed</h5>
 
 <div class="row align-items-center justify-content-center my-3">
   <div class="col-sm-12 col-md-5">
@@ -45,12 +48,12 @@
 </div>
 {:else if form && form.success}
   <div class="row justify-content-center my-3">
-      <div class="col-sm-12 col-md-6 my-3">
-        <h5 class="text-center">Blocks</h5>
+      <div class="col-sm-12 col-md-5 my-3">
+        <h5 class="text-center">Blocks [{form.blocks?.sent.length}]</h5>
         <BlocksTable data={form.blocks?.sent ?? []} perPage={15} />
       </div>
-      <div class="col-sm-12 col-md-6 my-3">
-        <h5 class="text-center">Blocked by</h5>
+      <div class="col-sm-12 col-md-5 my-3">
+        <h5 class="text-center">Blocked by [{form.blocks?.rcvd.length}]</h5>
         <BlocksTable data={form.blocks?.rcvd ?? []} perPage={15} />
       </div>
   </div>
