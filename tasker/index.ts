@@ -6,6 +6,7 @@ import { connectDb } from '@common/db';
 import { DidResolver } from '@atproto/identity';
 import { maybeInt } from '@common';
 import { syncOneProfile, syncWaitingProfiles } from './tasks/sync';
+import { storeTopBlocked, storeTopPosters } from './tasks/stats';
 
 export type AppContext = {
   app: express.Express;
@@ -17,6 +18,14 @@ export type AppContext = {
 function scheduleTasks(ctx: AppContext) {
   cron.schedule('*/2 * * * *', async () => {
     await syncWaitingProfiles(ctx);
+  });
+
+  cron.schedule('0 */6 * * *', async () => {
+    await storeTopBlocked();
+  });
+
+  cron.schedule('0 */6 * * *', async () => {
+    await storeTopPosters();
   });
 }
 
@@ -47,7 +56,11 @@ async function run() {
     log,
   };
 
-  scheduleTasks(ctx);
+  if (!process.env.TASKER_DEVEL) {
+    scheduleTasks(ctx);
+  }
+
+  await storeTopBlocked();
 
   app.get('/update/:did', async (req, res) => {
     const doc = await didres.resolveAtprotoData(req.params.did);
