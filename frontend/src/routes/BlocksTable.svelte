@@ -10,6 +10,7 @@
 </script>
 
 
+<Pagination rows={data ?? []} perPage={perPage} bind:trimmedRows={paginatedData} />
 <table class="table table-striped table-hover table-sm table-fixed mt-2">
     <thead>
       <tr style="text-align: center; vertical-align: middle">
@@ -29,5 +30,4 @@
         </tr>
       {/each}
     </tbody>
-  </table>
-  <Pagination rows={data ?? []} perPage={perPage} bind:trimmedRows={paginatedData} />
+</table>

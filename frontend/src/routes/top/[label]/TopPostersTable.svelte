@@ -1,13 +1,22 @@
 <script lang="ts">
+  import dayjs from 'dayjs';
+  import localizedFormat from 'dayjs/plugin/localizedFormat';
   import Pagination from '../../Pagination.svelte';
   import UserRow from '../../UserRow.svelte';
 
-  export let data: any[] | undefined;
+  export let data: {[key: string]: any} | undefined;
   export let perPage: number = 15;
+
+  dayjs.extend(localizedFormat)
 
   let paginatedData: Array<any> = [];
 </script>
 
+<h4 class="text-center">Top posters in the last 6 hours</h4>
+
+<h6 class="text-center">Last updated at {dayjs(data?.date).format('L LT')}</h6>
+
+<Pagination rows={data?.list ?? []} {perPage} bind:trimmedRows={paginatedData} />
 <table class="table table-striped table-hover table-sm table-fixed mt-2">
   <thead>
     <tr style="text-align: center; vertical-align: middle">
@@ -36,4 +45,3 @@
     {/each}
   </tbody>
 </table>
-<Pagination rows={data ?? []} {perPage} bind:trimmedRows={paginatedData} />

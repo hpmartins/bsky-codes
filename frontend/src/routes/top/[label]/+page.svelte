@@ -8,10 +8,10 @@
 
 <div class="row justify-content-center my-3">
     <div class="col-sm-12 col-md-6 my-3">
-        <!-- {#if data.type === 'blocks'}
-        <TopBlockedTable data={data.list} perPage={20} />
+        {#if data.type === 'blocked'}
+        <TopBlockedTable data={data} perPage={10} />
         {:else if data.type === 'posters'}
-        <TopPostersTable data={data.list} perPage={20} />
-        {/if} -->
+        <TopPostersTable data={data} perPage={10} />
+        {/if}
     </div>
 </div>
