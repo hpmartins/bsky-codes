@@ -14,6 +14,7 @@ export async function updateLickablePosts(ctx: AppContext, lickablePeople: ILick
       }
     })
     .match({
+      hasImages: 0,
       quoteUri: null,
       replyRoot: null,
       langs: 'pt',
