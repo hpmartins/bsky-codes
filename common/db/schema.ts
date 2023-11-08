@@ -289,6 +289,44 @@ const syncProfileSchema = new Schema<ISyncProfileState>(
   { timestamps: true }
 );
 
+// DerivedData
+export interface ITopBlocked {
+  _id: Date;
+  table: {
+    _id: string;
+    count: number;
+  }[]
+}
+export interface ITopPosters {
+  _id: Date;
+  table: {
+    _id: string;
+    count: number;
+    characters: number;
+    likes: number;
+    replies: number;
+    reposts: number;
+  }[]
+}
+
+export const DerivedData = model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
+export const TopBlocked = DerivedData.discriminator<ITopBlocked>('TopBlocked', new Schema({
+  table: [{
+    _id: { type: 'String', ref: 'Profile' },
+    count: Number
+  }]
+}));
+export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', new Schema({
+  table: [{
+    _id: { type: 'String', ref: 'Profile' },
+    count: Number,
+    characters: Number,
+    likes: Number,
+    replies: Number,
+    reposts: Number,
+  }]
+}));
+
 // Models
 export const Profile = model<IProfile>('Profile', profileSchema);
 export const Follow = model<IFollow>('Follow', followSchema);
