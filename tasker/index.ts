@@ -10,10 +10,9 @@ import { syncBlockRecords, syncOneProfile, syncWaitingProfiles } from './tasks/s
 import { storeTopBlocked, storeTopPosters } from './tasks/stats';
 import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
 import { Manager } from "socket.io-client";
-import NodeCache from "node-cache";
+import redis, { createClient } from 'redis';
 
-export const SECOND = 1000;
-export const MINUTE = SECOND * 60;
+export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
 export const DAY = HOUR * 24;
 export const WEEK = DAY * 7;
@@ -21,6 +20,8 @@ export const WEEK = DAY * 7;
 type AppConfig = {
   bskyDid: string;
   bskyPwd: string;
+  redisHost: string;
+  redisPort: number;
 }
 
 export type AppContext = {
@@ -29,7 +30,7 @@ export type AppContext = {
   api: BskyAgent;
   didres: DidResolver;
   limiter: Bottleneck;
-  cache: NodeCache;
+  cache: redis.RedisClientType<any, any, any>;
   log: (text: string) => void;
 };
 
@@ -59,7 +60,6 @@ async function run() {
   const listenerPort = maybeInt(process.env.LISTENER_PORT) ?? 6002
   const manager = new Manager(`ws://${listenerHost}:${listenerPort}`);
   const socket = manager.socket('/');
-  const cache = new NodeCache({ stdTTL: (48 * HOUR) / 1000 });
   socket.on("connect", () => {
     log('connected to listener')
   })
@@ -71,15 +71,17 @@ async function run() {
   })
 
   const cfg = {
-    bskyDid: process.env.WOLFGANG_BSKY_DID ?? '',
-    bskyPwd: process.env.WOLFGANG_BSKY_PASSWORD ?? ''
+    bskyDid: maybeStr(process.env.WOLFGANG_BSKY_DID) ?? '',
+    bskyPwd: maybeStr(process.env.WOLFGANG_BSKY_PASSWORD) ?? '',
+    redisHost: maybeStr(process.env.REDIS_HOST) ?? 'localhost',
+    redisPort: maybeInt(process.env.REDIS_PORT) ?? 6379,
   }
 
   const app = express();
   const didres = new DidResolver({});
   const limiter = new Bottleneck({
-    maxConcurrent: 10,
-    minTime: (5 * 60000) / 5000
+    maxConcurrent: 1,
+    minTime: (5 * 60000) / 2000
   });
   const log = (text: string) => {
     console.log(`[${new Date().toLocaleTimeString()}] [tasker] ${text}`);
@@ -88,14 +90,18 @@ async function run() {
   const api = new BskyAgent({ service: 'https://bsky.social/' })
   await api.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
 
-  limiter.on('failed', async (error, jobInfo) => {
-    if ('Could not find repo' in error) {
+  const cache = await createClient()
+    .on('error', err => log(`redis error: ${err}`))
+    .connect()
+
+  limiter.on('failed', async (error: Error, jobInfo) => {
+    if (error.message.includes('Could not find repo')) {
       return;
     }
+    ctx.log(error.message)
     ctx.log('Retrying in 10s...');
     return 10000;
   });
-  limiter.on('retry', (error, jobInfo) => ctx.log('Retrying now'));
 
   const ctx: AppContext = {
     cfg,

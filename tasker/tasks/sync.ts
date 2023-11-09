@@ -1,24 +1,26 @@
 import { Block, Interaction, SyncProfile } from '../../common/db';
 import { syncRecords } from '../../common';
 import { AtprotoData } from '@atproto/identity';
-import { AppContext } from '../index';
+import { AppContext, WEEK } from '../index';
 import dayjs from 'dayjs';
 import { AppBskyGraphBlock } from '@atproto/api';
 
 export async function syncBlockRecords(ctx: AppContext, repo: string) {
-  if (ctx.cache.get(repo)) return;
+  if (await ctx.cache.get(repo) !== null) return;
+  if (await SyncProfile.findById(repo)) return;
 
-  const syncTest = await SyncProfile.findById(repo)
-  if (syncTest) return;
-
-  const blocks = await getAllBlockRecords(ctx, repo);
-  if (blocks && blocks.length > 0) {
-    for (const block of blocks) {
-      await Block.updateOne({ _id: block._id }, block, { timestamps: false, strict: false, upsert: true })
+  try {
+    const blocks = await getAllBlockRecords(ctx, repo);
+    if (blocks && blocks.length > 0) {
+      for (const block of blocks) {
+        await Block.updateOne({ _id: block._id }, block, { timestamps: false, strict: false, upsert: true })
+      }
+      ctx.log(`updated ${blocks.length} blocks of ${repo}`)
     }
-    ctx.log(`updated ${blocks.length} blocks of ${repo}`)
+  } catch (e) {
   }
-  ctx.cache.set(repo, Date.now());
+
+  await ctx.cache.set(repo, repo, { EX: 1*WEEK });
 }
 
 async function getAllBlockRecords(ctx: AppContext, did: string) {
