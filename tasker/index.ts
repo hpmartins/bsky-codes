@@ -89,7 +89,9 @@ async function run() {
   await api.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
 
   limiter.on('failed', async (error, jobInfo) => {
-    ctx.log(error);
+    if ('Could not find repo' in error) {
+      return;
+    }
     ctx.log('Retrying in 10s...');
     return 10000;
   });
