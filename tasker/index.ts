@@ -92,6 +92,7 @@ async function run() {
 
   const cache = await createClient()
     .on('error', err => log(`redis error: ${err}`))
+    .on('connect', () => log('connected to redis'))
     .connect()
 
   limiter.on('failed', async (error: Error, jobInfo) => {
