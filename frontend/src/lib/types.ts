@@ -32,4 +32,6 @@ export type CirclesOptionsType = {
     add_watermark: boolean
     add_date: boolean
     bg_color: string
+    add_border: boolean
+    border_color: string
 }

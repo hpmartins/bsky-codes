@@ -22,7 +22,9 @@
     remove_bots: true,
     add_watermark: true,
     add_date: true,
-    bg_color: '#1D428A'
+    bg_color: '#1D428A',
+    add_border: true,
+    border_color: '#FFC72C',
   };
 
   dayjs.extend(isoWeek);
@@ -322,6 +324,27 @@
             style="width:30%;"
             on:input={(e) => (circlesOptions.bg_color = e?.target?.value)}
           />
+
+          <div class="form-check form-switch mt-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="circlesBorder"
+              on:change={(e) => (circlesOptions.add_border = e?.target?.checked)}
+              checked
+            />
+            <label class="form-check-label" for="circlesBorder">Add border:</label>
+          </div>
+          <input
+            type="color"
+            class="form-control"
+            id="circlesBorderColor"
+            value="#FFC72C"
+            style="width:30%;"
+            on:input={(e) => (circlesOptions.border_color = e?.target?.value)}
+          />
+
         </div>
         <div class="col-sm-12 col-md-6 mb-3 word-wrap">
           {#key interactionsData}{#key circlesOptions}

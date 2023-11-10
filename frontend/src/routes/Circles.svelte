@@ -121,14 +121,21 @@
       }
       context.font = '20px Arial';
       context.fillStyle = textColor;
-      context.fillText(textFull, 5, 25);
+      context.fillText(textFull, 10, 27);
     }
 
     if (options.add_watermark) {
       context.font = '20px Arial';
       context.fillStyle = textColor;
-      context.fillText('wolfgang.raios.xyz', 428, 25);
+      context.fillText('wolfgang.raios.xyz', 422, 27);
     }
+
+    if (options.add_border) {
+      context.strokeStyle = options.border_color;
+      context.lineWidth = 15;
+      context.strokeRect(0, 0, width, height);
+    }
+
 
     // loop over the layers
     for (const [layerIndex, layer] of config.entries()) {
