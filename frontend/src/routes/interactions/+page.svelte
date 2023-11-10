@@ -30,6 +30,8 @@
 
   const cal: CalHeatmap = new CalHeatmap();
 
+  let dateRangeStr = '';
+
   onMount(async () => {
     cal.on('click', async (event, timestamp, value) => {
       const date = dayjs(timestamp).add(1, 'w');
@@ -37,22 +39,27 @@
         method: 'POST',
         body: JSON.stringify({
           did: form?.did,
-          week: date.isoWeek(),
-          year: date.isoWeekYear()
+          weekly: {
+            week: date.isoWeek(),
+            year: date.isoWeekYear(),
+          }
         }),
         headers: { 'Content-type': 'application/json' }
       });
       const res = await test.json();
       interactionsData = {
         found: true,
-        date: { start: date.subtract(1, 'week'), end: date },
+        date: { type: 'weekly', start: date.subtract(1, 'week'), end: date },
         sent: res.sent as InteractionsType[],
         rcvd: res.rcvd as InteractionsType[]
       };
+      dateRangeStr = `${dayjs(interactionsData.date?.start).format('L')} to ${dayjs(
+        interactionsData.date?.end
+      ).format('L')}`
     });
 
     await cal.paint({
-      range: 4,
+      range: 3,
       date: {
         locale: { weekStart: 1 },
         min: dayjs('2022-11-01'),
@@ -66,7 +73,7 @@
           textAlign: 'middle'
         }
       },
-      subDomain: { type: 'week', label: 'W', width: 25, height: 55 },
+      subDomain: { type: 'week', label: 'W', width: 25, height: 35 },
       data: {
         source: form?.dates,
         x: (dt: {week: number, year: number}) => { return getDateOfIsoWeek(dt.week, dt.year) },
@@ -89,6 +96,31 @@
   }
   async function handleNext() {
     cal.next();
+  }
+
+  async function handleDatePeriod(type: string) {
+    const test = await fetch('/api/interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          did: form?.did,
+          range: type,
+        }),
+        headers: { 'Content-type': 'application/json' }
+      });
+      const res = await test.json();
+      interactionsData = {
+        found: true,
+        date: { type: type },
+        sent: res.sent as InteractionsType[],
+        rcvd: res.rcvd as InteractionsType[]
+      };
+      const dateRangeDict: {[key: string]: string} = {
+        'all': 'All time',
+        'month': 'Last 30 days',
+        'week': 'Last 7 days',
+        'day': 'Last 24 hours (approx.)',
+      }
+      dateRangeStr = dateRangeDict[type]
   }
 </script>
 
@@ -136,43 +168,66 @@
   <div class="text-center">
     {form?.syncToUpdate ? "The profile has been marked for update. Check again in a few minutes." : "" }
   </div>
-  <div class="row align-items-center justify-content-center my-3">
-    <div class="col-sm-auto col-md-auto">
-      <p class="text-center">Choose a week:</p>
 
-      <div
-        id="interactions-heatmap"
-        class="my-2 border align-items-center justify-content-center"
-      />
-
-      <div class="text-center">
-        <a
-          class="button button--sm button--secondary"
-          href={'#'}
-          on:click|preventDefault={handlePrevious}
-        >
-          &laquo; Previous
+  <hr>
+  <div class="text-center">
+    <b>Choose a week:</b>
+    <div style="font-size: 0.8rem">
+        <a href={'#'} on:click|preventDefault={handlePrevious}>
+          <i class="bi bi-chevron-double-left"></i> prev
         </a>
-        <a
-          class="button button--sm button--secondary"
-          href={'#'}
-          on:click|preventDefault={handleNext}
-        >
-          Next &raquo;
+        |
+        <a href={'#'} on:click|preventDefault={handleNext}>
+          next <i class="bi bi-chevron-double-right"></i>
         </a>
+    </div>
+    <div class="row align-items-center justify-content-center mt-1">
+      <div class="col-sm-auto col-md-auto">
+          <div
+            id="interactions-heatmap"
+            class="align-items-center justify-content-center"
+          />      
+      </div>
+    </div>
+  </div>
+  <div class="text-center mt-2">
+    <b>... or a specific date period:</b>
+    <div>
+        <a href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}>
+          all time
+        </a>
+        |
+        <a href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
+          last month
+        </a>
+        |
+        <a href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
+          last 7 days
+        </a>
+        |
+        <a href={'#'} on:click|preventDefault={() => handleDatePeriod('day')}>
+          last 24 hours
+        </a>
+    </div>
+    <div class="row align-items-center justify-content-center mt-1">
+      <div class="col-sm-auto col-md-auto">
+          <div
+            id="interactions-heatmap"
+            class="align-items-center justify-content-center"
+          />      
       </div>
     </div>
   </div>
 
   {#if interactionsData.found && form.profile}
+    <hr>
     <h5 class="text-center">
-      Data from {dayjs(interactionsData.date?.start).format('L')} to {dayjs(
-        interactionsData.date?.end
-      ).format('L')}
+      {dateRangeStr}
     </h5>
     <p class="text-center">
       <button
         class="btn btn-primary"
+        style="color: #1D428A; background-color: #FFC72C"
         type="button"
         data-bs-toggle="collapse"
         data-bs-target="#collapseCircles"
@@ -265,7 +320,7 @@
             id="circlesBGColor"
             value="#1D428A"
             style="width:30%;"
-            on:change={(e) => (circlesOptions.bg_color = e?.target?.value)}
+            on:input={(e) => (circlesOptions.bg_color = e?.target?.value)}
           />
         </div>
         <div class="col-sm-12 col-md-6 mb-3 word-wrap">

@@ -15,10 +15,10 @@
     "noImplicitAny": false,
     "paths": {
 			"@common": [
-				"../common"
+				"./common"
 			],
 			"@common/*": [
-				"../common/*"
+				"./common/*"
 			],
     }
   },

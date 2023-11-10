@@ -8,7 +8,7 @@
 
 <nav
 	class="navbar navbar-expand-lg mb-3"
-	style="background-color: #e6c219; border-bottom: 5px solid #405be3;"
+	style="background-color: #FFC72C; border-bottom: 10px solid #1D428A;"
 >
 	<div class="container">
 		<a class="navbar-brand" href="/">

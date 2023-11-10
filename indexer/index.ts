@@ -3,7 +3,8 @@ import 'dotenv/config';
 import { Manager } from "socket.io-client";
 import NodeCache from "node-cache";
 import { connectDb } from "../common/db";
-import { FirehoseData, processFirehoseStream } from "./worker";
+import { FirehoseData } from '../common/types';
+import { processFirehoseStream } from "./worker";
 import { maybeInt, maybeStr } from "../common";
 
 export const SECOND = 1000;

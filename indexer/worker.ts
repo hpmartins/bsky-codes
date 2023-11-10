@@ -8,65 +8,9 @@ import {
   Post,
   Profile,
   Repost,
-  IProfile,
-  IBlock,
-  IFollow,
-  ILike,
-  IRepost,
-  IList,
-  IListItem
 } from '../common/db';
-import { IPost, IFeedGen } from '../common/db';
 import { updatePartition, updateProfile } from '../common';
-
-type IDelete = {
-  uri: string;
-};
-
-export type FirehoseData = {
-  repo: string;
-
-  profiles: {
-    create: IProfile[];
-    delete: IDelete[];
-    update: IProfile[];
-  };
-  feedgens: {
-    create: IFeedGen[];
-    delete: IDelete[];
-    update: IFeedGen[];
-  };
-  posts: {
-    create: IPost[];
-    delete: IDelete[];
-    update: IPost[];
-  };
-  blocks: {
-    create: IBlock[];
-    delete: IDelete[];
-  };
-  follows: {
-    create: IFollow[];
-    delete: IDelete[];
-  };
-  likes: {
-    create: ILike[];
-    delete: IDelete[];
-  };
-  reposts: {
-    create: IRepost[];
-    delete: IDelete[];
-  };
-  lists: {
-    create: IList[];
-    delete: IDelete[];
-    update: IList[];
-  };
-  listitems: {
-    create: IListItem[];
-    delete: IDelete[];
-  };
-};
+import { FirehoseData } from '../common/types';
 
 export async function processFirehoseStream(ctx: AppContext, data: FirehoseData) {
   const { repo } = data;

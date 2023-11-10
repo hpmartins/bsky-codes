@@ -14,18 +14,19 @@
   "workspaces": [
     "listener",
     "indexer",
-    "frontend",
     "tasker",
     "common",
     "replier",
     "syncer"
   ],
   "dependencies": {
+    "dayjs": "^1.11.10",
     "redis": "^4.6.10",
     "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "@types/module-alias": "^2.0.4",
-    "module-alias": "^2.2.3"
+    "module-alias": "^2.2.3",
+    "prettier": "3.0.3"
   }
 }

@@ -19,7 +19,7 @@ export type InteractionsType = {
 
 export type InteractionsDataType = {
     found: boolean;
-    date?: { start: Dayjs; end: Dayjs };
+    date?: { type: string; start?: Dayjs; end?: Dayjs };
     sent?: InteractionsType[];
     rcvd?: InteractionsType[];
 }

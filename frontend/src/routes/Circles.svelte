@@ -7,6 +7,7 @@
   } from '$lib/types';
   import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
+  import dayjs from 'dayjs';
 
   let canvas: HTMLCanvasElement;
   let context: CanvasRenderingContext2D | null;
@@ -99,9 +100,25 @@
     context.imageSmoothingQuality = 'medium';
 
     if (options.add_date) {
-      const textFrom = data?.date?.start.format('L');
-      const textTo = data?.date?.end.format('L');
-      const textFull = `${textFrom} - ${textTo}`;
+      const type = data?.date?.type ?? '';
+      let textFull = '';
+      if (type === 'weekly') {
+        const textFrom = data?.date?.start?.format('L');
+        const textTo = data?.date?.end?.format('L');
+        textFull = `${textFrom} - ${textTo}`;
+      } else if (type === 'all') {
+        textFull = `${dayjs().format('L')} (all time)`;
+      } else if (type === 'month') {
+        textFull = `${dayjs().format('L')} (month)`;
+      } else if (type === 'week') {
+        const textFrom = dayjs().subtract(1, 'week').format('L');
+        const textTo = dayjs().format('L');
+        textFull = `${textFrom} - ${textTo}`;
+      } else if (type === 'day') {
+        const textFrom = dayjs().subtract(24, 'hour').format('L');
+        const textTo = dayjs().format('L');
+        textFull = `${textFrom} - ${textTo}`;
+      }
       context.font = '20px Arial';
       context.fillStyle = textColor;
       context.fillText(textFull, 5, 25);

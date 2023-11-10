@@ -17,48 +17,38 @@
 
 {#if totalRows && totalRows > perPage}
   <div class="pagination">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Basic outlined example">
     <button
+      class="btn btn-link"
       on:click={() => (currentPage -= 1)}
       disabled={currentPage === 0 ? true : false}
       aria-label="left arrow icon"
       aria-describedby="prev"
     >
-      &laquo;
+      <i class="bi bi-chevron-double-left"></i>
     </button>
-    <span id="prev" class="sr-only">Load previous {perPage} rows</span>
-    <p>{start + 1} - {end + 1} of {totalRows}</p>
+
+    <div style="margin: 0 1rem;" class="btn">{start + 1} - {end + 1} of {totalRows}</div>
+
     <button
+    class="btn btn-link"
       on:click={() => (currentPage += 1)}
       disabled={currentPage === totalPages - 1 ? true : false}
       aria-label="right arrow icon"
       aria-describedby="next"
     >
-      &raquo;
+      <i class="bi bi-chevron-double-right"></i>
     </button>
-    <span id="next" class="sr-only">Load next {perPage} rows</span>
+  </div>
   </div>
 {/if}
 
 <style>
-  .sr-only {
-    position: absolute;
-    clip: rect(1px, 1px, 1px, 1px);
-    padding: 0;
-    border: 0;
-    height: 1px;
-    width: 1px;
-    overflow: hidden;
-  }
-
   .pagination {
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: all;
-  }
-
-  .pagination p {
-    margin: 0 1rem;
   }
 
   button {

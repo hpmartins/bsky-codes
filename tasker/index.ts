@@ -70,7 +70,7 @@ async function run() {
     log(`reconnecting to listener... [${attempt}]`)
   })
 
-  const cfg = {
+  const cfg: AppConfig = {
     bskyDid: maybeStr(process.env.WOLFGANG_BSKY_DID) ?? '',
     bskyPwd: maybeStr(process.env.WOLFGANG_BSKY_PASSWORD) ?? '',
     redisHost: maybeStr(process.env.REDIS_HOST) ?? 'localhost',
