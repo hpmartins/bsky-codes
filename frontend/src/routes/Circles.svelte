@@ -121,21 +121,23 @@
       }
       context.font = '20px Arial';
       context.fillStyle = textColor;
-      context.fillText(textFull, 10, 27);
+      context.fillText(textFull, 12, 30);
     }
 
     if (options.add_watermark) {
       context.font = '20px Arial';
       context.fillStyle = textColor;
-      context.fillText('wolfgang.raios.xyz', 422, 27);
+      context.textAlign = 'right';
+      context.fillText('wolfgang.raios.xyz', 588, 30);
     }
 
     if (options.add_border) {
       context.strokeStyle = options.border_color;
       context.lineWidth = 15;
-      context.strokeRect(0, 0, width, height);
+      context.beginPath();
+      context.roundRect(0, 0, width, height, 15);
+      context.stroke();
     }
-
 
     // loop over the layers
     for (const [layerIndex, layer] of config.entries()) {
@@ -151,8 +153,9 @@
         if (!users[i]) break;
 
         const img = new Image();
+        img.setAttribute('crossOrigin', 'anonymous');
         if (users[i].avatar) {
-          img.src = users[i].avatar as string;
+          img.src = '/api/proxy?' + new URLSearchParams({ src: users[i].avatar as string})
         } else {
           img.src = '/person-fill.svg';
         }
@@ -182,6 +185,18 @@
       }
     }
   });
+
+  function handleCopy() {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob })
+        ])
+      }
+    )
+  }
 </script>
 
+<button on:click|preventDefault={handleCopy}>Copy image</button>
 <canvas bind:this={canvas} width={600} height={600} />
