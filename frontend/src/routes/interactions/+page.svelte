@@ -19,7 +19,7 @@
         [key: string]: string;
   } | undefined;
 
-  let interactionsData: InteractionsDataType = { found: true };
+  let interactionsData: InteractionsDataType = { found: false };
   let consolidateData = false;
 
   let cOptions: CirclesOptionsType = {

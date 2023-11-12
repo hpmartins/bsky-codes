@@ -28,20 +28,14 @@
     if (!context) return;
     if (!data || !options) return;
 
-    console.log(data);
-
     let interactionsList: InteractionsType[] | undefined;
     if (options.include_sent && options.include_rcvd) {
-      console.log('a')
       interactionsList = data.both;
     } else if (options.include_sent) {
       interactionsList = data.sent;
     } else if (options.include_rcvd) {
       interactionsList = data.rcvd;
     }
-
-    console.log(interactionsList)
-    console.log(options)
 
     if (!interactionsList || interactionsList.length === 0) return;
 
