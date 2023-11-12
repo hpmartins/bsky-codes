@@ -13,8 +13,8 @@ export const load: PageServerLoad = async () => {
 export const actions = {
   default: async ({ request }) => {
     const input = await request.formData();
-    const handle = input.get('handle');
-    const did = await resolveHandle(handle as string);
+    const { handle } = JSON.parse(String(input.get('actor')));
+    const did =  await resolveHandle(handle as string);
     if (did === undefined) {
       return { handle: handle, success: false };
     }

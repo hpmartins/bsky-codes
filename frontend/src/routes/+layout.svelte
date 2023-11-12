@@ -1,37 +1,88 @@
 <script lang="ts">
-    import Navbar from "./Navbar.svelte";
-    import type { LayoutData } from "./$types";
-    
-    export let data: LayoutData
+  import '../app.postcss';
+  import wolfgang from '$lib/assets/wolfgang.jpg';
+  import type { LayoutData } from './$types';
+
+  export let data: LayoutData;
 </script>
 
-<div class="container">
-    <Navbar items={data.navbar} />
-    <slot></slot>
-</div>
-
 <svelte:head>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Noto Sans" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <title>Wolfgang</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    rel="stylesheet"
+  />
+  <title>Wolfgang</title>
 </svelte:head>
 
-<style>
-    footer {
-        height: 110px;
-        line-height: 45px;
-        text-align: center;
-    }
-</style>
+<div class="flex flex-col h-screen">
+  <div class="navbar bg-primary">
+    <div class="navbar-start">
+      <div class="dropdown">
+        <label for="menuSvg" tabindex="-1" class="btn btn-ghost sm:hidden">
+          <svg
+            id="menuSvg"
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h8m-8 6h16"
+            /></svg
+          >
+        </label>
+        <ul
+          tabindex="-1"
+          class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+        >
+          {#each data.navbar as item}
+            <li>
+              <a type="button" href={item.href}>
+                <i class="bi-{item.icon}" />
+                {item.text}
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </div>
+      <a href="/" class="btn btn-primary text-secondary normal-case text-xl">
+        <img src={wolfgang} alt="Logo" width="32" height="32" style="border-radius: 33%;" />
+        Wolfgang
+      </a>
+    </div>
+    <div class="navbar-center hidden sm:flex">
+      {#each data.navbar as item}
+        <a class="btn btn-primary btn-sm text-secondary normal-case content-center" href={item.href}>
+          <i class="bi-{item.icon}" />
+          {item.text}
+        </a>
+      {/each}
+    </div>
+    <div class="navbar-end">
+      <a href="https://ko-fi.com/X8X3QCC8X" target="_blank" class="btn btn-sm normal-case btn-primary text-secondary">Support this site</a>
+    </div>
+  </div>
 
-<footer class="mt-auto">
-    <a href='https://ko-fi.com/X8X3QCC8X' target='_blank'>
-        <img style='height:50px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=3' alt='Buy Me a Coffee at ko-fi.com' />
-    </a>
-    <p>
-      built by henrique | <a href="/contact">contact</a>
-    </p>    
-</footer>
+  <div>
+    <slot />
+  </div>
+
+  <footer class="footer footer-center p-4 mt-auto text-base-content">
+    <aside>
+      <a href="https://ko-fi.com/X8X3QCC8X" target="_blank">
+        <img
+          style="height:45px;"
+          src="https://storage.ko-fi.com/cdn/kofi2.png?v=3"
+          alt="Buy Me a Coffee at ko-fi.com"
+        />
+      </a>
+      <p>
+        built by henrique | <a href="/contact">contact</a>
+      </p>
+    </aside>
+  </footer>
+</div>

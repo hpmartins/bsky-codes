@@ -7,20 +7,18 @@
   const displayName = profile.displayName ?? profile.handle ?? '';
 </script>
 
-<div class="text-left align-items-start" style="display: flex; align-items: center;">
-  <div style="width: 44px;">
-    {#if profile.avatar}
-      <img alt={''} src={profile.avatar} width="32px" height="32px" style="border-radius: 20%;" />
+<div class="flex items-center space-x-3">
+  <div class="avatar">
+    <div class="mask mask-squircle w-9 h-9">
+      {#if profile.avatar}
+      <img alt={''} src={profile.avatar} />
     {:else}
-      <i class="bi bi-person-square" style="font-size: 2rem" />
+      <i class="bi bi-person" style="font-size: 2rem"></i>
     {/if}
-  </div>
-  <div style="line-height: 1.1; word-wrap: break-word;">
-    <div style="font-size: 0.85rem">
-      {displayName}
     </div>
-    <a href="https://bsky.app/profile/{did}" style="font-size: 0.70rem">
-      @{handle}
-    </a>
+  </div>
+  <div>
+    <div class="font-bold">{displayName}</div>
+    <a href="https://bsky.app/profile/{did}" class="text-sm opacity-50">@{handle}</a>
   </div>
 </div>

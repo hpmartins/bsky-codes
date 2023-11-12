@@ -22,6 +22,7 @@ export type InteractionsDataType = {
     date?: { type: string; start?: Dayjs; end?: Dayjs };
     sent?: InteractionsType[];
     rcvd?: InteractionsType[];
+    both?: InteractionsType[];
 }
 
 export type CirclesOptionsType = {
