@@ -287,7 +287,7 @@
                 </div>
                 <div>
                   <label class="flex items-center space-x-2">
-                    <input class="checkbox checkbox-sm" type="checkbox" bind:checked={cOptions.add_date} />
+                    <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.add_border} />
                     <p>Border color:</p>
                   </label>
                   <input type="color" style="width:100%;" bind:value={cOptions.border_color} />
