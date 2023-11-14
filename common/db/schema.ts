@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 // Profiles
 export interface IProfile {
@@ -310,8 +310,15 @@ export interface ITopPosters {
     reposts: number;
   }[]
 }
+export interface IDataHistogram {
+  _id: string;
+  table: {
+    _id: Date;
+    posts: number;
+  }
+}
 
-export const DerivedData = model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
+export const DerivedData = mongoose.model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
 export const TopBlocked = DerivedData.discriminator<ITopBlocked>('TopBlocked', new Schema({
   table: [{
     _id: { type: 'String', ref: 'Profile' },
@@ -328,6 +335,13 @@ export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', n
     reposts: Number,
   }]
 }));
+export const DataHistogram = DerivedData.discriminator<IDataHistogram>('DataHistogram', new Schema ({
+  _id: String,
+  table: [{
+    _id: Date,
+    posts: Number,
+  }]
+}))
 
 // Wolfgang licks
 interface IWolfgangLick {
@@ -351,20 +365,20 @@ const wolfgangLickSchema = new Schema<IWolfgangLick>({
 }, { timestamps: true })
 
 // Models
-export const Profile = model<IProfile>('Profile', profileSchema);
-export const Follow = model<IFollow>('Follow', followSchema);
-export const Post = model<IPost>('Post', postSchema);
-export const Like = model<ILike>('Like', likeSchema);
-export const Repost = model<IRepost>('Repost', repostSchema);
-export const Block = model<IBlock>('Block', blockSchema);
-export const FeedGen = model<IFeedGen>('FeedGen', feedGenSchema);
-export const List = model<IList>('List', listSchema);
+export const Profile = mongoose.model<IProfile>('Profile', profileSchema);
+export const Follow = mongoose.model<IFollow>('Follow', followSchema);
+export const Post = mongoose.model<IPost>('Post', postSchema);
+export const Like = mongoose.model<ILike>('Like', likeSchema);
+export const Repost = mongoose.model<IRepost>('Repost', repostSchema);
+export const Block = mongoose.model<IBlock>('Block', blockSchema);
+export const FeedGen = mongoose.model<IFeedGen>('FeedGen', feedGenSchema);
+export const List = mongoose.model<IList>('List', listSchema);
 
-export const Interaction = model<IInteraction>('Interaction', interactionSchema);
+export const Interaction = mongoose.model<IInteraction>('Interaction', interactionSchema);
 
-export const SubState = model<ISubState>('SubState', subStateSchema);
+export const SubState = mongoose.model<ISubState>('SubState', subStateSchema);
 
-export const SyncState = model<ISyncState>('SyncState', syncStateSchema);
-export const SyncProfile = model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);
+export const SyncState = mongoose.model<ISyncState>('SyncState', syncStateSchema);
+export const SyncProfile = mongoose.model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);
 
-export const WolfgangLick = model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');
+export const WolfgangLick = mongoose.model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');
