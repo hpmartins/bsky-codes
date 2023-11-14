@@ -137,7 +137,7 @@
   }
 
   async function searchActors(q: string): Promise<{ [key: string]: string }[]> {
-    return fetch(`https://api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${q}`).then((res) =>
+    return fetch('https://api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=' + encodeURIComponent(q)).then((res) =>
       res
         .json()
         .then((data) =>
@@ -169,6 +169,7 @@
           searchFunction={searchActors}
           delay="200"
           localFiltering={false}
+          cleanUserText={false}
           labelFieldName="handle"
           valueFieldName="value"
           bind:value={autocompleteObject}
