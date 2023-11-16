@@ -3,6 +3,14 @@
   "compilerOptions": {
     "baseUrl": ".",
     "composite": true,
+    "paths": {
+			"@common": [
+				"../common"
+			],
+			"@common/*": [
+				"../common/*"
+			],
+    }
   },
   "include": ["./**/*.ts"],
   "references": [
