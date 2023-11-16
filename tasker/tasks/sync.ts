@@ -20,7 +20,7 @@ export async function syncBlockRecords(ctx: AppContext, repo: string) {
   } catch (e) {
   }
 
-  await ctx.cache.set(repo, repo, { EX: 1*WEEK });
+  await ctx.cache.set(repo, repo, { EX: 4*WEEK });
 }
 
 async function getAllBlockRecords(ctx: AppContext, did: string) {
