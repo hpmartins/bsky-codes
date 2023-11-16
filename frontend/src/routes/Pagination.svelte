@@ -1,6 +1,6 @@
-<script>
-  export let rows;
-  export let perPage;
+<script lang="ts">
+  export let rows: [];
+  export let perPage: number;
   export let trimmedRows;
 
   $: totalRows = rows.length;
