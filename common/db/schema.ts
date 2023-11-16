@@ -353,7 +353,7 @@ export const TopPostersByLang = DerivedData.discriminator<ITopPostersByLang>('To
 }));
 
 // Data histogram
-interface IDataHistogram {
+export interface IDataHistogram {
   _id: Date;
   profiles: number;
   blocks: number;

@@ -44,10 +44,10 @@
   "type": "module",
   "dependencies": {
     "cal-heatmap": "^4.2.3",
-    "chart.js": "^4.4.0",
     "dayjs": "^1.11.10",
     "mongoose": "^7.6.3",
-    "svelte-canvas": "^1.0.2"
+    "svelte-canvas": "^1.0.2",
+    "svelte-plotly.js": "^0.3.2"
   },
   "description": "Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).",
   "main": "server.js",
