@@ -8,9 +8,10 @@
   let context: CanvasRenderingContext2D | null;
   let circlesImage: HTMLImageElement;
 
-  export let profile: ProfileType;
-  export let data: InteractionsDataType;
-  export let options: CirclesOptionsType;
+  // These are the inputs for this page
+  export let profile: ProfileType; // user profile (handle, displayName, avatar)
+  export let data: InteractionsDataType; // data.sent, data.rcvd, data.both (interactions)
+  export let options: CirclesOptionsType; // all options
 
   function hex_is_light(color: string) {
     const hex = color.replace('#', '');
@@ -22,12 +23,15 @@
   }
   const toRad = (x: number) => x * (Math.PI / 180);
 
+  // this runs every time the Circles component is remounted,
+  // which happens every time any of the inputs change
   onMount(() => {
     context = canvas.getContext('2d');
 
     if (!context) return;
     if (!data || !options) return;
 
+    // decides which interactions to use based on the options
     let interactionsList: InteractionsType[] | undefined;
     if (options.include_sent && options.include_rcvd) {
       interactionsList = data.both;
@@ -37,24 +41,32 @@
       interactionsList = data.rcvd;
     }
 
+    // no image if no data
     if (!interactionsList || interactionsList.length === 0) return;
 
+    // filter bots
     if (options.remove_bots) {
       interactionsList = interactionsList.filter((x) => !DO_NOT_INCLUDE_THESE.includes(x._id));
     }
 
+    // - radial distances for each number of orbits
+    // - i chose this manually
     const distances: { [key: number]: number[] } = {
       1: [0, 210, 0, 0],
       2: [0, 160, 250, 0],
       3: [0, 120, 196, 260],
     };
 
+    // radiuses for every orbit for each number of orbits
     const radiuses: { [key: number]: number[] } = {
       1: [125, 55, 0, 0],
       2: [95, 42, 32, 0],
       3: [75, 32, 28, 22],
     };
 
+    // - main input for the image generation later
+    // - each block is an orbit, 0-th orbit is the
+    //   main profile image
     let config = [
       { distance: 0, count: 1, radius: radiuses[options.orbits][0], users: [profile] },
       {
@@ -88,6 +100,7 @@
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'medium';
 
+    // date on top left corner
     if (options.add_date) {
       const type = data?.date?.type ?? '';
       let textFull = '';
@@ -113,6 +126,7 @@
       context.fillText(textFull, 12, 30);
     }
 
+    // site watermark on top right corner
     if (options.add_watermark) {
       context.font = '20px Arial';
       context.fillStyle = textColor;
@@ -120,6 +134,7 @@
       context.fillText('wolfgang.raios.xyz', 588, 30);
     }
 
+    // add rounded border
     if (options.add_border) {
       context.strokeStyle = options.border_color;
       context.lineWidth = 15;
@@ -130,6 +145,7 @@
 
     const promises = [];
 
+    // this will create the image, load the avatar and return a promise
     const preload = (user: { [key: string]: string }, opt: { [key: string]: number }) =>
       new Promise((resolve, reject) => {
         const img = new Image();
@@ -142,9 +158,12 @@
         img.onload = function () {
           if (!context) return reject;
           context.save();
+          // this draws a circle centered at the image position
           context.beginPath();
           context.arc(opt.centerX, opt.centerY, opt.radius, 0, 2 * Math.PI, false);
+          // then clips whatever is out
           context.clip();
+          // this draws the img at some position with some radius
           context.drawImage(
             img,
             opt.centerX - opt.radius,
@@ -156,6 +175,9 @@
           resolve(img);
         };
         img.onerror = async function () {
+          // if fetching the avatar fails, here we try to update
+          // the profile to fetch a new avatar url. if it also
+          // fails to find one then it uses a placeholder
           const newprofileRes = await fetch('/api/update', {
             method: 'POST',
             body: JSON.stringify({
@@ -173,22 +195,30 @@
         };
       });
 
-    for (const [layerIndex, layer] of config.entries()) {
-      const { count, radius, distance, users } = layer;
+    // now we iterate the orbits to actually build the full image
+    for (const [orbitIndex, orbit] of config.entries()) {
+      const { count, radius, distance, users } = orbit;
 
+      // number of slices in this orbit
       const angleSize = 360 / count;
+      // iterate through all users in this orbit
       for (let i = 0; i < count; i++) {
+        // if list ends here we stop
         if (!users[i]) break;
 
-        const offset = layerIndex * 30;
-        const r = toRad(i * angleSize + offset);
+        // 30 degrees offset for every additional orbit
+        const offset = orbitIndex * 30;
+        // final angle for this user at this orbit
+        const t = toRad(i * angleSize + offset);
 
+        // push a new image loading thingy into the promises list
+        // with the coordinates and radius for that circle
         promises.push(
           preload(
             { avatar: users[i].avatar, did: users[i].did },
             {
-              centerX: Math.cos(r) * distance + width / 2,
-              centerY: Math.sin(r) * distance + height / 2,
+              centerX: Math.cos(t) * distance + width / 2,
+              centerY: Math.sin(t) * distance + height / 2,
               radius: radius,
             },
           ),
@@ -196,6 +226,11 @@
       }
     }
 
+    // all drawing happens on the <canvas> element
+    // which is hidden. we want the image to be downloadable
+    // and resizable in an <img> element so after all the image
+    // building promises are done the <img> element src is
+    // set to the canvas data
     Promise.allSettled(promises).then(() => {
       circlesImage.src = canvas.toDataURL();
     });
