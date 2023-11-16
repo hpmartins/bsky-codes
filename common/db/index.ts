@@ -8,7 +8,6 @@ const mongoConnection = {
 };
 
 export const connectDb = async (uri?: string) => {
-    console.log(mongoose.connections[0].readyState);
     if (mongoConnection.isConnected) {
         console.log('(mongodb) already connected');
         return;
