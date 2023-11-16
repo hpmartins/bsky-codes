@@ -8,7 +8,7 @@
   import { getDateOfIsoWeek } from '$lib/utils';
   import InteractionsTable from '../InteractionsTable.svelte';
   import type { CirclesOptionsType, InteractionsDataType, InteractionsType } from '$lib/types';
-  import Circles from '../Circles.svelte';
+  import Circles from './Circles.svelte';
   import AutoComplete from 'simple-svelte-autocomplete';
 
   export let data: PageData;

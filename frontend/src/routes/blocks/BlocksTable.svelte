@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { BlockType } from '$lib/types';
-  import Pagination from './Pagination.svelte';
-  import UserRow from './UserRow.svelte';
+  import Pagination from '../Pagination.svelte';
+  import UserRow from '../UserRow.svelte';
 
   export let data: BlockType[] | undefined;
   export let perPage: number = 15;

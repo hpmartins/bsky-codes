@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ActionData, PageData } from './$types';
-  import BlocksTable from '../BlocksTable.svelte';
+  import BlocksTable from './BlocksTable.svelte';
 
   import AutoComplete from 'simple-svelte-autocomplete';
   let autocompleteObject: {
