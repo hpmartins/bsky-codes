@@ -1,5 +1,20 @@
 import dayjs from 'dayjs';
-import { Block, ITopBlocked, ITopPosters, Post, TopBlocked, TopPosters } from '../../common/db';
+import {
+    Block,
+    Follow,
+    ITopBlocked,
+    ITopPosters,
+    Like,
+    Post,
+    Profile,
+    Repost,
+    TopBlocked,
+    TopPosters
+} from '../../common/db';
+
+const log = (text: string) => {
+    console.log(`[${new Date().toLocaleTimeString()}] [tasker] ${text}`);
+};
 
 export const storeTopBlocked = async () => {
     const [query] = await Block.aggregate<ITopBlocked>()
@@ -55,53 +70,237 @@ export const storeTopPosters = async () => {
     await TopPosters.create(query);
 };
 
-export const getFullPostHistogram = async () => {
-    console.log('querying');
-    const query = await Post.aggregate()
-        .match({
-            createdAt: { $gte: dayjs().subtract(2, 'day').toDate() }
+export const storeProfilesHistogram = async (after?: Date) => {
+    log('[histogram] profiles: starting')
+    let query = Profile.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
+        .group({
+            _id: {
+                $dateTrunc: { date: '$createdAt', unit: 'day' }
+            },
+            profiles: { $count: {} }
         })
+        .append({
+            $merge: {
+                into: 'data_histogram',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
+        });
+
+    await query.exec();
+    log('[histogram] profiles: done')
+};
+
+export const storeBlocksHistogram = async (after?: Date) => {
+    log('[histogram] blocks: starting')
+    let query = Block.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
+        .group({
+            _id: {
+                $dateTrunc: { date: '$createdAt', unit: 'day' }
+            },
+            blocks: {
+                $sum: {
+                    $cond: [{ $eq: ['$deleted', false] }, 1, 0]
+                }
+            },
+            blocks_deleted: {
+                $sum: {
+                    $cond: [{ $eq: ['$deleted', true] }, 1, 0]
+                }
+            }
+        })
+        .append({
+            $merge: {
+                into: 'data_histogram',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
+        });
+
+    await query.exec();
+    log('[histogram] blocks: done')
+};
+
+export const storeFollowsHistogram = async (after?: Date) => {
+    log('[histogram] follows: starting')
+    let query = Follow.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
+        .group({
+            _id: {
+                $dateTrunc: { date: '$createdAt', unit: 'day' }
+            },
+            follows: { $count: {} }
+        })
+        .append({
+            $merge: {
+                into: 'data_histogram',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
+        });
+
+    await query.exec();
+    log('[histogram] follows: done')
+};
+
+export const storeLikesHistogram = async (after?: Date) => {
+    log('[histogram] likes: starting')
+    let query = Like.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
+        .group({
+            _id: {
+                $dateTrunc: { date: '$createdAt', unit: 'day' }
+            },
+            likes: { $count: {} }
+        })
+        .append({
+            $merge: {
+                into: 'data_histogram',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
+        });
+
+    await query.exec();
+    log('[histogram] likes: done')
+};
+
+export const storeRepostsHistogram = async (after?: Date) => {
+    log('[histogram] reposts: starting')
+    let query = Repost.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
+        .group({
+            _id: {
+                $dateTrunc: { date: '$createdAt', unit: 'day' }
+            },
+            reposts: { $count: {} }
+        })
+        .append({
+            $merge: {
+                into: 'data_histogram',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
+        });
+
+    await query.exec();
+    log('[histogram] reposts: done')
+};
+
+export const storePostsHistogram = async (after?: Date) => {
+    log('[histogram] posts: starting')
+    let query = Post.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
         .addFields({
-            altTextLength: {
-                // change so posts with no image have null length
-                // change to array of lengths to check for real alt ratio
-                $strLenCP: {
-                    $cond: [
-                        { $or: [{ $eq: ['$altText', null] }, { $eq: ['$altText', 0] }] },
-                        '',
-                        {
-                            $reduce: {
-                                input: '$altText',
-                                initialValue: '',
-                                in: {
-                                    $cond: {
-                                        if: { $eq: [{ $indexOfArray: ['$altText', '$$this'] }, 0] },
-                                        then: { $concat: ['$$value', '$$this'] },
-                                        else: { $concat: ['$$value', '_', '$$this'] }
+            imagesWithAltText: {
+                $cond: [
+                    { $eq: ['$altText', null] },
+                    null,
+                    {
+                        $cond: [
+                            { $eq: [{ $size: '$altText' }, 0] },
+                            [],
+                            {
+                                $sum: {
+                                    $reduce: {
+                                        input: '$altText',
+                                        initialValue: [],
+                                        in: {
+                                            $concatArrays: [
+                                                '$$value',
+                                                [{ $cond: [{ $gt: [{ $strLenCP: '$$this' }, 0] }, 1, 0] }]
+                                            ]
+                                        }
                                     }
                                 }
                             }
-                        }
-                    ]
-                }
+                        ]
+                    }
+                ]
             }
         })
         .group({
             _id: {
                 $dateTrunc: { date: '$createdAt', unit: 'day' }
             },
-            posts: { $count: {} },
+            posts: {
+                $sum: {
+                    $cond: [{ $eq: ['$deleted', false] }, 1, 0]
+                }
+            },
+            posts_deleted: {
+                $sum: {
+                    $cond: [{ $eq: ['$deleted', true] }, 1, 0]
+                }
+            },
             characters: { $sum: '$textLength' },
-            altNone: {
-                $sum: {
-                    $cond: [{ $eq: ['$altTextLength', 0] }, 1, 0]
-                }
+            images: {
+                $sum: '$hasImages'
             },
-            altSome: {
+            imagesWithAltText: {
                 $sum: {
-                  $cond: [{ $gt: ['$altTextLength', 0] }, 1, 0]
+                    $cond: [{ $ne: ['$imagesWithAltText', null] }, '$imagesWithAltText', 0]
                 }
-            },
+            }
+        })
+        .append({
+            $merge: {
+                into: 'data_histogram',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
         });
-    console.log(query);
+
+    await query.exec();
+    log('[histogram] posts: done')
 };

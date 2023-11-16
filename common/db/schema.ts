@@ -310,12 +310,17 @@ export interface ITopPosters {
     reposts: number;
   }[]
 }
-export interface IDataHistogram {
-  _id: string;
+export interface ITopPostersByLang {
+  _id: Date;
+  lang: string;
   table: {
-    _id: Date;
-    posts: number;
-  }
+    _id: string;
+    count: number;
+    characters: number;
+    likes: number;
+    replies: number;
+    reposts: number;
+  }[]
 }
 
 export const DerivedData = mongoose.model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
@@ -335,13 +340,49 @@ export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', n
     reposts: Number,
   }]
 }));
-export const DataHistogram = DerivedData.discriminator<IDataHistogram>('DataHistogram', new Schema ({
-  _id: String,
+export const TopPostersByLang = DerivedData.discriminator<ITopPostersByLang>('TopPostersByLang', new Schema ({
+  lang: String,
   table: [{
-    _id: Date,
-    posts: Number,
+    _id: { type: 'String', ref: 'Profile' },
+    count: Number,
+    characters: Number,
+    likes: Number,
+    replies: Number,
+    reposts: Number,
   }]
-}))
+}));
+
+// Data histogram
+interface IDataHistogram {
+  _id: Date;
+  profiles: number;
+  blocks: number;
+  blocks_deleted: number;
+  follows: number;
+  likes: number;
+  reposts: number;
+  posts: number;
+  posts_deleted: number;
+  characters: number;
+  images: number;
+  imagesWithAltText: number;
+}
+const dataHistogramSchema = new Schema ({
+  _id: Date,
+  profiles: Number,
+  blocks: Number,
+  blocks_deleted: Number,
+  follows: Number,
+  likes: Number,
+  reposts: Number,
+  posts: Number,
+  posts_deleted: Number,
+  characters: Number,
+  images: Number,
+  imagesWithAltText: Number,
+}, { collection: 'data_histogram' })
+export const DataHistogram = mongoose.model<IDataHistogram>('DataHistogram', dataHistogramSchema);
+
 
 // Wolfgang licks
 interface IWolfgangLick {
