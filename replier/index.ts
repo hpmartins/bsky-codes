@@ -3,9 +3,10 @@ import 'dotenv/config';
 import { Manager } from 'socket.io-client';
 import { IPost, connectDb } from '../common/db';
 import { FirehoseData } from '../common/types';
-import { maybeInt, maybeStr } from '../common';
-import { BskyAgent } from '@atproto/api';
+import { getCreationTimestamp, maybeInt, maybeStr } from '../common';
+import { BskyAgent, RichText } from '@atproto/api';
 import redis, { createClient } from 'redis';
+import dayjs from 'dayjs';
 
 type AppConfig = {
     bskyDid: string;
@@ -21,15 +22,60 @@ export type AppContext = {
     log: (text: string) => void;
 };
 
-async function processInteractionThread(ctx: AppContext, post: IPost) {}
+async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
+    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+
+    const ts_data = await getCreationTimestamp(repo);
+    if (!ts_data) return;
+    
+    const { handle, indexedAt } = ts_data;
+
+    let date: string;
+    let text: string;
+    if (locale.startsWith('pt')) {
+        date = dayjs(indexedAt).format('DD/MM/YYYY [às] HH:mm:ss')
+        text = `🐈‍⬛ @${handle}, sua conta foi criada em ${date}`
+    } else {
+        date = dayjs(indexedAt).format('YYYY-MM-DD [at] h:mm:ss A')
+        text = `🐈‍⬛ @${handle}, your account was created on ${date}`
+    }
+    const postText = new RichText({
+        text: text
+    })
+    await postText.detectFacets(ctx.api)
+    const postRecord = {
+        $type: 'app.bsky.feed.post',
+        text: postText.text,
+        reply: {
+            parent: {
+                uri: post._id,
+                cid: post.cid,
+            },
+            root: {
+                uri: post._id,
+                cid: post.cid,
+            },
+        },
+        facets: postText.facets,
+        createdAt: new Date().toISOString(),
+    }
+    await ctx.api.post(postRecord)
+}
 
 export async function processFirehoseStream(ctx: AppContext, data: FirehoseData) {
-    const { repo, posts, likes } = data;
+    const { repo, posts } = data;
 
     if (posts.create.length > 0) {
         for (const post of posts.create) {
-            if (post.text.toLowerCase().includes('!test123')) {
-                console.log(post);
+            const text = post.text.toLowerCase();
+            if (text.includes('!luna')) {
+                const match = text.match(/!luna\s+(\w+)/i)
+                const key = match ? match[1].toLowerCase() : undefined
+                if (!key) return;
+
+                if (key === 'birthday') {
+                    await processBirthday(ctx, repo, post)
+                }
             }
         }
     }
@@ -60,7 +106,7 @@ const run = async () => {
     };
 
     const log = (text: string) => {
-        console.log(`[${new Date().toLocaleTimeString()}] [tasker] ${text}`);
+        console.log(`[${new Date().toLocaleTimeString()}] [replier] ${text}`);
     };
 
     const api = new BskyAgent({ service: 'https://bsky.social/' });

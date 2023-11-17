@@ -13,6 +13,9 @@ import { AtprotoData } from '@atproto/identity';
 import { ProfileViewDetailed } from "./lexicon/types/app/bsky/actor/defs";
 import { OutputSchema as ListReposSchema } from "./lexicon/types/com/atproto/sync/listRepos";
 import { OutputSchema as ListRecordsSchema } from "./lexicon/types/com/atproto/repo/listRecords";
+import dayjs from 'dayjs';
+import minMax from 'dayjs/plugin/minMax';
+dayjs.extend(minMax);
 
 export const getDateTime = (date?: number | Date) => {
   if (!date) return new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -233,6 +236,38 @@ export async function listRepos(params: {
     }
     return res.json() as Promise<ListReposSchema>;
   });
+}
+
+type ExportedOp = {
+    did: string;
+    operation: {
+        alsoKnownAs: string[];
+    };
+    cid: string;
+    nullified: boolean;
+    createdAt: string;
+};
+
+export async function getCreationTimestamp(did: string) {
+  try {
+    return fetch(`https://plc.directory/${did}/log/audit`)
+        .then((r) => r.json())
+        .then((r: ExportedOp[]) => {
+            const dates = r.map((x) => dayjs(x.createdAt));
+            const createdAt = dayjs.min(dates);
+            const lastAt = dayjs.max(dates);
+            const handle = r
+                .filter((x) => x.createdAt === lastAt?.toISOString())
+                .map((x) => x.operation.alsoKnownAs[0])[0]
+                .replace('at://', '');
+
+            return {
+                handle: handle,
+                indexedAt: createdAt?.toDate()
+            };
+        });
+  } catch (e) {
+  }
 }
 
 export async function listRecords(
