@@ -42,6 +42,7 @@
           searchFunction={searchActors}
           delay="200"
           localFiltering={false}
+          cleanUserText={false}
           labelFieldName="handle"
           valueFieldName="value"
           bind:value={autocompleteObject}
@@ -50,17 +51,20 @@
           placeholder="bluesky handle"
         >
           <div slot="item" let:item let:label>
-            <div class="text-left align-items-start" style="display: flex; align-items: center;">
-              <div style="width: 44px;">
-                {#if item.avatar}
-                  <img src={item.avatar} alt="" width="32px" height="32px" style="border-radius: 20%;" />
+            {@const displayName = item.displayName ?? item.handle ?? ''}
+            <div class="flex items-center space-x-2 text-xs">
+              <div class="avatar">
+                <div class="mask mask-squircle w-7 h-7">
+                  {#if item.avatar}
+                  <img alt={''} src={item.avatar} />
                 {:else}
-                  <i class="bi bi-person-square" style="font-size: 2rem" />
+                  <i class="bi bi-person" style="font-size: 1.5rem"></i>
                 {/if}
+                </div>
               </div>
-              <div style="line-height: 1.1; word-wrap: break-word;">
-                <div style="font-size: 0.85rem">{item.displayName ?? item.handle}</div>
-                <div style="font-size: 0.70rem">@{@html label}</div>
+              <div>
+                <div class="font-bold">{displayName}</div>
+                <div class="opacity-50">@{@html label}</div>
               </div>
             </div>
           </div>

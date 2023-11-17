@@ -178,19 +178,20 @@
           placeholder="@ bluesky handle"
         >
           <div slot="item" let:item let:label>
-            <div class="flex items-center">
-              <div class="avatar mr-2">
-                <div class="mask mask-squircle w-9 h-9">
+            {@const displayName = item.displayName ?? item.handle ?? ''}
+            <div class="flex items-center space-x-2 text-xs">
+              <div class="avatar">
+                <div class="mask mask-squircle w-7 h-7">
                   {#if item.avatar}
                   <img alt={''} src={item.avatar} />
                 {:else}
-                  <i class="bi bi-person" style="font-size: 2rem"></i>
+                  <i class="bi bi-person" style="font-size: 1.5rem"></i>
                 {/if}
                 </div>
               </div>
-              <div class="truncate ...">
-                <div class="text-sm break-all">{item.displayName ?? item.handle}</div>
-                <div class="text-xs opacity-50">@{@html label}</div>
+              <div>
+                <div class="font-bold">{displayName}</div>
+                <div class="opacity-50">@{@html label}</div>
               </div>
             </div>
           </div>
