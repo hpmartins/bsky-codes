@@ -115,6 +115,7 @@
       method: 'POST',
       body: JSON.stringify({
         did: form?.did,
+        handle: form?.handle,
         range: type,
       }),
       headers: { 'Content-type': 'application/json' },
