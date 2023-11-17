@@ -26,7 +26,7 @@
             class="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
-            stroke="currentColor"
+            stroke="#FFC72C"
             ><path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -81,7 +81,7 @@
         />
       </a>
       <p>
-        built by henrique | <a href="/contact">contact</a>
+        built by henrique | <a type="link" href="/contact">contact</a>
       </p>
     </aside>
   </footer>

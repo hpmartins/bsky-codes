@@ -223,17 +223,17 @@
       </div>
       <b>... or a specific date period:</b>
       <div>
-        <a class="anchor" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}> all time </a>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}> all time </a>
         |
-        <a class="anchor" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
           last month
         </a>
         |
-        <a class="anchor" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
           last 7 days
         </a>
         |
-        <a class="anchor" href={'#'} on:click|preventDefault={() => handleDatePeriod('day')}>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('day')}>
           last 24 hours
         </a>
       </div>
