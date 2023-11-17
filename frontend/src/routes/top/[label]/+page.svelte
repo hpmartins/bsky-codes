@@ -8,8 +8,8 @@
 
 <div class="col-sm-12 col-md-6 my-3">
   {#if data.type === 'blocked'}
-    <TopBlockedTable {data} perPage={10} />
+    <TopBlockedTable {data} perPage={25} />
   {:else if data.type === 'posters'}
-    <TopPostersTable {data} perPage={10} />
+    <TopPostersTable {data} perPage={25} />
   {/if}
 </div>

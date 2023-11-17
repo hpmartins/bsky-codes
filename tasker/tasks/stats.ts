@@ -21,7 +21,7 @@ const log = (text: string) => {
 export const storeTopBlocked = async () => {
     const [query] = await Block.aggregate<ITopBlocked>()
         .match({
-            createdAt: { $gt: dayjs().subtract(6, 'hour').toDate() },
+            createdAt: { $gt: dayjs().subtract(3, 'day').toDate() },
             deleted: false
         })
         .project({ subject: '$subject' })
@@ -36,7 +36,7 @@ export const storeTopBlocked = async () => {
 export const storeTopPosters = async () => {
     const [query] = await Post.aggregate<ITopPosters>()
         .match({
-            createdAt: { $gt: dayjs().subtract(24, 'hour').toDate() },
+            createdAt: { $gt: dayjs().subtract(3, 'day').toDate() },
             deleted: false
         })
         .group({

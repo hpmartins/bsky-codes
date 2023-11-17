@@ -14,7 +14,7 @@
 
 <div class="flex flex-col items-center gap-4">
   <div class="text-center">
-    <div class="text-2xl">Top blocked accounts in the last 6 hours</div>
+    <div class="text-2xl">Top blocked accounts in the last 72 hours</div>
     <div class="text-md">Last updated at {dayjs(data?.date).format('L LT')}</div>
   </div>
   <Pagination rows={data?.list ?? []} {perPage} bind:trimmedRows={paginatedData} />
