@@ -4,12 +4,14 @@ import {
     Follow,
     ITopBlocked,
     ITopPosters,
+    ITopPostersByLang,
     Like,
     Post,
     Profile,
     Repost,
     TopBlocked,
-    TopPosters
+    TopPosters,
+    TopPostersByLang
 } from '../../common/db';
 
 const log = (text: string) => {
@@ -304,3 +306,88 @@ export const storePostsHistogram = async (after?: Date) => {
     await query.exec();
     log('[histogram] posts: done')
 };
+
+export const storePostsByLang = async (after?: Date) => {
+    log('[histogram] posts by lang: starting')
+    let query = Post.aggregate();
+
+    if (after !== undefined) {
+        query = query.match({
+            createdAt: { $gte: after }
+        });
+    }
+
+    query = query
+        .project({
+            _id: 0,
+            author: 1,
+            langs: 1,
+            textLength: 1,
+            likes: 1,
+            comments: 1,
+            reposts: 1,
+            createdAt: 1,
+        })
+        .unwind('$langs')
+        .group({
+            _id: {
+                date: {$dateTrunc: { date: '$createdAt', unit: 'day' }},
+                author: '$author',
+                lang: '$langs',
+            },
+            author: { $first: "$author" },
+            count: {
+                $count: {}
+            },
+            characters: {
+                $sum: '$textLength'
+            },
+            likes: {
+                $sum: '$likes'
+            },
+            replies: {
+                $sum: '$comments'
+            },
+            reposts: {
+                $sum: '$reposts'
+            }
+        })
+        .match({ count: { $gt: 50 }})
+        .group({
+            _id: {
+                date: '$_id.date',
+                lang: '$_id.lang',
+            },
+            table: {
+                $push: {
+                    _id: '$author',
+                    count: '$count',
+                    characters: '$characters',
+                    likes: '$likes',
+                    replies: '$replies',
+                    reposts: '$reposts',
+                },
+            }
+        })
+        .group({
+            _id: '$_id.date',
+            items: {
+                $push: {
+                    _id: "$_id.lang",
+                    table: "$table"
+                }
+            }
+        })
+
+    const result: ITopPostersByLang[] = await query.exec();
+
+    for (const data of result) {
+        await TopPostersByLang.findByIdAndUpdate(data._id, {
+            items: data.items.map(x => ({
+                _id: x._id,
+                table: x.table,
+            }))
+        }, { upsert: true })
+        console.log(data._id)
+    }
+}

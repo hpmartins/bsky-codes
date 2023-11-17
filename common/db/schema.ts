@@ -312,14 +312,16 @@ export interface ITopPosters {
 }
 export interface ITopPostersByLang {
   _id: Date;
-  lang: string;
-  table: {
+  items: {
     _id: string;
-    count: number;
-    characters: number;
-    likes: number;
-    replies: number;
-    reposts: number;
+    table: {
+      _id: string;
+      count: number;
+      characters: number;
+      likes: number;
+      replies: number;
+      reposts: number;
+    }[]
   }[]
 }
 
@@ -341,15 +343,19 @@ export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', n
   }]
 }));
 export const TopPostersByLang = DerivedData.discriminator<ITopPostersByLang>('TopPostersByLang', new Schema ({
-  lang: String,
-  table: [{
-    _id: { type: 'String', ref: 'Profile' },
-    count: Number,
-    characters: Number,
-    likes: Number,
-    replies: Number,
-    reposts: Number,
-  }]
+  items: [
+    {
+      _id: String,
+      table: [{
+        _id: { type: 'String', ref: 'Profile' },
+        count: Number,
+        characters: Number,
+        likes: Number,
+        replies: Number,
+        reposts: Number,
+      }]
+    }
+  ]
 }));
 
 // Data histogram

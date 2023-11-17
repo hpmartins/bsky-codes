@@ -7,7 +7,7 @@ import { BskyAgent } from '@atproto/api';
 import { DidResolver } from '@atproto/identity';
 import { maybeBoolean, maybeInt, maybeStr } from '../common';
 import { syncBlockRecords, syncOneProfile, syncWaitingProfiles } from './tasks/sync';
-import { storeBlocksHistogram, storeFollowsHistogram, storeLikesHistogram, storePostsHistogram, storeProfilesHistogram, storeRepostsHistogram, storeTopBlocked, storeTopPosters } from './tasks/stats';
+import { storeBlocksHistogram, storeFollowsHistogram, storeLikesHistogram, storePostsByLang, storePostsHistogram, storeProfilesHistogram, storeRepostsHistogram, storeTopBlocked, storeTopPosters } from './tasks/stats';
 import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
 import { Manager } from "socket.io-client";
 import redis, { createClient } from 'redis';
@@ -61,6 +61,11 @@ function scheduleTasks(ctx: AppContext) {
     await storeProfilesHistogram(after);
     await storeRepostsHistogram(after);
     await storePostsHistogram(after);
+  })
+
+  cron.schedule('10 */6 * * *', async () => {
+    const after = dayjs().subtract(2, 'day').startOf('day').toDate();
+    await storePostsByLang(after);
   })
 }
 
