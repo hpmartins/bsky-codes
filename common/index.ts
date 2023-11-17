@@ -248,11 +248,12 @@ type ExportedOp = {
     createdAt: string;
 };
 
-export async function getCreationTimestamp(did: string) {
+export async function getCreationTimestamp(did: string): Promise<{handle: string, indexedAt: Date | undefined} | undefined> {
   try {
     return fetch(`https://plc.directory/${did}/log/audit`)
         .then((r) => r.json())
-        .then((r: ExportedOp[]) => {
+        .then((t) => {
+            const r = t as unknown as ExportedOp[]
             const dates = r.map((x) => dayjs(x.createdAt));
             const createdAt = dayjs.min(dates);
             const lastAt = dayjs.max(dates);
