@@ -81,7 +81,7 @@
         />
       </a>
       <p>
-        built by henrique | <a type="link" href="/contact">contact</a>
+        built by henrique | <a class="link" href="/contact">contact</a>
       </p>
     </aside>
   </footer>
