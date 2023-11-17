@@ -53,7 +53,7 @@
     // - i chose this manually
     const distances: { [key: number]: number[] } = {
       1: [0, 210, 0, 0],
-      2: [0, 160, 250, 0],
+      2: [0, 158, 246, 0],
       3: [0, 120, 196, 260],
     };
 
@@ -123,7 +123,7 @@
       }
       context.font = '20px Arial';
       context.fillStyle = textColor;
-      context.fillText(textFull, 12, 30);
+      context.fillText(textFull, 12, 28);
     }
 
     // site watermark on top right corner
@@ -131,7 +131,7 @@
       context.font = '20px Arial';
       context.fillStyle = textColor;
       context.textAlign = 'right';
-      context.fillText('wolfgang.raios.xyz', 588, 30);
+      context.fillText('wolfgang.raios.xyz', 588, 28);
     }
 
     // add rounded border
