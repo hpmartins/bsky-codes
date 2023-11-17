@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { Interaction, SyncProfile } from '../../../../common/db';
 import { getallDates } from '../../../../common/queries';
-import { getProfile, resolveHandle } from '$lib/utils';
+import { getProfile, resolveHandle, flog } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
   const agg = await Interaction.aggregate( [ { $collStats: { count: {} } } ] )
@@ -34,6 +34,8 @@ export const actions = {
 
     const profile = await getProfile(did);
     const dates = await getallDates(did);
+
+    flog(`searched dates @${handle} [${did}]`)
 
     return {
       success: true,

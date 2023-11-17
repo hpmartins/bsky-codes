@@ -2,7 +2,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { Block, SyncProfile } from '../../../../common/db';
 import { getAllBlocks } from '../../../../common/queries'
 import type { BlockType } from '$lib/types';
-import { getProfile, resolveHandle } from '$lib/utils';
+import { flog, getProfile, resolveHandle } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
   const agg = await Block.aggregate( [ { $collStats: { count: {} } } ] )
@@ -36,6 +36,8 @@ export const actions = {
     const profile = await getProfile(did)
     const blocksSent = await getAllBlocks(did, 'author');
     const blocksRcvd = await getAllBlocks(did, 'subject');
+
+    flog(`searched blocks @${handle} [${did}]`)
 
     return {
       did: did,

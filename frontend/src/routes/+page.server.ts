@@ -1,7 +1,5 @@
 import { Block, Interaction, Post, Profile } from '@common/db';
 import type { PageServerLoad } from './$types';
-import dayjs from 'dayjs';
-
 
 const formatNumber = (s: string) => s.replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
 

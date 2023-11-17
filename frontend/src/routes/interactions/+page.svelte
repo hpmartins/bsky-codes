@@ -14,7 +14,6 @@
   export let data: PageData;
   export let form: ActionData;
 
-
   let autocompleteObject: {
         [key: string]: string;
   } | undefined;
@@ -48,6 +47,7 @@
         method: 'POST',
         body: JSON.stringify({
           did: form?.did,
+          handle: form?.handle,
           weekly: {
             week: date.isoWeek(),
             year: date.isoWeekYear(),

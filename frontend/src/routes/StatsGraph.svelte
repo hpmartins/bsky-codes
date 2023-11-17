@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { IDataHistogram } from '@common/db';
-    import dayjs from 'dayjs';
+  import dayjs from 'dayjs';
   import { onMount } from 'svelte';
   import Plot from 'svelte-plotly.js';
 

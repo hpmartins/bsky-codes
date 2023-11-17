@@ -1,17 +1,21 @@
 import type { InteractionsType } from '$lib/types';
+import { flog } from '$lib/utils';
 import { getInteractions, getInteractionsByDateRange } from '../../../../../common/queries';
 import type { RequestHandler } from './$types';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 
 export const POST: RequestHandler = async ({ request }) => {
   const input: {
     did: string;
+    handle: string;
     weekly?: {
       week: string;
       year: string;
     };
     range?: string;
   } = await request.json();
+  
+  flog(`searched interactions @${input.handle} [${input.did}]`)
 
   if (input.weekly) {
     const sent = await getInteractions(input.did, 'author', input.weekly.week, input.weekly.year);

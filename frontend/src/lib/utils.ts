@@ -13,6 +13,10 @@ export async function resolveHandle(handle: string) {
   }
 }
 
+export const flog = (text: string) => {
+  console.log(`[${new Date().toLocaleTimeString()}] [frontend] ${text}`);
+};
+
 export async function getProfile(did: string) {
   const res = await fetch(`https://api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${did}`);
   return await res.json()
