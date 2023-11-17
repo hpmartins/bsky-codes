@@ -67,8 +67,8 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
     if (posts.create.length > 0) {
         for (const post of posts.create) {
-            const text = post.text.toLowerCase();
-            if (text.includes('!luna')) {
+            const text = post.text.toLowerCase().trim();
+            if (text.startsWith('!luna')) {
                 const match = text.match(/!luna\s+(\w+)/i)
                 const key = match ? match[1].toLowerCase() : undefined
                 if (!key) return;
