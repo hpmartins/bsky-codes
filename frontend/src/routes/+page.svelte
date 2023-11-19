@@ -11,25 +11,25 @@
   </p>
 
   <div class="flex justify-center">
-  <div class="stats stats-vertical md:stats-horizontal shadow">
-    <div class="stat">
-      <div class="stat-title">Profiles</div>
-      <div class="stat-value">{data.count.profiles}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Posts</div>
-      <div class="stat-value">{data.count.posts}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Blocks</div>
-      <div class="stat-value">{data.count.blocks}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Interactions</div>
-      <div class="stat-value">{data.count.interactions}</div>
+    <div class="stats stats-vertical md:stats-horizontal shadow">
+      <div class="stat">
+        <div class="stat-title">Profiles</div>
+        <div class="stat-value">{data.count.profiles}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Posts</div>
+        <div class="stat-value">{data.count.posts}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Blocks</div>
+        <div class="stat-value">{data.count.blocks}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Interactions</div>
+        <div class="stat-value">{data.count.interactions}</div>
+      </div>
     </div>
   </div>
-</div>
 
   <div class="flex flex-row flex-grow flex-wrap justify-center gap-4">
     <div class="card w-full md:w-80 bg-primary text-secondary">

@@ -63,7 +63,11 @@
       {/each}
     </div>
     <div class="navbar-end">
-      <a href="https://ko-fi.com/X8X3QCC8X" target="_blank" class="btn btn-sm normal-case btn-primary text-secondary">Support this site</a>
+      <a
+        href="https://ko-fi.com/X8X3QCC8X"
+        target="_blank"
+        class="btn btn-sm normal-case btn-primary text-secondary">Support this site</a
+      >
     </div>
   </div>
 

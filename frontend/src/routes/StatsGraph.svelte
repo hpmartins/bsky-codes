@@ -6,29 +6,26 @@
 
   export let histogram: IDataHistogram[];
 
-  const x = histogram.map(x => x._id)
+  const x = histogram.map((x) => x._id);
 
   const feedData = [
     {
-        x: x,
-        y: histogram.map(x => x.posts),
-        name: 'posts',
-        type: 'bar'
+      x: x,
+      y: histogram.map((x) => x.posts),
+      name: 'posts',
+      type: 'bar',
     },
     {
-        x: x,
-        y: histogram.map(x => x.posts_deleted),
-        name: 'deleted posts',
-        type: 'bar'
+      x: x,
+      y: histogram.map((x) => x.posts_deleted),
+      name: 'deleted posts',
+      type: 'bar',
     },
-  ]
-  
+  ];
 
   onMount(() => {
     if (!histogram) return;
   });
-
-
 </script>
 
 <Plot
@@ -37,11 +34,11 @@
     margin: { t: 0 },
     barmode: 'stack',
     xaxis: {
-        type: 'date',
-        side: 'left',
-        autorange: false,
-        range: [dayjs().subtract(1, 'month').toDate(), dayjs().toDate()]
-    }
+      type: 'date',
+      side: 'left',
+      autorange: false,
+      range: [dayjs().subtract(1, 'month').toDate(), dayjs().toDate()],
+    },
   }}
   fillParent="width"
   debounce={250}

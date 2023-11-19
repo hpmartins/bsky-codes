@@ -5,7 +5,7 @@ import { getProfile } from '$lib/utils';
 export const POST: RequestHandler = async ({ request }) => {
   const input = await request.json();
   const profile = await getProfile(input.did);
-  if (!profile) return new Response(undefined)
+  if (!profile) return new Response(undefined);
   const newprofile = await Profile.findOneAndUpdate(
     { _id: profile.did },
     {
@@ -13,9 +13,9 @@ export const POST: RequestHandler = async ({ request }) => {
       displayName: profile.displayName,
       avatar: profile.avatar,
       description: profile.description,
-      lastProfileUpdateAt: new Date()
+      lastProfileUpdateAt: new Date(),
     },
-    { new: true }
+    { new: true },
   );
   return new Response(JSON.stringify(newprofile));
 };

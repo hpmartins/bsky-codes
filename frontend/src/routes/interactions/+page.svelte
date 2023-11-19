@@ -10,14 +10,16 @@
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
   import Circles from './Circles.svelte';
   import AutoComplete from 'simple-svelte-autocomplete';
-    import type { InteractionsType } from '@common/queries';
+  import type { InteractionsType } from '@common/queries';
 
   export let data: PageData;
   export let form: ActionData;
 
-  let autocompleteObject: {
+  let autocompleteObject:
+    | {
         [key: string]: string;
-  } | undefined;
+      }
+    | undefined;
 
   let interactionsData: InteractionsDataType = { found: false };
   let consolidateData = false;
@@ -139,7 +141,9 @@
   }
 
   async function searchActors(q: string): Promise<{ [key: string]: string }[]> {
-    return fetch('https://api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=' + encodeURIComponent(q)).then((res) =>
+    return fetch(
+      'https://api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=' + encodeURIComponent(q),
+    ).then((res) =>
       res
         .json()
         .then((data) =>
@@ -185,10 +189,10 @@
               <div class="avatar">
                 <div class="mask mask-squircle w-7 h-7">
                   {#if item.avatar}
-                  <img alt={''} src={item.avatar} />
-                {:else}
-                  <i class="bi bi-person" style="font-size: 1.5rem"></i>
-                {/if}
+                    <img alt={''} src={item.avatar} />
+                  {:else}
+                    <i class="bi bi-person" style="font-size: 1.5rem" />
+                  {/if}
                 </div>
               </div>
               <div>
@@ -198,7 +202,9 @@
             </div>
           </div>
         </AutoComplete>
-        <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary">Search</button>
+        <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
+          >Search</button
+        >
       </div>
     </div>
   </form>
@@ -228,17 +234,11 @@
       <div>
         <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}> all time </a>
         |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
-          last month
-        </a>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}> last month </a>
         |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
-          last 7 days
-        </a>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}> last 7 days </a>
         |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('day')}>
-          last 24 hours
-        </a>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('day')}> last 24 hours </a>
       </div>
     </div>
 
@@ -257,33 +257,59 @@
               <div>
                 Include:
                 <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.include_sent} />
+                  <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={cOptions.include_sent}
+                  />
                   <span class="label-text">Sent</span>
                 </label>
                 <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.include_rcvd} />
+                  <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={cOptions.include_rcvd}
+                  />
                   <span class="label-text">Received</span>
                 </label>
               </div>
               <div>
                 Options:
                 <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.remove_bots} />
+                  <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={cOptions.remove_bots}
+                  />
                   <span class="label-text">Remove main bots</span>
                 </label>
                 <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.add_date} />
+                  <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={cOptions.add_date}
+                  />
                   <span class="label-text">Add date</span>
                 </label>
                 <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.add_watermark} />
+                  <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={cOptions.add_watermark}
+                  />
                   <span class="label-text">Add watermark</span>
                 </label>
               </div>
               <div>
                 <div>
                   Orbits:
-                  <input type="range" class="range range-xs range-primary" min="1" max="3" bind:value={cOptions.orbits} />
+                  <input
+                    type="range"
+                    class="range range-xs range-primary"
+                    min="1"
+                    max="3"
+                    bind:value={cOptions.orbits}
+                  />
                 </div>
                 <div>
                   Background color:
@@ -291,7 +317,11 @@
                 </div>
                 <div>
                   <label class="flex items-center space-x-2">
-                    <input class="checkbox checkbox-sm checkbox-secondary" type="checkbox" bind:checked={cOptions.add_border} />
+                    <input
+                      class="checkbox checkbox-sm checkbox-secondary"
+                      type="checkbox"
+                      bind:checked={cOptions.add_border}
+                    />
                     <p>Border color:</p>
                   </label>
                   <input type="color" style="width:100%;" bind:value={cOptions.border_color} />
@@ -312,8 +342,10 @@
         <span class="label-text text-md pr-2">Separate</span>
         <label class="relative inline-flex cursor-pointer items-center">
           <input id="switch" type="checkbox" class="peer sr-only" bind:checked={consolidateData} />
-          <label for="switch" class="hidden"></label>
-          <div class="peer h-6 w-11 rounded-full border bg-primary after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-secondary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300"></div>
+          <label for="switch" class="hidden" />
+          <div
+            class="peer h-6 w-11 rounded-full border bg-primary after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-secondary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300"
+          />
         </label>
         <span class="label-text text-md pl-2">Consolidate</span>
       </div>

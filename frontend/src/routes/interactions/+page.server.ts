@@ -4,17 +4,17 @@ import { getallDates } from '../../../../common/queries';
 import { getProfile, resolveHandle, flog } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
-  const agg = await Interaction.aggregate( [ { $collStats: { count: {} } } ] )
+  const agg = await Interaction.aggregate([{ $collStats: { count: {} } }]);
   return {
-      count: agg[0].count.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
-  }
-}
+    count: agg[0].count.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ','),
+  };
+};
 
 export const actions = {
   default: async ({ request }) => {
     const input = await request.formData();
     const { handle } = JSON.parse(String(input.get('actor')));
-    const did =  await resolveHandle(handle as string);
+    const did = await resolveHandle(handle as string);
     if (did === undefined) {
       return { handle: handle, success: false };
     }
@@ -25,9 +25,9 @@ export const actions = {
       await SyncProfile.updateOne(
         { _id: did },
         {
-          updated: false
+          updated: false,
         },
-        { upsert: true }
+        { upsert: true },
       );
       syncToUpdate = true;
     }
@@ -35,7 +35,7 @@ export const actions = {
     const profile = await getProfile(did);
     const dates = await getallDates(did);
 
-    flog(`searched dates @${handle} [${did}]`)
+    flog(`searched dates @${handle} [${did}]`);
 
     return {
       success: true,
@@ -43,7 +43,7 @@ export const actions = {
       handle: profile ? profile.handle : handle,
       profile: profile,
       dates: dates,
-      syncToUpdate: syncToUpdate
+      syncToUpdate: syncToUpdate,
     };
-  }
+  },
 } satisfies Actions;

@@ -21,7 +21,7 @@
     </thead>
     <tbody>
       {#each paginatedData as row (row._id)}
-      <tr class="text-center">
+        <tr class="text-center">
           <td>{row.idx}</td>
           <td class="text-left">
             <UserRow did={row._id} profile={row.profile} />

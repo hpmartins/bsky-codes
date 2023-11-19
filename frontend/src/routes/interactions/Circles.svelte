@@ -3,7 +3,7 @@
   import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
   import dayjs from 'dayjs';
-    import type { InteractionsType, SimpleProfileType } from '@common/queries';
+  import type { InteractionsType, SimpleProfileType } from '@common/queries';
 
   let canvas: HTMLCanvasElement;
   let context: CanvasRenderingContext2D | null;

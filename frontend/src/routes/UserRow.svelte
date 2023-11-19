@@ -11,10 +11,10 @@
   <div class="avatar">
     <div class="mask mask-squircle w-9 h-9">
       {#if profile.avatar}
-      <img alt={''} src={profile.avatar} />
-    {:else}
-      <i class="bi bi-person" style="font-size: 2rem"></i>
-    {/if}
+        <img alt={''} src={profile.avatar} />
+      {:else}
+        <i class="bi bi-person" style="font-size: 2rem" />
+      {/if}
     </div>
   </div>
   <div>

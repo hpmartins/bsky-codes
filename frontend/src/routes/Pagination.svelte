@@ -27,7 +27,9 @@
       >
         <i class="bi bi-chevron-double-left" />
       </button>
-      <div class="btn btn-sm btn-primary text-secondary join-item">{start + 1} - {end + 1} of {totalRows}</div>
+      <div class="btn btn-sm btn-primary text-secondary join-item">
+        {start + 1} - {end + 1} of {totalRows}
+      </div>
 
       <button
         class="btn btn-sm btn-primary text-secondary disabled:text-gray disabled:btn-primary join-item"

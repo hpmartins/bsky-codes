@@ -3,9 +3,11 @@
   import BlocksTable from './BlocksTable.svelte';
 
   import AutoComplete from 'simple-svelte-autocomplete';
-  let autocompleteObject: {
+  let autocompleteObject:
+    | {
         [key: string]: string;
-  } | undefined;
+      }
+    | undefined;
 
   export let data: PageData;
   export let form: ActionData;
@@ -56,10 +58,10 @@
               <div class="avatar">
                 <div class="mask mask-squircle w-7 h-7">
                   {#if item.avatar}
-                  <img alt={''} src={item.avatar} />
-                {:else}
-                  <i class="bi bi-person" style="font-size: 1.5rem"></i>
-                {/if}
+                    <img alt={''} src={item.avatar} />
+                  {:else}
+                    <i class="bi bi-person" style="font-size: 1.5rem" />
+                  {/if}
                 </div>
               </div>
               <div>
@@ -69,7 +71,9 @@
             </div>
           </div>
         </AutoComplete>
-        <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary">Search</button>
+        <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
+          >Search</button
+        >
       </div>
     </div>
   </form>

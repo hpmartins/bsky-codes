@@ -1,15 +1,15 @@
 import type { Actions, PageServerLoad } from './$types';
 import { Block, SyncProfile } from '../../../../common/db';
-import { getAllBlocks } from '../../../../common/queries'
+import { getAllBlocks } from '../../../../common/queries';
 import type { BlockType } from '$lib/types';
 import { flog, getProfile, resolveHandle } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
-  const agg = await Block.aggregate( [ { $collStats: { count: {} } } ] )
+  const agg = await Block.aggregate([{ $collStats: { count: {} } }]);
   return {
-    count: agg[0].count.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
-  }
-}
+    count: agg[0].count.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ','),
+  };
+};
 
 export const actions = {
   default: async ({ request, locals }) => {
@@ -26,18 +26,18 @@ export const actions = {
       await SyncProfile.updateOne(
         { _id: did },
         {
-          updated: false
+          updated: false,
         },
-        { upsert: true }
+        { upsert: true },
       );
       syncToUpdate = true;
     }
 
-    const profile = await getProfile(did)
+    const profile = await getProfile(did);
     const blocksSent = await getAllBlocks(did, 'author');
     const blocksRcvd = await getAllBlocks(did, 'subject');
 
-    flog(`searched blocks @${handle} [${did}]`)
+    flog(`searched blocks @${handle} [${did}]`);
 
     return {
       did: did,
@@ -45,9 +45,9 @@ export const actions = {
       success: true,
       blocks: {
         sent: blocksSent as unknown as BlockType[],
-        rcvd: blocksRcvd as unknown as BlockType[]
+        rcvd: blocksRcvd as unknown as BlockType[],
       },
-      syncToUpdate: syncToUpdate
+      syncToUpdate: syncToUpdate,
     };
-  }
+  },
 } satisfies Actions;
