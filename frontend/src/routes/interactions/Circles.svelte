@@ -1,15 +1,16 @@
 <script lang="ts">
-  import type { CirclesOptionsType, InteractionsDataType, InteractionsType, ProfileType } from '$lib/types';
+  import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
   import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
   import dayjs from 'dayjs';
+    import type { InteractionsType, SimpleProfileType } from '@common/queries';
 
   let canvas: HTMLCanvasElement;
   let context: CanvasRenderingContext2D | null;
   let circlesImage: HTMLImageElement;
 
   // These are the inputs for this page
-  export let profile: ProfileType; // user profile (handle, displayName, avatar)
+  export let profile: SimpleProfileType; // user profile (handle, displayName, avatar)
   export let data: InteractionsDataType; // data.sent, data.rcvd, data.both (interactions)
   export let options: CirclesOptionsType; // all options
 

@@ -1,4 +1,24 @@
+import dayjs from 'dayjs';
 import { Interaction } from '../db';
+
+export type SimpleProfileType = {
+    did: string;
+    avatar: string;
+    displayName: string;
+    handle: string;
+};
+
+export type InteractionsType = {
+    _id: string;
+    idx?: number;
+    characters: number;
+    replies: number;
+    likes: number;
+    reposts: number;
+    total: number;
+    points: number;
+    profile: SimpleProfileType;
+};
 
 export const getallDates = async (actor: string) => {
     return await Interaction.aggregate([
@@ -70,7 +90,7 @@ export const getInteractions = async (
     which: 'author' | 'subject',
     week: string,
     year: string
-) => {
+): Promise<InteractionsType[]> => {
     const query = await Interaction.aggregate([
         {
             $match: which === 'author' ? { '_id.author': actor } : { '_id.subject': actor }
@@ -223,7 +243,7 @@ export const getInteractionsByDateRange = async (
         end?: Date;
         limit?: number;
     }
-) => {
+): Promise<InteractionsType[]> => {
     let query = Interaction.aggregate();
 
     if (which === 'author') {
@@ -231,7 +251,7 @@ export const getInteractionsByDateRange = async (
     } else {
         query = query.match({ '_id.subject': actor });
     }
-    
+
     query = query
         .match({ $expr: { $ne: ['$_id.author', '$_id.subject'] } })
         .unwind('$list')
@@ -322,4 +342,80 @@ export const getInteractionsByDateRange = async (
         });
 
     return await query.exec();
+};
+
+export const searchInteractions = async (input: {
+    did: string;
+    handle: string;
+    weekly?: {
+        week: string;
+        year: string;
+    };
+    range?: string;
+}): Promise<{[key: string]: InteractionsType[]} | undefined> => {
+    let sent: InteractionsType[] | undefined;
+    let rcvd: InteractionsType[] | undefined;
+    if (input.weekly) {
+        sent = await getInteractions(input.did, 'author', input.weekly.week, input.weekly.year);
+        rcvd = await getInteractions(input.did, 'subject', input.weekly.week, input.weekly.year);
+    } else {
+        let start: Date | undefined = undefined;
+        let limit = 3000;
+        if (input.range === 'all') {
+            start = dayjs().subtract(10, 'year').toDate();
+            limit = 1000;
+        } else if (input.range === 'month') {
+            start = dayjs().subtract(1, 'month').startOf('day').toDate();
+        } else if (input.range === 'week') {
+            start = dayjs().subtract(1, 'week').startOf('day').toDate();
+        } else if (input.range === 'day') {
+            start = dayjs().subtract(24, 'hour').startOf('day').toDate();
+        }
+        if (start !== undefined) {
+            sent = await getInteractionsByDateRange(input.did, 'author', {
+                start: start,
+                limit: limit
+            });
+            rcvd = await getInteractionsByDateRange(input.did, 'subject', {
+                start: start,
+                limit: limit
+            });
+        }
+    }
+
+    if (sent && rcvd) {
+        let both = sent.concat(rcvd);
+        const summed: { [key: string]: InteractionsType } = {};
+        both.forEach((x) => {
+          if (x._id in summed) {
+            summed[x._id].characters += x.characters;
+            summed[x._id].replies += x.replies;
+            summed[x._id].likes += x.likes;
+            summed[x._id].reposts += x.reposts;
+            summed[x._id].total += x.total;
+            summed[x._id].points += x.points;
+          } else {
+            summed[x._id] = {
+              _id: x._id,
+              profile: x.profile,
+              characters: x.characters,
+              replies: x.replies,
+              likes: x.likes,
+              reposts: x.reposts,
+              total: x.total,
+              points: x.points,
+            };
+          }
+        });
+        both = Object.values(summed).sort((a, b) => {
+          return (b.points as number) - (a.points as number);
+        });
+
+        return {
+            sent: sent.map((x, idx) => ({ idx: idx + 1, ...x })),
+            rcvd: rcvd.map((x, idx) => ({ idx: idx + 1, ...x })),
+            both: both.map((x, idx) => ({ idx: idx + 1, ...x })),
+        }
+    }
+    return;
 };

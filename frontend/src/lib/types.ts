@@ -1,20 +1,9 @@
+import type { InteractionsType, SimpleProfileType } from "@common/queries";
 import type { Dayjs } from "dayjs"
 
-export type ProfileType = {
-    [key: string]: string
-}
-
 export type BlockType = {
-    profile: ProfileType,
+    profile: SimpleProfileType,
     [key: string]: string | object
-}
-
-export type InteractionsType = {
-    profile: ProfileType
-    _id: string
-    total: number
-    points: number
-    [key: string]: string | number | object  
 }
 
 export type InteractionsDataType = {
