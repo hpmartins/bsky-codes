@@ -81,7 +81,7 @@ export abstract class FirehoseSubscription {
 
   async updateCursor(cursor: number) {
     await SubState.updateOne(
-      { service: this.service + '_devel' },
+      { service: this.service },
       { cursor: cursor },
       { upsert: true }
     );
