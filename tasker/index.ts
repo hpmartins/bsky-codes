@@ -2,11 +2,11 @@ var cron = require('node-cron');
 import 'module-alias/register';
 import express from 'express';
 import Bottleneck from 'bottleneck';
-import { Profile, connectDb } from '../common/db';
-import { BskyAgent } from '@atproto/api';
+import { Profile, SyncProfile, connectDb } from '../common/db';
+import AtpAgent, { BskyAgent } from '@atproto/api';
 import { DidResolver } from '@atproto/identity';
 import { getCreationTimestamp, listRepos, maybeBoolean, maybeInt, maybeStr } from '../common';
-import { syncBlockRecords, syncOneProfile, syncWaitingProfiles } from './tasks/sync';
+import { syncBlockRecords, syncOneProfile, syncPostRecords, syncWaitingProfiles } from './tasks/sync';
 import { storeBlocksHistogram, storeFollowsHistogram, storeLikesHistogram, storePostsByLang, storePostsHistogram, storeProfilesHistogram, storeRepostsHistogram, storeTopBlocked, storeTopPosters } from './tasks/stats';
 import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
 import { Manager } from "socket.io-client";
@@ -28,7 +28,8 @@ type AppConfig = {
 export type AppContext = {
   cfg: AppConfig;
   app: express.Express;
-  api: BskyAgent;
+  api: AtpAgent;
+  agent: BskyAgent;
   didres: DidResolver;
   limiter: Bottleneck;
   cache: redis.RedisClientType<any, any, any>;
@@ -134,8 +135,10 @@ async function run() {
     console.log(`[${new Date().toLocaleTimeString()}] [tasker] ${text}`);
   };
 
-  const api = new BskyAgent({ service: 'https://bsky.social/' })
-  await api.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
+  const agent = new BskyAgent({ service: 'https://bsky.social/' })
+  await agent.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
+
+  const api = new AtpAgent({ service: 'https://bsky.social/' })
 
   const cache = await createClient()
     .on('error', err => log(`redis error: ${err}`))
@@ -155,6 +158,7 @@ async function run() {
     cfg,
     app,
     api,
+    agent,
     didres,
     limiter,
     cache,
@@ -166,8 +170,25 @@ async function run() {
     scheduleTasks(ctx);
   }
 
-  // Sync blocks
-  socket.on("data", async (data: { repo: string }): Promise<void> => await syncBlockRecords(ctx, data.repo));
+  // Sync stuff
+  const syncCheck = maybeBoolean(process.env.TASKER_ENABLE_SYNC) ?? false;
+  if (syncCheck) {
+    socket.on("data", async (data: { repo: string }): Promise<void> => {
+      const { repo } = data;
+      
+      if (await ctx.cache.hExists('syncPosts', repo)) {
+        const totalPosts = await syncPostRecords(ctx, repo)
+        log(`[sync] ${repo}: posts:${String(totalPosts).padStart(4, ' ')}`)
+        await ctx.cache.hSet('syncPosts', repo, 1);
+      }
+  
+      if (await ctx.cache.hExists('syncBlocks', repo)) {
+        const totalBlocks = await syncBlockRecords(ctx, repo)
+        log(`[sync] ${repo}: blocks:${String(totalBlocks).padStart(4, ' ')}`)
+        await ctx.cache.hSet('syncBlocks', repo, 1);
+      }
+    });
+  }
 
   app.get('/update/:did', async (req, res) => {
     const doc = await didres.resolveAtprotoData(req.params.did);

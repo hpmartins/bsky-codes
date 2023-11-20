@@ -58,7 +58,7 @@ export async function updateLickablePosts(ctx: AppContext, lickablePeople: ILick
   for (const post of repostablePosts) {
     try {
       ctx.log(`reposting: ${post.postedAt} @${post.handle} ${post.points}p ${post._id}`)
-      await ctx.api.repost(post._id, post.cid)
+      await ctx.agent.repost(post._id, post.cid)
       await WolfgangLick.findByIdAndUpdate(post._id, { reposted: true })
     } catch (e) {
       ctx.log(`[ERROR] reposting: ${post.postedAt} @${post.handle} ${post.points}p ${post._id}`)
@@ -70,7 +70,7 @@ async function getAllFollowers(ctx: AppContext) {
   let cursor: string | undefined;
   let followers: { uri: string | undefined; did: string; handle: string }[] = [];
   do {
-    const { data } = await ctx.api.getFollowers({
+    const { data } = await ctx.agent.getFollowers({
       actor: ctx.cfg.bskyDid,
       limit: 100,
       cursor: cursor
@@ -88,7 +88,7 @@ async function getAllFollows(ctx: AppContext) {
   let cursor: string | undefined;
   let follows: { uri: string | undefined; did: string; handle: string }[] = [];
   do {
-    const { data } = await ctx.api.getFollows({
+    const { data } = await ctx.agent.getFollows({
       actor: ctx.cfg.bskyDid,
       limit: 100,
       cursor: cursor
@@ -112,7 +112,7 @@ export async function updateLickablePeople(ctx: AppContext): Promise<ILickablePe
   const timeStart = Date.now();
 
   const unlickableListUri = 'at://did:plc:y4rd5hesgwwbkblvkkidfs73/app.bsky.graph.list/3k3jnxzkl322v';
-  const unlickableList = await ctx.api.app.bsky.graph.getList({ list: unlickableListUri });
+  const unlickableList = await ctx.agent.app.bsky.graph.getList({ list: unlickableListUri });
   const unlickablePeople = unlickableList.data.items.map((x) => ({ did: x.subject.did, handle: x.subject.handle }));
   const followers = await getAllFollowers(ctx);
   const follows = await getAllFollows(ctx);
@@ -126,21 +126,21 @@ export async function updateLickablePeople(ctx: AppContext): Promise<ILickablePe
   for (const to_unfollow of they_dont_follow_me_back) {
     if (to_unfollow.uri) {
       ctx.log(`[wolfgang] unfollowing (unfollow-based): ${to_unfollow.handle}`);
-        await ctx.api.deleteFollow(to_unfollow.uri);
+        await ctx.agent.deleteFollow(to_unfollow.uri);
     }
   }
 
   for (const to_unfollow of i_follow_but_shouldnt) {
     if (to_unfollow.uri) {
       ctx.log(`[wolfgang] unfollowing (list-based): ${to_unfollow.handle}`);
-        await ctx.api.deleteFollow(to_unfollow.uri);
+        await ctx.agent.deleteFollow(to_unfollow.uri);
     }
   }
 
   for (const to_follow of i_dont_follow_them_back) {
     if (to_follow.uri) {
       ctx.log(`[wolfgang] following: ${to_follow.handle}`);
-        await ctx.api.follow(to_follow.did);
+        await ctx.agent.follow(to_follow.did);
     }
   }
 
