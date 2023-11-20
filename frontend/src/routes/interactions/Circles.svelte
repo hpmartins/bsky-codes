@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
+  import dayjs from 'dayjs';
   import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
-  import dayjs from 'dayjs';
   import type { InteractionsType, SimpleProfileType } from '@common/queries';
 
   let canvas: HTMLCanvasElement;
@@ -106,20 +106,20 @@
       const type = data?.date?.type ?? '';
       let textFull = '';
       if (type === 'weekly') {
-        const textFrom = data?.date?.start?.format('L');
-        const textTo = data?.date?.end?.format('L');
+        const textFrom = data?.date?.start?.toDate().toLocaleDateString();
+        const textTo = data?.date?.end?.toDate().toLocaleDateString();
         textFull = `${textFrom} - ${textTo}`;
       } else if (type === 'all') {
-        textFull = `${dayjs().format('L')} (all time)`;
+        textFull = `${new Date().toLocaleDateString()} (all time)`;
       } else if (type === 'month') {
-        textFull = `${dayjs().format('L')} (month)`;
+        textFull = `${new Date().toLocaleDateString()} (month)`;
       } else if (type === 'week') {
-        const textFrom = dayjs().subtract(1, 'week').format('L');
-        const textTo = dayjs().format('L');
+        const textFrom = dayjs().subtract(1, 'week').toDate().toLocaleDateString();
+        const textTo = new Date().toLocaleDateString();
         textFull = `${textFrom} - ${textTo}`;
       } else if (type === 'day') {
-        const textFrom = dayjs().subtract(24, 'hour').format('L');
-        const textTo = dayjs().format('L');
+        const textFrom = dayjs().subtract(24, 'hour').toDate().toLocaleDateString();
+        const textTo = new Date().toLocaleDateString();
         textFull = `${textFrom} - ${textTo}`;
       }
       context.font = '20px Arial';
@@ -147,7 +147,7 @@
     const promises = [];
 
     // this will create the image, load the avatar and return a promise
-    const preload = (user: { [key: string]: string }, opt: { [key: string]: number }) =>
+    const preload = (user: { [key: string]: string | undefined }, opt: { [key: string]: number }) =>
       new Promise((resolve, reject) => {
         const img = new Image();
         img.setAttribute('crossOrigin', 'anonymous');

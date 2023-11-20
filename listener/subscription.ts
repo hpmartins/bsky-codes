@@ -81,14 +81,14 @@ export abstract class FirehoseSubscription {
 
   async updateCursor(cursor: number) {
     await SubState.updateOne(
-      { service: this.service },
+      { service: this.service + '_devel' },
       { cursor: cursor },
       { upsert: true }
     );
   }
 
   async getCursor(): Promise<{ cursor?: number }> {
-    const res = await SubState.findOne({ service: this.service }, 'cursor').exec()
+    const res = await SubState.findOne({ service: this.service + '_devel' }, 'cursor').exec()
     return res ? { cursor: res.cursor } : {}
   }
 }

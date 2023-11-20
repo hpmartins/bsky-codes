@@ -3,8 +3,9 @@ import 'dotenv/config';
 import { Manager } from 'socket.io-client';
 import { IPost, connectDb } from '../common/db';
 import { FirehoseData } from '../common/types';
-import { getCreationTimestamp, maybeInt, maybeStr } from '../common';
-import { BskyAgent, RichText } from '@atproto/api';
+import { getCreationTimestamp, getProfile, maybeInt, maybeStr } from '../common';
+import { createCirclesImage, searchInteractions } from '../common/queries/interactions';
+import { AppBskyFeedPost, BskyAgent, RichText } from '@atproto/api';
 import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
 
@@ -27,39 +28,106 @@ async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
 
     const ts_data = await getCreationTimestamp(repo);
     if (!ts_data) return;
-    
+
     const { handle, indexedAt } = ts_data;
 
     let date: string;
     let text: string;
     if (locale.startsWith('pt')) {
-        date = dayjs(indexedAt).format('DD/MM/YYYY [às] HH:mm:ss')
-        text = `🐈‍⬛ @${handle}, sua conta foi criada em ${date}`
+        date = dayjs(indexedAt).format('DD/MM/YYYY [às] HH:mm:ss');
+        text = `🐈‍⬛ @${handle}, sua conta foi criada em ${date}`;
     } else {
-        date = dayjs(indexedAt).format('YYYY-MM-DD [at] h:mm:ss A')
-        text = `🐈‍⬛ @${handle}, your account was created on ${date}`
+        date = dayjs(indexedAt).format('YYYY-MM-DD [at] h:mm:ss A');
+        text = `🐈‍⬛ @${handle}, your account was created on ${date}`;
     }
     const postText = new RichText({
         text: text
-    })
-    await postText.detectFacets(ctx.api)
+    });
+    await postText.detectFacets(ctx.api);
     const postRecord = {
         $type: 'app.bsky.feed.post',
         text: postText.text,
         reply: {
             parent: {
                 uri: post._id,
-                cid: post.cid,
+                cid: post.cid
             },
             root: {
                 uri: post._id,
-                cid: post.cid,
-            },
+                cid: post.cid
+            }
         },
         facets: postText.facets,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+    };
+    await ctx.api.post(postRecord);
+}
+
+async function processBolas(ctx: AppContext, repo: string, post: IPost) {
+    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+
+    const profile = await getProfile(repo);
+    if (!profile) return;
+    const data = await searchInteractions({
+        did: profile.did,
+        handle: profile.handle,
+        range: 'week'
+    });
+    if (!data) return;
+
+    const stream = await createCirclesImage(
+        {
+            did: profile.did,
+            avatar: profile.avatar,
+            displayName: profile.displayName,
+            handle: profile.handle
+        },
+        data,
+        { type: 'week' },
+        locale
+    );
+
+    let text: string;
+    if (locale.startsWith('pt')) {
+        text = `🐈‍⬛ @${profile.handle}, aqui estão suas bolas dos últimos 7 dias 🖤`;
+    } else {
+        text = `🐈‍⬛ @${profile.handle}, here are your circles of the last 7 days 🖤`;
     }
-    await ctx.api.post(postRecord)
+    const postText = new RichText({
+        text: text
+    });
+    await postText.detectFacets(ctx.api);
+
+    ctx.api.uploadBlob(stream, { encoding: 'image/png' }).then((res) => {
+        if (res.success) {
+            const postRecord = {
+                $type: 'app.bsky.feed.post',
+                text: postText.text,
+                facets: postText.facets,
+                createdAt: new Date().toISOString(),
+                embed: {
+                    $type: 'app.bsky.embed.images',
+                    images: [{ image: res.data.blob, alt: '' }]
+                },
+                reply: {
+                    parent: {
+                        uri: post._id,
+                        cid: post.cid
+                    },
+                    root: {
+                        uri: post._id,
+                        cid: post.cid
+                    }
+                },
+            };
+            if (AppBskyFeedPost.isRecord(postRecord)) {
+                const val = AppBskyFeedPost.validateRecord(postRecord);
+                if (val.success) {
+                    ctx.api.post(postRecord);
+                }
+            }
+        }
+    });
 }
 
 export async function processFirehoseStream(ctx: AppContext, data: FirehoseData) {
@@ -69,12 +137,16 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
         for (const post of posts.create) {
             const text = post.text.toLowerCase().trim();
             if (text.startsWith('!luna')) {
-                const match = text.match(/!luna\s+(\w+)/i)
-                const key = match ? match[1].toLowerCase() : undefined
+                const match = text.match(/!luna\s+(\w+)/i);
+                const key = match ? match[1].toLowerCase() : undefined;
                 if (!key) return;
 
                 if (key === 'birthday') {
-                    await processBirthday(ctx, repo, post)
+                    await processBirthday(ctx, repo, post);
+                }
+
+                if (key === 'bolas' || key === 'circles') {
+                    await processBolas(ctx, repo, post);
                 }
             }
         }
