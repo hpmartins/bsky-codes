@@ -578,7 +578,6 @@ export const createCirclesImage = async (
     // this will create the image, load the avatar and return a promise
     const preload = (user: { [key: string]: string | undefined }, opt: { [key: string]: number }) =>
         new Promise(async (resolve, reject) => {
-            console.log(user);
             const avatar = user.avatar ?? '';
             return loadImage(avatar)
                 .then((img) => {

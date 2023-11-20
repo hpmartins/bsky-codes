@@ -9,6 +9,11 @@ import { AppBskyFeedPost, BskyAgent, RichText } from '@atproto/api';
 import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
 
+export const MINUTE = 60;
+export const HOUR = MINUTE * 60;
+export const DAY = HOUR * 24;
+export const WEEK = DAY * 7;
+
 type AppConfig = {
     bskyDid: string;
     bskyPwd: string;
@@ -18,7 +23,7 @@ type AppConfig = {
 
 export type AppContext = {
     cfg: AppConfig;
-    api: BskyAgent;
+    agent: BskyAgent;
     cache: redis.RedisClientType<any, any, any>;
     log: (text: string) => void;
 };
@@ -43,7 +48,8 @@ async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
     const postText = new RichText({
         text: text
     });
-    await postText.detectFacets(ctx.api);
+
+    await postText.detectFacets(ctx.agent);
     const postRecord = {
         $type: 'app.bsky.feed.post',
         text: postText.text,
@@ -60,7 +66,10 @@ async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
         facets: postText.facets,
         createdAt: new Date().toISOString()
     };
-    await ctx.api.post(postRecord);
+    
+    const reply = await ctx.agent.post(postRecord);
+
+    return reply;
 }
 
 async function processBolas(ctx: AppContext, repo: string, post: IPost) {
@@ -89,16 +98,16 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
 
     let text: string;
     if (locale.startsWith('pt')) {
-        text = `🐈‍⬛ @${profile.handle}, aqui estão suas bolas dos últimos 7 dias 🖤`;
+        text = `🐈‍⬛ Bolas de @${profile.handle} dos últimos 7 dias 🖤`;
     } else {
-        text = `🐈‍⬛ @${profile.handle}, here are your circles of the last 7 days 🖤`;
+        text = `🐈‍⬛ Circles of @${profile.handle} for the last 7 days 🖤`;
     }
     const postText = new RichText({
         text: text
     });
-    await postText.detectFacets(ctx.api);
+    await postText.detectFacets(ctx.agent);
 
-    ctx.api.uploadBlob(stream, { encoding: 'image/png' }).then((res) => {
+    return ctx.agent.uploadBlob(stream, { encoding: 'image/png' }).then((res) => {
         if (res.success) {
             const postRecord = {
                 $type: 'app.bsky.feed.post',
@@ -123,7 +132,7 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
             if (AppBskyFeedPost.isRecord(postRecord)) {
                 const val = AppBskyFeedPost.validateRecord(postRecord);
                 if (val.success) {
-                    ctx.api.post(postRecord);
+                    return ctx.agent.post(postRecord);
                 }
             }
         }
@@ -136,18 +145,64 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
     if (posts.create.length > 0) {
         for (const post of posts.create) {
             const text = post.text.toLowerCase().trim();
+
+            // Luna
             if (text.startsWith('!luna')) {
                 const match = text.match(/!luna\s+(\w+)/i);
                 const key = match ? match[1].toLowerCase() : undefined;
                 if (!key) return;
 
+                // !luna birthday
+                // - Account creation timestamp
                 if (key === 'birthday') {
-                    await processBirthday(ctx, repo, post);
+                    if (await ctx.cache.exists(`luna/birthday:${repo}`)) {
+                        ctx.log(`[luna/birthday] try:${repo}`);
+                        return;
+                    };
+                    try {
+                        const reply = await processBirthday(ctx, repo, post);
+                        if (reply) {
+                            await ctx.cache.hSet('luna/birthday', post._id, reply.uri)
+                            await ctx.cache.set(`luna/birthday:${repo}`, 1, { EX: 1*HOUR })
+                            ctx.log(`[luna/birthday] add:${repo}`)
+                        }
+                    } catch (e) {}
                 }
 
+                // !luna bolas|circles
+                // - Default bolas
                 if (key === 'bolas' || key === 'circles') {
-                    await processBolas(ctx, repo, post);
+                    if (await ctx.cache.exists(`luna/bolas:${repo}`)) {
+                        ctx.log(`[luna/bolas] try:${repo}`);
+                        return;
+                    };
+                    try {
+                        const reply = await processBolas(ctx, repo, post);
+                        if (reply) {
+                            await ctx.cache.hSet('luna/bolas', post._id, reply.uri)
+                            await ctx.cache.set(`luna/bolas:${repo}`, 1, { EX: 1*HOUR })
+                            ctx.log(`[luna/bolas] add:${repo}`)
+                        }
+                    } catch (e) {}
                 }
+            }
+        }
+    }
+
+    if (posts.delete.length > 0) {
+        for (const del of posts.delete) {
+            const birthdayPost = await ctx.cache.hGet('luna/birthday', del.uri)
+            if (birthdayPost) {
+                await ctx.agent.deletePost(birthdayPost)
+                await ctx.cache.hDel('luna/birthday', del.uri)
+                ctx.log(`[luna/birthday] del:${repo}`)
+            }
+
+            const bolasPost = await ctx.cache.hGet('luna/bolas', del.uri)
+            if (bolasPost) {
+                await ctx.agent.deletePost(bolasPost)
+                await ctx.cache.hDel('luna/bolas', del.uri)
+                ctx.log(`[luna/bolas] del:${repo}`)
             }
         }
     }
@@ -181,8 +236,8 @@ const run = async () => {
         console.log(`[${new Date().toLocaleTimeString()}] [replier] ${text}`);
     };
 
-    const api = new BskyAgent({ service: 'https://bsky.social/' });
-    await api.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
+    const agent = new BskyAgent({ service: 'https://bsky.social/' });
+    await agent.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
 
     const cache = await createClient()
         .on('error', (err) => log(`redis error: ${err}`))
@@ -191,7 +246,7 @@ const run = async () => {
 
     const ctx: AppContext = {
         cfg,
-        api,
+        agent,
         cache,
         log
     };
