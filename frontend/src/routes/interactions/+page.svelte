@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import dayjs from 'dayjs';
+  import { t } from '$lib/translations';
   import isoWeek from 'dayjs/plugin/isoWeek';
   import localizedFormat from 'dayjs/plugin/localizedFormat';
   import type { ActionData, PageData, SubmitFunction } from './$types';
@@ -98,7 +99,10 @@
       scale: {
         color: {
           type: 'linear',
-          domain: [0, Math.max.apply(null, Object.values(form?.dates?.map((x) => x.count) ?? []))],
+          domain: [
+            0,
+            Math.max.apply(null, Object.values(form?.dates?.map((x: { count: number }) => x.count) ?? [])),
+          ],
         },
       },
     });
@@ -132,10 +136,9 @@
       both: res.both as InteractionsType[],
     };
     const dateRangeDict: { [key: string]: string } = {
-      all: 'All time',
-      month: 'Last 30 days',
-      week: 'Last 7 days',
-      day: 'Last 24 hours (approx.)',
+      all: $t('features.interactions.dates.all'),
+      month: $t('features.interactions.dates.month'),
+      week: $t('features.interactions.dates.week'),
     };
     dateRangeStr = dateRangeDict[type];
   }
@@ -158,13 +161,13 @@
   <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css" />
   <link rel="stylesheet" href="/style.css" />
-  <title>Wolfgang - Interactions</title>
+  <title>Wolfgang - {$t('features.interactions.pagetitle')}</title>
 </svelte:head>
 
 <div class="md:container md:mx-auto p-12 space-y-8">
   <div class="text-center">
-    <p class="text-2xl">Interactions</p>
-    <p class="text-lg">{data.count} unique items</p>
+    <p class="text-2xl">{$t('features.interactions.title')}</p>
+    <p class="text-lg">{$t('features.interactions.stats', { count: data.count })}</p>
   </div>
 
   <form method="POST">
@@ -181,7 +184,7 @@
           bind:value={autocompleteObject}
           noInputStyles={true}
           inputClassName="flex input input-bordered join-item"
-          placeholder="@ bluesky handle"
+          placeholder="@ {$t('features.common.handle')}"
         >
           <div slot="item" let:item let:label>
             {@const displayName = item.displayName ?? item.handle ?? ''}
@@ -203,42 +206,49 @@
           </div>
         </AutoComplete>
         <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
-          >Search</button
+          >{$t('features.common.search')}</button
         >
       </div>
     </div>
   </form>
 
   {#if form && !form.success}
-    <div class="text-center">Could not find the account</div>
+    <div class="text-center">{$t('features.common.account404')}</div>
   {:else if form && form.success}
-    <div class="text-center">
-      {form?.syncToUpdate ? 'The profile has been marked for update. Check again in a few minutes.' : ''}
-    </div>
+    {#if form.syncToUpdate}
+      <div class="text-center">
+        {$t('features.common.syncUpdate')}
+      </div>
+    {/if}
 
     <hr />
     <div class="flex flex-col items-center gap-1">
-      <b>Choose a week:</b>
+      <b>{$t('features.interactions.choose_week')}:</b>
       <div class="join">
         <button class="join-item btn btn-xs" on:click|preventDefault={handlePrevious}>
-          <i class="bi bi-chevron-double-left" /> prev
+          <i class="bi bi-chevron-double-left" />
+          {$t('features.common.prev')}
         </button>
         <button class="join-item btn btn-xs" on:click|preventDefault={handleNext}>
-          next <i class="bi bi-chevron-double-right" />
+          {$t('features.common.next')} <i class="bi bi-chevron-double-right" />
         </button>
       </div>
       <div class="flex justify-center items-center">
         <div id="interactions-heatmap" class="max-w-sm" />
       </div>
-      <b>... or a specific date period:</b>
+      <b>{$t('features.interactions.choose_range')}:</b>
       <div>
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}> all time </a>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}>
+          {$t('features.interactions.dates.all')}
+        </a>
         |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}> last month </a>
+        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
+          {$t('features.interactions.dates.month')}
+        </a>
         |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}> last 7 days </a>
-        |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('day')}> last 24 hours </a>
+        <a class="link font-bold" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
+          {$t('features.interactions.dates.week')}
+        </a>
       </div>
     </div>
 
@@ -248,21 +258,21 @@
         {dateRangeStr}
       </div>
       <details class="collapse bg-base-200">
-        <summary class="collapse-title text-xl text-center font-medium"> Bolas </summary>
+        <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary">↠ {$t('features.interactions.bolas.title')} ↞</summary>
         <div class="collapse-content">
           <div class="flex flex-col justify-center items-center gap-4">
             <div
               class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded"
             >
               <div>
-                Include:
+                {$t('features.interactions.bolas.include')}:
                 <label class="label cursor-pointer gap-x-3 justify-start">
                   <input
                     class="checkbox checkbox-sm checkbox-secondary"
                     type="checkbox"
                     bind:checked={cOptions.include_sent}
                   />
-                  <span class="label-text">Sent</span>
+                  <span class="label-text">{$t('features.interactions.bolas.sent')}</span>
                 </label>
                 <label class="label cursor-pointer gap-x-3 justify-start">
                   <input
@@ -270,18 +280,18 @@
                     type="checkbox"
                     bind:checked={cOptions.include_rcvd}
                   />
-                  <span class="label-text">Received</span>
+                  <span class="label-text">{$t('features.interactions.bolas.received')}</span>
                 </label>
               </div>
               <div>
-                Options:
+                {$t('features.interactions.bolas.options')}:
                 <label class="label cursor-pointer gap-x-3 justify-start">
                   <input
                     class="checkbox checkbox-sm checkbox-secondary"
                     type="checkbox"
                     bind:checked={cOptions.remove_bots}
                   />
-                  <span class="label-text">Remove main bots</span>
+                  <span class="label-text">{$t('features.interactions.bolas.remove_bots')}</span>
                 </label>
                 <label class="label cursor-pointer gap-x-3 justify-start">
                   <input
@@ -289,7 +299,7 @@
                     type="checkbox"
                     bind:checked={cOptions.add_date}
                   />
-                  <span class="label-text">Add date</span>
+                  <span class="label-text">{$t('features.interactions.bolas.add_date')}</span>
                 </label>
                 <label class="label cursor-pointer gap-x-3 justify-start">
                   <input
@@ -297,12 +307,12 @@
                     type="checkbox"
                     bind:checked={cOptions.add_watermark}
                   />
-                  <span class="label-text">Add watermark</span>
+                  <span class="label-text">{$t('features.interactions.bolas.add_watermark')}</span>
                 </label>
               </div>
               <div>
                 <div>
-                  Orbits:
+                  {$t('features.interactions.bolas.orbits')}:
                   <input
                     type="range"
                     class="range range-xs range-primary"
@@ -312,7 +322,7 @@
                   />
                 </div>
                 <div>
-                  Background color:
+                  {$t('features.interactions.bolas.bg_color')}:
                   <input type="color" style="width:100%;" bind:value={cOptions.bg_color} />
                 </div>
                 <div>
@@ -322,7 +332,7 @@
                       type="checkbox"
                       bind:checked={cOptions.add_border}
                     />
-                    <p>Border color:</p>
+                    <p>{$t('features.interactions.bolas.border_color')}:</p>
                   </label>
                   <input type="color" style="width:100%;" bind:value={cOptions.border_color} />
                 </div>
@@ -339,7 +349,7 @@
       </details>
 
       <div class="flex justify-center items-center">
-        <span class="label-text text-md pr-2">Separate</span>
+        <span class="label-text text-md pr-2">{$t('features.interactions.separate')}</span>
         <label class="relative inline-flex cursor-pointer items-center">
           <input id="switch" type="checkbox" class="peer sr-only" bind:checked={consolidateData} />
           <label for="switch" class="hidden" />
@@ -347,21 +357,21 @@
             class="peer h-6 w-11 rounded-full border bg-primary after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-secondary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300"
           />
         </label>
-        <span class="label-text text-md pl-2">Consolidate</span>
+        <span class="label-text text-md pl-2">{$t('features.interactions.consolidate')}</span>
       </div>
       {#if consolidateData}
         <div>
-          <div class="text-center text-xl">Sent + Received</div>
+          <div class="text-center text-xl">{$t('features.interactions.table.title.both')}</div>
           <InteractionsTable data={interactionsData?.both ?? []} perPage={10} />
         </div>
       {:else}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
-            <div class="text-center text-xl">Sent</div>
+            <div class="text-center text-xl">{$t('features.interactions.table.title.sent')}</div>
             <InteractionsTable data={interactionsData?.sent ?? []} perPage={10} />
           </div>
           <div>
-            <div class="text-center text-xl">Received</div>
+            <div class="text-center text-xl">{$t('features.interactions.table.title.rcvd')}</div>
             <InteractionsTable data={interactionsData?.rcvd ?? []} perPage={10} />
           </div>
         </div>

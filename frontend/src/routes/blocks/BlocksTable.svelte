@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { BlockType } from '$lib/types';
+  import { t, locale } from '$lib/translations';
   import Pagination from '../Pagination.svelte';
   import UserRow from '../UserRow.svelte';
 
@@ -15,8 +16,8 @@
     <thead>
       <tr class="text-center text-lg text-primary">
         <th>#</th>
-        <th class="text-left">User</th>
-        <th>Date</th>
+        <th class="text-left" title={$t('features.common.user')}>{$t('features.common.user')}</th>
+        <th title={$t('features.common.date')}>{$t('features.common.date')}</th>
       </tr>
     </thead>
     <tbody>
@@ -26,7 +27,7 @@
           <td class="text-left">
             <UserRow did={row._id} profile={row.profile} />
           </td>
-          <td>{new Date(row.createdAt).toLocaleString()}</td>
+          <td>{new Date(row.createdAt).toLocaleString(locale.get())}</td>
         </tr>
       {/each}
     </tbody>

@@ -1,21 +1,21 @@
 <script lang="ts">
   import dayjs from 'dayjs';
-  import localizedFormat from 'dayjs/plugin/localizedFormat';
+  import { t } from '$lib/translations';
   import Pagination from '../../Pagination.svelte';
   import UserRow from '../../UserRow.svelte';
 
   export let data: { [key: string]: any } | undefined;
   export let perPage: number = 15;
 
-  dayjs.extend(localizedFormat);
+  let paginatedData: any[] = [];
 
-  let paginatedData: Array<any> = [];
+  const date = dayjs(data?.date).format('L LT');
 </script>
 
 <div class="flex flex-col items-center gap-4">
   <div class="text-center">
-    <div class="text-2xl">Top posters in the last 72 hours</div>
-    <div class="text-md">Last updated at {dayjs(data?.date).format('L LT')}</div>
+    <div class="text-2xl">{$t('features.top.posters.title')}</div>
+    <div class="text-md">{$t('features.common.last_updated', { date })}</div>
   </div>
   <Pagination rows={data?.list ?? []} {perPage} bind:trimmedRows={paginatedData} />
   <div class="overflow-x-auto">
@@ -23,12 +23,12 @@
       <thead>
         <tr class="text-center text-lg text-primary">
           <th>#</th>
-          <th class="text-left">User</th>
-          <th>Count</th>
-          <th><i class="bi bi-hash" /></th>
-          <th><i class="bi bi-chat-square-text-fill" /></th>
-          <th><i class="bi bi-repeat" /></th>
-          <th><i class="bi bi-heart-fill" /></th>
+          <th class="text-left" title={$t('features.common.user')}>{$t('features.common.user')}</th>
+          <th title={$t('features.common.count')}>{$t('features.common.count')}</th>
+          <th title={$t('features.common.characters')}><i class="bi bi-hash" /></th>
+          <th title={$t('features.common.replies')}><i class="bi bi-chat-square-text-fill" /></th>
+          <th title={$t('features.common.likes')}><i class="bi bi-repeat" /></th>
+          <th title={$t('features.common.reposts')}><i class="bi bi-heart-fill" /></th>
         </tr>
       </thead>
       <tbody>

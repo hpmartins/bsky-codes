@@ -1,68 +1,77 @@
 <script lang="ts">
+  import { t } from '$lib/translations';
   import type { PageServerData } from './$types';
 
   export let data: PageServerData;
+
+  const link = 'https://bsky.app/';
+
+  const stats = [
+    {
+      key: 'profiles',
+      count: data.count.profiles,
+    },
+    {
+      key: 'posts',
+      count: data.count.posts,
+    },
+    {
+      key: 'blocks',
+      count: data.count.blocks,
+    },
+    {
+      key: 'interactions',
+      count: data.count.interactions,
+    },
+  ];
+
+  const cards = [
+    {
+      key: 'interactions',
+      href: '/interactions',
+    },
+    {
+      key: 'blocks',
+      href: '/top_blocks',
+    },
+    {
+      key: 'top_blocked',
+      href: '/top/blocked',
+    },
+    {
+      key: 'top_posters',
+      href: '/top/posters',
+    },
+  ];
 </script>
 
 <div class="md:container md:mx-auto center p-12 space-y-8">
-  <p class="text-xl font-bold">Welcome to Wolfgang!</p>
+  <p class="text-xl font-bold">{$t('home.title')}</p>
   <p>
-    Information about <a class="link" href="https://bsky.app/">Bluesky</a> accounts. Not all data is indexed yet.
+    {@html $t('home.headline', { link })}
   </p>
 
   <div class="flex justify-center">
     <div class="stats stats-vertical md:stats-horizontal shadow">
-      <div class="stat">
-        <div class="stat-title">Profiles</div>
-        <div class="stat-value">{data.count.profiles}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-title">Posts</div>
-        <div class="stat-value">{data.count.posts}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-title">Blocks</div>
-        <div class="stat-value">{data.count.blocks}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-title">Interactions</div>
-        <div class="stat-value">{data.count.interactions}</div>
-      </div>
+      {#each stats as stat}
+        <div class="stat">
+          <div class="stat-title">{$t(`home.stats.${stat.key}`)}</div>
+          <div class="stat-value">{stat.count}</div>
+        </div>
+      {/each}
     </div>
   </div>
 
   <div class="flex flex-row flex-grow flex-wrap justify-center gap-4">
-    <div class="card w-full md:w-80 bg-primary text-secondary">
-      <a href="/interactions">
-        <div class="card-body p-3">
-          <h2 class="card-title">Interactions</h2>
-          <p>Find your interactions by week and create an image with the top profiles</p>
-        </div>
-      </a>
-    </div>
-    <div class="card w-full md:w-80 bg-primary text-secondary">
-      <a href="/blocks">
-        <div class="card-body p-3">
-          <h2 class="card-title">Blocks</h2>
-          <p>Search who anyone blocks or is blocked by</p>
-        </div>
-      </a>
-    </div>
-    <div class="card w-full md:w-80 bg-primary text-secondary">
-      <a href="/top/blocked">
-        <div class="card-body p-3">
-          <h2 class="card-title">Top blocked</h2>
-          <p>Most blocked accounts in the last 72 hours</p>
-        </div>
-      </a>
-    </div>
-    <div class="card w-full md:w-80 bg-primary text-secondary">
-      <a href="/top/posters">
-        <div class="card-body p-3">
-          <h2 class="card-title">Top posters</h2>
-          <p>Who most posted in the last 72 hours</p>
-        </div>
-      </a>
-    </div>
+    {#each cards as card}
+      <div class="card w-full md:w-80 bg-primary text-secondary">
+        <a href={card.href}>
+          <div class="card-body p-3">
+            <h2 class="card-title">{$t(`home.cards.${card.key}.title`)}</h2>
+            <p>{$t(`home.cards.${card.key}.text`)}</p>
+          </div>
+        </a>
+      </div>
+    {/each}
   </div>
 </div>

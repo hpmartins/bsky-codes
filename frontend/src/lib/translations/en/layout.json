@@ -1,0 +1,12 @@
+{
+    "navbar": {
+        "interactions": "Interactions",
+        "blocks": "Blocks",
+        "top_blocked": "Top blocked",
+        "top_posters": "Top posters"
+    },
+
+    "built": "built by henrique",
+    "support": "Support this site",
+    "contact": "contact"
+}

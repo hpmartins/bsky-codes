@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
+  import { t } from '$lib/translations';
   import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
   import type { InteractionsType, SimpleProfileType } from '@common/types';
@@ -247,6 +248,8 @@
   }
 </script>
 
-<button class="btn btn-sm btn-primary mb-2" on:click|preventDefault={handleCopy}>Copy image</button>
+<button class="btn btn-sm btn-primary mb-2" on:click|preventDefault={handleCopy}>
+  {$t('features.interactions.bolas.copy')}
+</button>
 <canvas hidden bind:this={canvas} width={600} height={600} />
 <img bind:this={circlesImage} alt="" />

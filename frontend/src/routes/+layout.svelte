@@ -1,9 +1,37 @@
 <script lang="ts">
   import '../app.postcss';
   import wolfgang from '$lib/assets/wolfgang.jpg';
-  import type { LayoutData } from './$types';
 
-  export let data: LayoutData;
+  import dayjs from 'dayjs';
+  import { t, locale } from '$lib/translations';
+  import localizedFormat from 'dayjs/plugin/localizedFormat';
+  import 'dayjs/locale/pt-br';
+  import 'dayjs/locale/pt';
+  dayjs.extend(localizedFormat);
+  dayjs.locale(locale.get());
+
+  const navbar = [
+    {
+      key: 'interactions',
+      href: '/interactions',
+      icon: 'people',
+    },
+    {
+      key: 'blocks',
+      href: '/blocks',
+      icon: 'ban',
+    },
+    {
+      key: 'top_blocked',
+      href: '/top/blocked',
+      icon: 'x-circle',
+    },
+    {
+      key: 'top_posters',
+      href: '/top/posters',
+      icon: 'graph-up-arrow',
+    },
+  ];
 </script>
 
 <svelte:head>
@@ -39,11 +67,11 @@
           tabindex="-1"
           class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
         >
-          {#each data.navbar as item}
+          {#each navbar as item}
             <li>
               <a type="button" href={item.href}>
                 <i class="bi-{item.icon}" />
-                {item.text}
+                {$t(`layout.navbar.${item.key}`)}
               </a>
             </li>
           {/each}
@@ -55,10 +83,10 @@
       </a>
     </div>
     <div class="navbar-center hidden sm:flex">
-      {#each data.navbar as item}
+      {#each navbar as item}
         <a class="btn btn-primary btn-sm text-secondary normal-case content-center" href={item.href}>
           <i class="bi-{item.icon}" />
-          {item.text}
+          {$t(`layout.navbar.${item.key}`)}
         </a>
       {/each}
     </div>
@@ -66,7 +94,7 @@
       <a
         href="https://ko-fi.com/X8X3QCC8X"
         target="_blank"
-        class="btn btn-sm normal-case btn-primary text-secondary">Support this site</a
+        class="btn btn-sm normal-case btn-primary text-secondary">{$t('layout.support')}</a
       >
     </div>
   </div>
@@ -85,7 +113,7 @@
         />
       </a>
       <p>
-        built by henrique | <a class="link" href="/contact">contact</a>
+        {$t('layout.built')} | <a class="link" href="/contact">{$t('layout.contact')}</a>
       </p>
     </aside>
   </footer>

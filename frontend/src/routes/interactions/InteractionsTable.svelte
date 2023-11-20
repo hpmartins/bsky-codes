@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { InteractionsType } from '@common/types';
+  import { t } from '$lib/translations';
   import Pagination from '../Pagination.svelte';
   import UserRow from '../UserRow.svelte';
 
@@ -15,12 +16,12 @@
     <thead>
       <tr class="text-center text-lg text-primary">
         <th>#</th>
-        <th class="text-left">User</th>
-        <th><i class="bi bi-hash" /></th>
-        <th><i class="bi bi-chat-square-text-fill" /></th>
-        <th><i class="bi bi-repeat" /></th>
-        <th><i class="bi bi-heart-fill" /></th>
-        <th title="subtotal">total</th>
+        <th class="text-left" title={$t('features.common.user')}>{$t('features.common.user')}</th>
+        <th title={$t('features.common.characters')}><i class="bi bi-hash" /></th>
+        <th title={$t('features.common.replies')}><i class="bi bi-chat-square-text-fill" /></th>
+        <th title={$t('features.common.likes')}><i class="bi bi-repeat" /></th>
+        <th title={$t('features.common.reposts')}><i class="bi bi-heart-fill" /></th>
+        <th title={$t('features.common.total')}>{$t('features.common.total')}</th>
       </tr>
     </thead>
     <tbody>

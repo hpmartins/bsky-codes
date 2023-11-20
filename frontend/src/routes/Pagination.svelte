@@ -1,7 +1,8 @@
 <script lang="ts">
-  export let rows: [];
+  import { t } from '$lib/translations';
+  export let rows: any[];
   export let perPage: number;
-  export let trimmedRows;
+  export let trimmedRows : any[];
 
   $: totalRows = rows.length;
   $: currentPage = 0;
@@ -28,7 +29,7 @@
         <i class="bi bi-chevron-double-left" />
       </button>
       <div class="btn btn-sm btn-primary text-secondary join-item">
-        {start + 1} - {end + 1} of {totalRows}
+        {start + 1} - {end + 1} {$t('features.common.of')} {totalRows}
       </div>
 
       <button
