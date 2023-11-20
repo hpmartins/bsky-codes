@@ -10,7 +10,7 @@
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
   import Circles from './Circles.svelte';
   import AutoComplete from 'simple-svelte-autocomplete';
-  import type { InteractionsType } from '@common/queries';
+  import type { InteractionsType } from '@common/types';
 
   export let data: PageData;
   export let form: ActionData;

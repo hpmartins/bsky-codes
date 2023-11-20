@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { ProfileType } from '$lib/types';
+  import type { SimpleProfileType } from "@common/types";
   export let did: string;
-  export let profile: ProfileType;
+  export let profile: SimpleProfileType;
 
   const handle = profile.handle ?? '';
   const displayName = profile.displayName ?? profile.handle ?? '';

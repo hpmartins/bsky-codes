@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
-  import dayjs from 'dayjs';
   import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
-  import type { InteractionsType, SimpleProfileType } from '@common/queries';
+  import type { InteractionsType, SimpleProfileType } from '@common/types';
+  import dayjs from 'dayjs';
 
   let canvas: HTMLCanvasElement;
   let context: CanvasRenderingContext2D | null;

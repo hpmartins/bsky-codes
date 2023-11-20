@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { InteractionsType } from '@common/queries';
+  import type { InteractionsType } from '@common/types';
   import Pagination from '../Pagination.svelte';
   import UserRow from '../UserRow.svelte';
 

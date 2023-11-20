@@ -1,5 +1,24 @@
 import { IProfile, IBlock, IFollow, ILike, IRepost, IList, IListItem, IPost, IFeedGen } from '../common/db';
 
+export type SimpleProfileType = {
+  did: string;
+  avatar: string | undefined;
+  displayName: string | undefined;
+  handle: string;
+};
+
+export type InteractionsType = {
+  _id: string;
+  idx?: number;
+  characters: number;
+  replies: number;
+  likes: number;
+  reposts: number;
+  total: number;
+  points: number;
+  profile: SimpleProfileType;
+};
+
 type IDelete = {
   uri: string;
 };

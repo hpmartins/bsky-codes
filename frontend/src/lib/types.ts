@@ -1,4 +1,4 @@
-import type { InteractionsType, SimpleProfileType } from '@common/queries';
+import type { InteractionsType, SimpleProfileType } from '@common/types';
 import type { Dayjs } from 'dayjs';
 
 export type BlockType = {
