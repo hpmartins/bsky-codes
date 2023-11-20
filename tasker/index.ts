@@ -2,10 +2,10 @@ var cron = require('node-cron');
 import 'module-alias/register';
 import express from 'express';
 import Bottleneck from 'bottleneck';
-import { connectDb } from '../common/db';
+import { Profile, connectDb } from '../common/db';
 import { BskyAgent } from '@atproto/api';
 import { DidResolver } from '@atproto/identity';
-import { maybeBoolean, maybeInt, maybeStr } from '../common';
+import { getCreationTimestamp, listRepos, maybeBoolean, maybeInt, maybeStr } from '../common';
 import { syncBlockRecords, syncOneProfile, syncWaitingProfiles } from './tasks/sync';
 import { storeBlocksHistogram, storeFollowsHistogram, storeLikesHistogram, storePostsByLang, storePostsHistogram, storeProfilesHistogram, storeRepostsHistogram, storeTopBlocked, storeTopPosters } from './tasks/stats';
 import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
@@ -67,6 +67,37 @@ function scheduleTasks(ctx: AppContext) {
     const after = dayjs().subtract(2, 'day').startOf('day').toDate();
     await storePostsByLang(after);
   })
+}
+
+async function updateIndexedAt(ctx: AppContext) {
+  let repoCursor: string | undefined;
+  do {
+    const response = await ctx.limiter.schedule(async () =>
+      listRepos({
+        limit: 3,
+        cursor: repoCursor
+      })
+    );
+
+    if (response && response.repos) {
+        for (const repo of response.repos) {
+            const ts_data = await ctx.limiter.schedule(async () =>
+                getCreationTimestamp(repo.did)
+            );
+            if (!ts_data) continue;
+            const { handle, indexedAt } = ts_data;
+            await Profile.updateOne(
+                { _id: repo.did },
+                {
+                    handle: handle,
+                    indexedAt: indexedAt
+                },
+                { upsert: true }
+            );
+        }
+    }
+    repoCursor = response?.cursor ?? undefined;
+  } while (!!repoCursor && repoCursor.length > 0);
 }
 
 async function run() {
