@@ -80,7 +80,8 @@
             "title": "Contas mais bloqueadas nas últimas 72 horas"
         },
         "posters": {
-            "title": "Contas que mais postaram nas últimas 72 horas"
+            "title": "Contas que mais postaram nas últimas 72 horas",
+            "toggle": "remover possíveis bots"
         }
     }
 }

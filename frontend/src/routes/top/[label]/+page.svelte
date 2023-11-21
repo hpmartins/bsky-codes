@@ -10,6 +10,6 @@
   {#if data.type === 'blocked'}
     <TopBlockedTable {data} perPage={25} />
   {:else if data.type === 'posters'}
-    <TopPostersTable {data} perPage={25} />
+    <TopPostersTable {data} />
   {/if}
 </div>

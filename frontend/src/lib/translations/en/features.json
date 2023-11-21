@@ -80,7 +80,8 @@
             "title": "Top blocked accounts in the last 72 hours"
         },
         "posters": {
-            "title": "Top posters in the last 72 hours"
+            "title": "Top posters in the last 72 hours",
+            "toggle": "remove possible bots"
         }
     }
 }
