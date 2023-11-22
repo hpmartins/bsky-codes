@@ -29,7 +29,8 @@
         "graphTitle": "Posts por idioma (top 10)",
         "tableTitle": "Posts por idioma",
         "tableSubtitle": "Últimos 7 dias",
-        "postersTitle": "Posts de contas por idioma"
+        "postersTitle": "Posts de contas por idioma",
+        "selectPlaceholder": "Escolha um idioma"
     },
 
     "blocks": {

@@ -121,20 +121,21 @@
   <div class="flex flex-col items-center gap-4">
     <div class="text-center">
       <p class="text-lg">{$t('features.languages.postersTitle')}</p>
+      <p class="text-md">{$t('features.languages.tableSubtitle')}</p>
     </div>
     <select
       class="select select-primary w-full max-w-xs"
       bind:value={selectedLanguage}
       on:change={onSelectLanguage}
     >
-      <option value="XX" disabled selected>Select a language</option>
+      <option value="XX" disabled selected>{$t('features.languages.selectPlaceholder')}</option>
       {#each langs as lang}
         <option>{lang ?? 'none'}</option>
       {/each}
     </select>
 
     {#if posters.length > 0}
-      <Pagination rows={posters} perPage={10} bind:trimmedRows={langTablePagData} />
+      <Pagination rows={posters} perPage={20} bind:trimmedRows={langTablePagData} />
       <div class="overflow-x-auto">
         <table class="table table-xs table-zebra">
           <thead>

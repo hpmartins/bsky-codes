@@ -29,7 +29,8 @@
         "graphTitle": "Post count by language (top 10)",
         "tableTitle": "Post count by language",
         "tableSubtitle": "Last 7 days",
-        "postersTitle": "Top posters by language"
+        "postersTitle": "Top posters by language",
+        "selectPlaceholder": "Select a language"
     },
 
     "blocks": {

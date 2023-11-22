@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
       reposts: { $sum: '$people.reposts' },
     })
     .sort({ count: 'desc' })
-    .limit(50)
+    .limit(60)
     .lookup({
       from: 'profiles',
       localField: '_id',
