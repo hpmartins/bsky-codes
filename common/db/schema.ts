@@ -310,20 +310,6 @@ export interface ITopPosters {
     reposts: number;
   }[]
 }
-export interface ITopPostersByLang {
-  _id: Date;
-  items: {
-    _id: string;
-    table: {
-      _id: string;
-      count: number;
-      characters: number;
-      likes: number;
-      replies: number;
-      reposts: number;
-    }[]
-  }[]
-}
 
 export const DerivedData = mongoose.model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
 export const TopBlocked = DerivedData.discriminator<ITopBlocked>('TopBlocked', new Schema({
@@ -341,21 +327,6 @@ export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', n
     replies: Number,
     reposts: Number,
   }]
-}));
-export const TopPostersByLang = DerivedData.discriminator<ITopPostersByLang>('TopPostersByLang', new Schema ({
-  items: [
-    {
-      _id: String,
-      table: [{
-        _id: { type: 'String', ref: 'Profile' },
-        count: Number,
-        characters: Number,
-        likes: Number,
-        replies: Number,
-        reposts: Number,
-      }]
-    }
-  ]
 }));
 
 // Data histogram
@@ -389,6 +360,49 @@ const dataHistogramSchema = new Schema ({
 }, { collection: 'data_histogram' })
 export const DataHistogram = mongoose.model<IDataHistogram>('DataHistogram', dataHistogramSchema);
 
+export interface IPostersByLanguage {
+  _id: {
+    date: Date;
+    lang: string;
+  }
+  total: {
+    count: number;
+    characters: number;
+    likes: number;
+    replies: number;
+    reposts: number;
+  }
+  people: {
+      _id: string;
+      count: number;
+      characters: number;
+      likes: number;
+      replies: number;
+      reposts: number;
+  }[]
+}
+const postersByLanguageSchema = new Schema<IPostersByLanguage>({
+  _id: {
+    date: String,
+    lang: String,
+  },
+  total: {
+    count: Number,
+    characters: Number,
+    likes: Number,
+    replies: Number,
+    reposts: Number,
+  },
+  people: [{
+    _id: { type: 'String', ref: 'Profile' },
+    count: Number,
+    characters: Number,
+    likes: Number,
+    replies: Number,
+    reposts: Number,
+  }]
+})
+export const PostersByLanguage = mongoose.model<IPostersByLanguage>('PostersByLanguage', postersByLanguageSchema, 'languages');
 
 // Wolfgang licks
 interface IWolfgangLick {

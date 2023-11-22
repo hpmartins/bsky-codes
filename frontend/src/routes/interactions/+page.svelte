@@ -262,7 +262,7 @@
         <div class="collapse-content">
           <div class="flex flex-col justify-center items-center gap-4">
             <div
-              class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded"
+              class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3"
             >
               <div>
                 {$t('features.interactions.bolas.include')}:

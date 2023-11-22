@@ -34,6 +34,10 @@
       key: 'blocks',
       href: '/top_blocks',
     },
+    { 
+      key: 'languages',
+      href: '/languages',
+    },
     {
       key: 'top_blocked',
       href: '/top/blocked',

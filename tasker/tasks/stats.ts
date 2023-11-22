@@ -4,14 +4,12 @@ import {
     Follow,
     ITopBlocked,
     ITopPosters,
-    ITopPostersByLang,
     Like,
     Post,
     Profile,
     Repost,
     TopBlocked,
-    TopPosters,
-    TopPostersByLang
+    TopPosters
 } from '../../common/db';
 
 const log = (text: string) => {
@@ -73,7 +71,7 @@ export const storeTopPosters = async () => {
 };
 
 export const storeProfilesHistogram = async (after?: Date) => {
-    log('[histogram] profiles: starting')
+    log('[histogram] profiles: starting');
     let query = Profile.aggregate();
 
     if (after !== undefined) {
@@ -99,11 +97,11 @@ export const storeProfilesHistogram = async (after?: Date) => {
         });
 
     await query.exec();
-    log('[histogram] profiles: done')
+    log('[histogram] profiles: done');
 };
 
 export const storeBlocksHistogram = async (after?: Date) => {
-    log('[histogram] blocks: starting')
+    log('[histogram] blocks: starting');
     let query = Block.aggregate();
 
     if (after !== undefined) {
@@ -138,11 +136,11 @@ export const storeBlocksHistogram = async (after?: Date) => {
         });
 
     await query.exec();
-    log('[histogram] blocks: done')
+    log('[histogram] blocks: done');
 };
 
 export const storeFollowsHistogram = async (after?: Date) => {
-    log('[histogram] follows: starting')
+    log('[histogram] follows: starting');
     let query = Follow.aggregate();
 
     if (after !== undefined) {
@@ -168,11 +166,11 @@ export const storeFollowsHistogram = async (after?: Date) => {
         });
 
     await query.exec();
-    log('[histogram] follows: done')
+    log('[histogram] follows: done');
 };
 
 export const storeLikesHistogram = async (after?: Date) => {
-    log('[histogram] likes: starting')
+    log('[histogram] likes: starting');
     let query = Like.aggregate();
 
     if (after !== undefined) {
@@ -198,11 +196,11 @@ export const storeLikesHistogram = async (after?: Date) => {
         });
 
     await query.exec();
-    log('[histogram] likes: done')
+    log('[histogram] likes: done');
 };
 
 export const storeRepostsHistogram = async (after?: Date) => {
-    log('[histogram] reposts: starting')
+    log('[histogram] reposts: starting');
     let query = Repost.aggregate();
 
     if (after !== undefined) {
@@ -228,11 +226,11 @@ export const storeRepostsHistogram = async (after?: Date) => {
         });
 
     await query.exec();
-    log('[histogram] reposts: done')
+    log('[histogram] reposts: done');
 };
 
 export const storePostsHistogram = async (after?: Date) => {
-    log('[histogram] posts: starting')
+    log('[histogram] posts: starting');
     let query = Post.aggregate();
 
     if (after !== undefined) {
@@ -259,7 +257,15 @@ export const storePostsHistogram = async (after?: Date) => {
                                         in: {
                                             $concatArrays: [
                                                 '$$value',
-                                                [{ $cond: [{ $gt: [{ $strLenCP: '$$this' }, 0] }, 1, 0] }]
+                                                [
+                                                    {
+                                                        $cond: [
+                                                            { $gt: [{ $strLenCP: '$$this' }, 0] },
+                                                            1,
+                                                            0
+                                                        ]
+                                                    }
+                                                ]
                                             ]
                                         }
                                     }
@@ -304,11 +310,11 @@ export const storePostsHistogram = async (after?: Date) => {
         });
 
     await query.exec();
-    log('[histogram] posts: done')
+    log('[histogram] posts: done');
 };
 
 export const storePostsByLang = async (after?: Date) => {
-    log('[histogram] posts by lang: starting')
+    log('[histogram] posts by lang: starting');
     let query = Post.aggregate();
 
     if (after !== undefined) {
@@ -321,21 +327,25 @@ export const storePostsByLang = async (after?: Date) => {
         .project({
             _id: 0,
             author: 1,
-            langs: 1,
+            lang: {
+                $cond: [
+                    { $or: [{ $eq: ['$langs', null] }, { $eq: [{ $size: '$langs' }, 0] }] },
+                    null,
+                    { $substr: [{ $toLower: { $first: '$langs' } }, 0, 2] }
+                ]
+            },
             textLength: 1,
             likes: 1,
             comments: 1,
             reposts: 1,
             createdAt: 1,
         })
-        .unwind('$langs')
         .group({
             _id: {
-                date: {$dateTrunc: { date: '$createdAt', unit: 'day' }},
+                date: { $dateTrunc: { date: '$createdAt', unit: 'hour', binSize: 1 } },
                 author: '$author',
-                lang: '$langs',
+                lang: '$lang'
             },
-            author: { $first: "$author" },
             count: {
                 $count: {}
             },
@@ -352,42 +362,41 @@ export const storePostsByLang = async (after?: Date) => {
                 $sum: '$reposts'
             }
         })
-        .match({ count: { $gt: 50 }})
+        .sort({ count: 'desc' })
         .group({
             _id: {
                 date: '$_id.date',
-                lang: '$_id.lang',
+                lang: '$_id.lang'
             },
-            table: {
+            people: {
                 $push: {
-                    _id: '$author',
-                    count: '$count',
+                    _id: '$_id.author',
+                    count: '$count',                    
                     characters: '$characters',
                     likes: '$likes',
                     replies: '$replies',
                     reposts: '$reposts',
-                },
-            }
-        })
-        .group({
-            _id: '$_id.date',
-            items: {
-                $push: {
-                    _id: "$_id.lang",
-                    table: "$table"
                 }
             }
         })
+        .sort({ '_id.date': 'desc' })
+        .addFields({
+            total: {
+                count: { $sum: '$people.count' },
+                characters: { $sum: '$people.characters' },
+                likes: { $sum: '$people.likes' },
+                replies: { $sum: '$people.replies' },
+                reposts: { $sum: '$people.reposts' },
+            }
+        })
+        .append({
+            $merge: {
+                into: 'languages',
+                on: '_id',
+                whenMatched: 'merge',
+                whenNotMatched: 'insert'
+            }
+        });
 
-    const result: ITopPostersByLang[] = await query.exec();
-
-    for (const data of result) {
-        await TopPostersByLang.findByIdAndUpdate(data._id, {
-            items: data.items.map(x => ({
-                _id: x._id,
-                table: x.table,
-            }))
-        }, { upsert: true })
-        console.log(data._id)
-    }
-}
+    await query.exec();
+};

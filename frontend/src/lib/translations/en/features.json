@@ -7,6 +7,7 @@
         "date": "date",
         "total": "total",
         "search": "search",
+        "language": "language",
         "last_updated": "Last updated at {{date}}",
 
         "prev": "prev",
@@ -19,6 +20,16 @@
 
         "syncUpdate": "The profile has been marked for update. Check again in a few minutes.",
         "account404": "Could not find the account"
+    },
+
+    "languages": {
+        "pagetitle": "Languages",
+        "title": "Languages",
+
+        "graphTitle": "Post count by language (top 10)",
+        "tableTitle": "Post count by language",
+        "tableSubtitle": "Last 7 days",
+        "postersTitle": "Top posters by language"
     },
 
     "blocks": {

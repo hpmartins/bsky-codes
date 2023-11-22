@@ -22,6 +22,11 @@
       icon: 'ban',
     },
     {
+      key: 'languages',
+      href: '/languages',
+      icon: 'translate'
+    },
+    {
       key: 'top_blocked',
       href: '/top/blocked',
       icon: 'x-circle',

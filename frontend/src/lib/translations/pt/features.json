@@ -7,6 +7,7 @@
         "date": "data",
         "total": "total",
         "search": "procurar",
+        "language": "idioma",
         "last_updated": "Atualizado pela última vez em {{date}}",
 
         "prev": "anterior",
@@ -19,6 +20,16 @@
 
         "syncUpdate": "O perfil foi marcado para atualização. Cheque novamente em alguns minutos.",
         "account404": "A conta não foi encontrada."
+    },
+
+    "languages": {
+        "pagetitle": "Idiomas",
+        "title": "Idiomas",
+
+        "graphTitle": "Posts por idioma (top 10)",
+        "tableTitle": "Posts por idioma",
+        "tableSubtitle": "Últimos 7 dias",
+        "postersTitle": "Posts de contas por idioma"
     },
 
     "blocks": {

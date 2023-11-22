@@ -64,8 +64,8 @@ function scheduleTasks(ctx: AppContext) {
     await storePostsHistogram(after);
   })
 
-  cron.schedule('10 */6 * * *', async () => {
-    const after = dayjs().subtract(2, 'day').startOf('day').toDate();
+  cron.schedule('10 */3 * * *', async () => {
+    const after = dayjs().subtract(6, 'hour').startOf('hour').toDate();
     await storePostsByLang(after);
   })
 }

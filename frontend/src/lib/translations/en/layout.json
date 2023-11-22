@@ -2,6 +2,7 @@
     "navbar": {
         "interactions": "Interactions",
         "blocks": "Blocks",
+        "languages": "Languages",
         "top_blocked": "Top blocked",
         "top_posters": "Top posters"
     },

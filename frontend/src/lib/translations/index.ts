@@ -3,11 +3,14 @@ import lang from './lang.json';
 
 export const defaultLocale = 'en';
 
-export const config: Config<{
-  date?: string,
-  count?: number,
-  link?: string,
-}, never> = {
+export const config: Config<
+  {
+    date?: string;
+    count?: number;
+    link?: string;
+  },
+  never
+> = {
   translations: {
     en: { lang },
     pt: { lang },
@@ -38,13 +41,13 @@ export const config: Config<{
     {
       locale: 'en',
       key: 'features',
-      routes: ['/interactions', '/blocks', /\/top\/.*/],
+      routes: ['/interactions', '/languages', '/blocks', /\/top\/.*/],
       loader: async () => (await import('./en/features.json')).default,
     },
     {
       locale: 'pt',
       key: 'features',
-      routes: ['/interactions', '/blocks', /\/top\/.*/],
+      routes: ['/interactions', '/languages', '/blocks', /\/top\/.*/],
       loader: async () => (await import('./pt/features.json')).default,
     },
   ],

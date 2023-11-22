@@ -12,7 +12,7 @@
 
 <Pagination rows={data ?? []} {perPage} bind:trimmedRows={paginatedData} />
 <div class="overflow-x-auto">
-  <table class="table table-zebra">
+  <table class="table table-xs table-zebra">
     <thead>
       <tr class="text-center text-lg text-primary">
         <th>#</th>

@@ -14,6 +14,10 @@
             "title": "Interações/Bolas",
             "text": "Procure as interações entre contas e gere uma imagem com os avatares dos principais perfis que interagiram"
         },
+        "languages": {
+            "title": "Idiomas",
+            "text": "Estatísticas sobre idiomas dos posts e listas de contas que mais postam em cada idioma."
+        },
         "blocks": {
             "title": "Blocks",
             "text": "Os blocks do Bluesky são públicos. Veja aqui quem cada conta bloqueia e vice-versa."

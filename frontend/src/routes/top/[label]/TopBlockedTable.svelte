@@ -19,11 +19,11 @@
   </div>
   <Pagination rows={data?.list ?? []} {perPage} bind:trimmedRows={paginatedData} />
   <div class="overflow-x-auto">
-    <table class="table table-zebra">
+    <table class="table table-xs table-zebra">
       <thead>
         <tr class="text-center text-lg text-primary">
           <th>#</th>
-          <th class="text-left" title={$t('features.common.user')}>{$t('features.common.user')}</th>
+          <th title={$t('features.common.user')}>{$t('features.common.user')}</th>
           <th title={$t('features.common.count')}>{$t('features.common.count')}</th>
         </tr>
       </thead>

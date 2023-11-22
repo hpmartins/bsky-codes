@@ -12,11 +12,11 @@
 
 <Pagination rows={data ?? []} {perPage} bind:trimmedRows={paginatedData} />
 <div class="overflow-x-auto">
-  <table class="table table-zebra">
+  <table class="table table-xs table-zebra">
     <thead>
       <tr class="text-center text-lg text-primary">
         <th>#</th>
-        <th class="text-left" title={$t('features.common.user')}>{$t('features.common.user')}</th>
+        <th title={$t('features.common.user')}>{$t('features.common.user')}</th>
         <th title={$t('features.common.characters')}><i class="bi bi-hash" /></th>
         <th title={$t('features.common.replies')}><i class="bi bi-chat-square-text-fill" /></th>
         <th title={$t('features.common.likes')}><i class="bi bi-repeat" /></th>
