@@ -311,14 +311,14 @@ export interface ITopPosters {
   }[]
 }
 
-export const DerivedData = mongoose.model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
-export const TopBlocked = DerivedData.discriminator<ITopBlocked>('TopBlocked', new Schema({
+export const DerivedData = mongoose.models['DerivedData'] || mongoose.model('DerivedData', new Schema({ _id: Date }, { discriminatorKey: 'kind', collection: 'derived_data' }));
+export const TopBlocked = mongoose.models['TopBlocked'] || DerivedData.discriminator<ITopBlocked>('TopBlocked', new Schema({
   table: [{
     _id: { type: 'String', ref: 'Profile' },
     count: Number
   }]
 }));
-export const TopPosters = DerivedData.discriminator<ITopPosters>('TopPosters', new Schema({
+export const TopPosters = mongoose.models['TopPosters'] || DerivedData.discriminator<ITopPosters>('TopPosters', new Schema({
   table: [{
     _id: { type: 'String', ref: 'Profile' },
     count: Number,
@@ -358,7 +358,7 @@ const dataHistogramSchema = new Schema ({
   images: Number,
   imagesWithAltText: Number,
 }, { collection: 'data_histogram' })
-export const DataHistogram = mongoose.model<IDataHistogram>('DataHistogram', dataHistogramSchema);
+export const DataHistogram = mongoose.models['DataHistogram'] || mongoose.model<IDataHistogram>('DataHistogram', dataHistogramSchema);
 
 export interface IPostersByLanguage {
   _id: {
@@ -402,7 +402,7 @@ const postersByLanguageSchema = new Schema<IPostersByLanguage>({
     reposts: Number,
   }]
 })
-export const PostersByLanguage = mongoose.model<IPostersByLanguage>('PostersByLanguage', postersByLanguageSchema, 'languages');
+export const PostersByLanguage = mongoose.models['PostersByLanguage'] || mongoose.model<IPostersByLanguage>('PostersByLanguage', postersByLanguageSchema, 'languages');
 
 // Wolfgang licks
 interface IWolfgangLick {
@@ -426,20 +426,20 @@ const wolfgangLickSchema = new Schema<IWolfgangLick>({
 }, { timestamps: true })
 
 // Models
-export const Profile = mongoose.model<IProfile>('Profile', profileSchema);
-export const Follow = mongoose.model<IFollow>('Follow', followSchema);
-export const Post = mongoose.model<IPost>('Post', postSchema);
-export const Like = mongoose.model<ILike>('Like', likeSchema);
-export const Repost = mongoose.model<IRepost>('Repost', repostSchema);
-export const Block = mongoose.model<IBlock>('Block', blockSchema);
-export const FeedGen = mongoose.model<IFeedGen>('FeedGen', feedGenSchema);
-export const List = mongoose.model<IList>('List', listSchema);
+export const Profile = mongoose.models['Profile'] || mongoose.model<IProfile>('Profile', profileSchema);
+export const Follow = mongoose.models['Follow'] || mongoose.model<IFollow>('Follow', followSchema);
+export const Post = mongoose.models['Post'] || mongoose.model<IPost>('Post', postSchema);
+export const Like = mongoose.models['Like'] || mongoose.model<ILike>('Like', likeSchema);
+export const Repost = mongoose.models['Repost'] || mongoose.model<IRepost>('Repost', repostSchema);
+export const Block = mongoose.models['Block'] || mongoose.model<IBlock>('Block', blockSchema);
+export const FeedGen = mongoose.models['FeedGen'] || mongoose.model<IFeedGen>('FeedGen', feedGenSchema);
+export const List = mongoose.models['List'] || mongoose.model<IList>('List', listSchema);
 
-export const Interaction = mongoose.model<IInteraction>('Interaction', interactionSchema);
+export const Interaction = mongoose.models['Interaction'] || mongoose.model<IInteraction>('Interaction', interactionSchema);
 
-export const SubState = mongoose.model<ISubState>('SubState', subStateSchema);
+export const SubState = mongoose.models['SubState'] || mongoose.model<ISubState>('SubState', subStateSchema);
 
-export const SyncState = mongoose.model<ISyncState>('SyncState', syncStateSchema);
-export const SyncProfile = mongoose.model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);
+export const SyncState = mongoose.models['SyncState'] || mongoose.model<ISyncState>('SyncState', syncStateSchema);
+export const SyncProfile = mongoose.models['SyncStateProfile'] || mongoose.model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);
 
-export const WolfgangLick = mongoose.model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');
+export const WolfgangLick = mongoose.models['WolfgangLick'] || mongoose.model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');
