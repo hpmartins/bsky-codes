@@ -14,7 +14,8 @@ const config = {
     adapter: adapter(),
 
     alias: {
-      '@common': '../common'
+      '@common': '../common',
+      '#': './src/routes',
     }
   }
 };

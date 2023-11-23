@@ -26,11 +26,9 @@
         "pagetitle": "Languages",
         "title": "Languages",
 
-        "graphTitle": "Post count by language (top 10)",
         "tableTitle": "Post count by language",
         "tableSubtitle": "Last 7 days",
-        "postersTitle": "Top posters by language",
-        "selectPlaceholder": "Select a language"
+        "selectPlaceholder": "All"
     },
 
     "blocks": {
@@ -93,6 +91,7 @@
         },
         "posters": {
             "title": "Top posters in the last 72 hours",
+            "filter": "Filter by language",
             "toggle": "remove possible bots"
         }
     }

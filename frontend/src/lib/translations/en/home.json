@@ -16,7 +16,7 @@
         },
         "languages": {
             "title": "Languages",
-            "text": "Post language statistics and lists of top posters by language."
+            "text": "Post language statistics."
         },
         "blocks": {
             "title": "Blocks",
@@ -28,7 +28,7 @@
         },
         "top_posters": {
             "title": "Top posters",
-            "text": "Who most posted in the last 72 hours."
+            "text": "Who most posted in the last 72 hours, in general or by post language."
         }
     }
 }

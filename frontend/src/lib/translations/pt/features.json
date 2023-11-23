@@ -26,10 +26,8 @@
         "pagetitle": "Idiomas",
         "title": "Idiomas",
 
-        "graphTitle": "Posts por idioma (top 10)",
-        "tableTitle": "Posts por idioma",
+        "tableTitle": "Número de posts por idioma",
         "tableSubtitle": "Últimos 7 dias",
-        "postersTitle": "Posts de contas por idioma",
         "selectPlaceholder": "Escolha um idioma"
     },
 
@@ -93,6 +91,7 @@
         },
         "posters": {
             "title": "Contas que mais postaram nas últimas 72 horas",
+            "filter": "Filtrar por idioma",
             "toggle": "remover possíveis bots"
         }
     }

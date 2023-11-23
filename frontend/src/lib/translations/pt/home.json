@@ -16,7 +16,7 @@
         },
         "languages": {
             "title": "Idiomas",
-            "text": "Estatísticas sobre idiomas dos posts e listas de contas que mais postam em cada idioma."
+            "text": "Estatísticas sobre idiomas dos posts."
         },
         "blocks": {
             "title": "Blocks",
@@ -28,7 +28,7 @@
         },
         "top_posters": {
             "title": "Top postadores",
-            "text": "Lista das contas que mais postaram nas últimas 72 horas."
+            "text": "Lista das contas que mais postaram nos últimos três dias, no geral ou por idioma do post."
         }
     }
 }

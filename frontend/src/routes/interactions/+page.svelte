@@ -4,7 +4,7 @@
   import { t } from '$lib/translations';
   import isoWeek from 'dayjs/plugin/isoWeek';
   import localizedFormat from 'dayjs/plugin/localizedFormat';
-  import type { ActionData, PageData, SubmitFunction } from './$types';
+  import type { ActionData, PageData } from './$types';
   import CalHeatmap from 'cal-heatmap';
   import { getDateOfIsoWeek } from '$lib/utils';
   import InteractionsTable from './InteractionsTable.svelte';
@@ -164,218 +164,218 @@
   <title>Wolfgang - {$t('features.interactions.pagetitle')}</title>
 </svelte:head>
 
-<div class="md:container md:mx-auto p-12 space-y-8">
-  <div class="text-center">
-    <p class="text-2xl">{$t('features.interactions.title')}</p>
-    <p class="text-lg">{$t('features.interactions.stats', { count: data.count })}</p>
+<div class="text-center">
+  <p class="text-2xl">{$t('features.interactions.title')}</p>
+  <p class="text-lg">{$t('features.interactions.stats', { count: data.count })}</p>
+</div>
+
+<form method="POST">
+  <div class="flex justify-center">
+    <div class="join">
+      <AutoComplete
+        selectName="actor"
+        searchFunction={searchActors}
+        delay="200"
+        localFiltering={false}
+        cleanUserText={false}
+        labelFieldName="handle"
+        valueFieldName="value"
+        bind:value={autocompleteObject}
+        noInputStyles={true}
+        inputClassName="flex input input-bordered join-item"
+        placeholder="@ {$t('features.common.handle')}"
+      >
+        <div slot="item" let:item let:label>
+          {@const displayName = item.displayName ?? item.handle ?? ''}
+          <div class="flex items-center space-x-2 text-xs">
+            <div class="avatar">
+              <div class="mask mask-squircle w-7 h-7">
+                {#if item.avatar}
+                  <img alt={''} src={item.avatar} />
+                {:else}
+                  <i class="bi bi-person" style="font-size: 1.5rem" />
+                {/if}
+              </div>
+            </div>
+            <div>
+              <div class="font-bold">{displayName}</div>
+              <div class="opacity-50">@{@html label}</div>
+            </div>
+          </div>
+        </div>
+      </AutoComplete>
+      <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
+        >{$t('features.common.search')}</button
+      >
+    </div>
+  </div>
+</form>
+
+{#if form && !form.success}
+  <div class="text-center">{$t('features.common.account404')}</div>
+{:else if form && form.success}
+  {#if form.syncToUpdate}
+    <div class="text-center">
+      {$t('features.common.syncUpdate')}
+    </div>
+  {/if}
+
+  <hr />
+  <div class="flex flex-col items-center gap-1">
+    <b>{$t('features.interactions.choose_week')}:</b>
+    <div class="join">
+      <button class="join-item btn btn-xs" on:click|preventDefault={handlePrevious}>
+        <i class="bi bi-chevron-double-left" />
+        {$t('features.common.prev')}
+      </button>
+      <button class="join-item btn btn-xs" on:click|preventDefault={handleNext}>
+        {$t('features.common.next')} <i class="bi bi-chevron-double-right" />
+      </button>
+    </div>
+    <div class="flex justify-center items-center">
+      <div id="interactions-heatmap" class="max-w-sm" />
+    </div>
+    <b>{$t('features.interactions.choose_range')}:</b>
+    <div>
+      <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}>
+        {$t('features.interactions.dates.all')}
+      </a>
+      |
+      <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
+        {$t('features.interactions.dates.month')}
+      </a>
+      |
+      <a class="link font-bold" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
+        {$t('features.interactions.dates.week')}
+      </a>
+    </div>
   </div>
 
-  <form method="POST">
-    <div class="flex justify-center">
-      <div class="join">
-        <AutoComplete
-          selectName="actor"
-          searchFunction={searchActors}
-          delay="200"
-          localFiltering={false}
-          cleanUserText={false}
-          labelFieldName="handle"
-          valueFieldName="value"
-          bind:value={autocompleteObject}
-          noInputStyles={true}
-          inputClassName="flex input input-bordered join-item"
-          placeholder="@ {$t('features.common.handle')}"
-        >
-          <div slot="item" let:item let:label>
-            {@const displayName = item.displayName ?? item.handle ?? ''}
-            <div class="flex items-center space-x-2 text-xs">
-              <div class="avatar">
-                <div class="mask mask-squircle w-7 h-7">
-                  {#if item.avatar}
-                    <img alt={''} src={item.avatar} />
-                  {:else}
-                    <i class="bi bi-person" style="font-size: 1.5rem" />
-                  {/if}
-                </div>
-              </div>
-              <div>
-                <div class="font-bold">{displayName}</div>
-                <div class="opacity-50">@{@html label}</div>
-              </div>
-            </div>
-          </div>
-        </AutoComplete>
-        <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
-          >{$t('features.common.search')}</button
-        >
-      </div>
-    </div>
-  </form>
-
-  {#if form && !form.success}
-    <div class="text-center">{$t('features.common.account404')}</div>
-  {:else if form && form.success}
-    {#if form.syncToUpdate}
-      <div class="text-center">
-        {$t('features.common.syncUpdate')}
-      </div>
-    {/if}
-
+  {#if interactionsData.found && form.profile}
     <hr />
-    <div class="flex flex-col items-center gap-1">
-      <b>{$t('features.interactions.choose_week')}:</b>
-      <div class="join">
-        <button class="join-item btn btn-xs" on:click|preventDefault={handlePrevious}>
-          <i class="bi bi-chevron-double-left" />
-          {$t('features.common.prev')}
-        </button>
-        <button class="join-item btn btn-xs" on:click|preventDefault={handleNext}>
-          {$t('features.common.next')} <i class="bi bi-chevron-double-right" />
-        </button>
-      </div>
-      <div class="flex justify-center items-center">
-        <div id="interactions-heatmap" class="max-w-sm" />
-      </div>
-      <b>{$t('features.interactions.choose_range')}:</b>
-      <div>
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}>
-          {$t('features.interactions.dates.all')}
-        </a>
-        |
-        <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('month')}>
-          {$t('features.interactions.dates.month')}
-        </a>
-        |
-        <a class="link font-bold" href={'#'} on:click|preventDefault={() => handleDatePeriod('week')}>
-          {$t('features.interactions.dates.week')}
-        </a>
-      </div>
+    <div class="text-center text-2xl font-bold">
+      {dateRangeStr}
     </div>
-
-    {#if interactionsData.found && form.profile}
-      <hr />
-      <div class="text-center text-2xl font-bold">
-        {dateRangeStr}
-      </div>
-      <details class="collapse bg-base-200">
-        <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary">↠ {$t('features.interactions.bolas.title')} ↞</summary>
-        <div class="collapse-content">
-          <div class="flex flex-col justify-center items-center gap-4">
-            <div
-              class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3"
-            >
-              <div>
-                {$t('features.interactions.bolas.include')}:
-                <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input
-                    class="checkbox checkbox-sm checkbox-secondary"
-                    type="checkbox"
-                    bind:checked={cOptions.include_sent}
-                  />
-                  <span class="label-text">{$t('features.interactions.bolas.sent')}</span>
-                </label>
-                <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input
-                    class="checkbox checkbox-sm checkbox-secondary"
-                    type="checkbox"
-                    bind:checked={cOptions.include_rcvd}
-                  />
-                  <span class="label-text">{$t('features.interactions.bolas.received')}</span>
-                </label>
-              </div>
-              <div>
-                {$t('features.interactions.bolas.options')}:
-                <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input
-                    class="checkbox checkbox-sm checkbox-secondary"
-                    type="checkbox"
-                    bind:checked={cOptions.remove_bots}
-                  />
-                  <span class="label-text">{$t('features.interactions.bolas.remove_bots')}</span>
-                </label>
-                <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input
-                    class="checkbox checkbox-sm checkbox-secondary"
-                    type="checkbox"
-                    bind:checked={cOptions.add_date}
-                  />
-                  <span class="label-text">{$t('features.interactions.bolas.add_date')}</span>
-                </label>
-                <label class="label cursor-pointer gap-x-3 justify-start">
-                  <input
-                    class="checkbox checkbox-sm checkbox-secondary"
-                    type="checkbox"
-                    bind:checked={cOptions.add_watermark}
-                  />
-                  <span class="label-text">{$t('features.interactions.bolas.add_watermark')}</span>
-                </label>
-              </div>
-              <div>
-                <div>
-                  {$t('features.interactions.bolas.orbits')}:
-                  <input
-                    type="range"
-                    class="range range-xs range-primary"
-                    min="1"
-                    max="3"
-                    bind:value={cOptions.orbits}
-                  />
-                </div>
-                <div>
-                  {$t('features.interactions.bolas.bg_color')}:
-                  <input type="color" style="width:100%;" bind:value={cOptions.bg_color} />
-                </div>
-                <div>
-                  <label class="flex items-center space-x-2">
-                    <input
-                      class="checkbox checkbox-sm checkbox-secondary"
-                      type="checkbox"
-                      bind:checked={cOptions.add_border}
-                    />
-                    <p>{$t('features.interactions.bolas.border_color')}:</p>
-                  </label>
-                  <input type="color" style="width:100%;" bind:value={cOptions.border_color} />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              {#key interactionsData}{#key cOptions}
-                  <Circles profile={form.profile} data={interactionsData} options={cOptions} />
-                {/key}{/key}
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <div class="flex justify-center items-center">
-        <span class="label-text text-md pr-2">{$t('features.interactions.separate')}</span>
-        <label class="relative inline-flex cursor-pointer items-center">
-          <input id="switch" type="checkbox" class="peer sr-only" bind:checked={consolidateData} />
-          <label for="switch" class="hidden" />
+    <details class="collapse bg-base-200">
+      <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary"
+        >↠ {$t('features.interactions.bolas.title')} ↞</summary
+      >
+      <div class="collapse-content">
+        <div class="flex flex-col justify-center items-center gap-4">
           <div
-            class="peer h-6 w-11 rounded-full border bg-primary after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-secondary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300"
-          />
-        </label>
-        <span class="label-text text-md pl-2">{$t('features.interactions.consolidate')}</span>
+            class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3"
+          >
+            <div>
+              {$t('features.interactions.bolas.include')}:
+              <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                  class="checkbox checkbox-sm checkbox-secondary"
+                  type="checkbox"
+                  bind:checked={cOptions.include_sent}
+                />
+                <span class="label-text">{$t('features.interactions.bolas.sent')}</span>
+              </label>
+              <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                  class="checkbox checkbox-sm checkbox-secondary"
+                  type="checkbox"
+                  bind:checked={cOptions.include_rcvd}
+                />
+                <span class="label-text">{$t('features.interactions.bolas.received')}</span>
+              </label>
+            </div>
+            <div>
+              {$t('features.interactions.bolas.options')}:
+              <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                  class="checkbox checkbox-sm checkbox-secondary"
+                  type="checkbox"
+                  bind:checked={cOptions.remove_bots}
+                />
+                <span class="label-text">{$t('features.interactions.bolas.remove_bots')}</span>
+              </label>
+              <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                  class="checkbox checkbox-sm checkbox-secondary"
+                  type="checkbox"
+                  bind:checked={cOptions.add_date}
+                />
+                <span class="label-text">{$t('features.interactions.bolas.add_date')}</span>
+              </label>
+              <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                  class="checkbox checkbox-sm checkbox-secondary"
+                  type="checkbox"
+                  bind:checked={cOptions.add_watermark}
+                />
+                <span class="label-text">{$t('features.interactions.bolas.add_watermark')}</span>
+              </label>
+            </div>
+            <div>
+              <div>
+                {$t('features.interactions.bolas.orbits')}:
+                <input
+                  type="range"
+                  class="range range-xs range-primary"
+                  min="1"
+                  max="3"
+                  bind:value={cOptions.orbits}
+                />
+              </div>
+              <div>
+                {$t('features.interactions.bolas.bg_color')}:
+                <input type="color" style="width:100%;" bind:value={cOptions.bg_color} />
+              </div>
+              <div>
+                <label class="flex items-center space-x-2">
+                  <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={cOptions.add_border}
+                  />
+                  <p>{$t('features.interactions.bolas.border_color')}:</p>
+                </label>
+                <input type="color" style="width:100%;" bind:value={cOptions.border_color} />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            {#key interactionsData}{#key cOptions}
+                <Circles profile={form.profile} data={interactionsData} options={cOptions} />
+              {/key}{/key}
+          </div>
+        </div>
       </div>
-      {#if consolidateData}
+    </details>
+
+    <div class="flex justify-center items-center">
+      <span class="label-text text-md pr-2">{$t('features.interactions.separate')}</span>
+      <label class="relative inline-flex cursor-pointer items-center">
+        <input id="switch" type="checkbox" class="peer sr-only" bind:checked={consolidateData} />
+        <label for="switch" class="hidden" />
+        <div
+          class="peer h-6 w-11 rounded-full border bg-primary after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-secondary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300"
+        />
+      </label>
+      <span class="label-text text-md pl-2">{$t('features.interactions.consolidate')}</span>
+    </div>
+    {#if consolidateData}
+      <div>
+        <div class="text-center text-xl">{$t('features.interactions.table.title.both')}</div>
+        <InteractionsTable data={interactionsData?.both ?? []} perPage={10} />
+      </div>
+    {:else}
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <div class="text-center text-xl">{$t('features.interactions.table.title.both')}</div>
-          <InteractionsTable data={interactionsData?.both ?? []} perPage={10} />
+          <div class="text-center text-xl">{$t('features.interactions.table.title.sent')}</div>
+          <InteractionsTable data={interactionsData?.sent ?? []} perPage={10} />
         </div>
-      {:else}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div class="text-center text-xl">{$t('features.interactions.table.title.sent')}</div>
-            <InteractionsTable data={interactionsData?.sent ?? []} perPage={10} />
-          </div>
-          <div>
-            <div class="text-center text-xl">{$t('features.interactions.table.title.rcvd')}</div>
-            <InteractionsTable data={interactionsData?.rcvd ?? []} perPage={10} />
-          </div>
+        <div>
+          <div class="text-center text-xl">{$t('features.interactions.table.title.rcvd')}</div>
+          <InteractionsTable data={interactionsData?.rcvd ?? []} perPage={10} />
         </div>
-      {/if}
+      </div>
     {/if}
   {/if}
-</div>
+{/if}

@@ -24,7 +24,7 @@
     {
       key: 'languages',
       href: '/languages',
-      icon: 'translate'
+      icon: 'translate',
     },
     {
       key: 'top_blocked',
@@ -104,8 +104,10 @@
     </div>
   </div>
 
-  <div>
-    <slot />
+  <div class="md:container md:mx-auto py-4 md:p-4 space-y-8">
+    <div class="flex flex-col items-center gap-4">
+      <slot />
+    </div>
   </div>
 
   <footer class="footer footer-center p-4 mt-auto text-base-content">

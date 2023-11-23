@@ -31,74 +31,72 @@
   <title>Wolfgang - {$t('features.blocks.pagetitle')}</title>
 </svelte:head>
 
-<div class="md:container md:mx-auto p-12 space-y-8">
-  <div class="text-center">
-    <p class="text-2xl">{$t('features.blocks.title')}</p>
-    <p class="text-lg">{$t('features.blocks.stats', { count: data.count })}</p>
-  </div>
+<div class="text-center">
+  <p class="text-2xl">{$t('features.blocks.title')}</p>
+  <p class="text-lg">{$t('features.blocks.stats', { count: data.count })}</p>
+</div>
 
-  <form method="POST">
-    <div class="flex flex-col justify-center items-center">
-      <div class="join">
-        <AutoComplete
-          selectName="actor"
-          searchFunction={searchActors}
-          delay="200"
-          localFiltering={false}
-          cleanUserText={false}
-          labelFieldName="handle"
-          valueFieldName="value"
-          bind:value={autocompleteObject}
-          noInputStyles={true}
-          inputClassName="input input-bordered w-full max-w-xs join-item"
-          placeholder="@ {$t('features.common.handle')}"
-        >
-          <div slot="item" let:item let:label>
-            {@const displayName = item.displayName ?? item.handle ?? ''}
-            <div class="flex items-center space-x-2 text-xs">
-              <div class="avatar">
-                <div class="mask mask-squircle w-7 h-7">
-                  {#if item.avatar}
-                    <img alt={''} src={item.avatar} />
-                  {:else}
-                    <i class="bi bi-person" style="font-size: 1.5rem" />
-                  {/if}
-                </div>
-              </div>
-              <div>
-                <div class="font-bold">{displayName}</div>
-                <div class="opacity-50">@{@html label}</div>
+<form method="POST">
+  <div class="flex flex-col justify-center items-center">
+    <div class="join">
+      <AutoComplete
+        selectName="actor"
+        searchFunction={searchActors}
+        delay="200"
+        localFiltering={false}
+        cleanUserText={false}
+        labelFieldName="handle"
+        valueFieldName="value"
+        bind:value={autocompleteObject}
+        noInputStyles={true}
+        inputClassName="input input-bordered w-full max-w-xs join-item"
+        placeholder="@ {$t('features.common.handle')}"
+      >
+        <div slot="item" let:item let:label>
+          {@const displayName = item.displayName ?? item.handle ?? ''}
+          <div class="flex items-center space-x-2 text-xs">
+            <div class="avatar">
+              <div class="mask mask-squircle w-7 h-7">
+                {#if item.avatar}
+                  <img alt={''} src={item.avatar} />
+                {:else}
+                  <i class="bi bi-person" style="font-size: 1.5rem" />
+                {/if}
               </div>
             </div>
+            <div>
+              <div class="font-bold">{displayName}</div>
+              <div class="opacity-50">@{@html label}</div>
+            </div>
           </div>
-        </AutoComplete>
-        <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
-          >{$t('features.common.search')}</button
-        >
-      </div>
+        </div>
+      </AutoComplete>
+      <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
+        >{$t('features.common.search')}</button
+      >
     </div>
-  </form>
+  </div>
+</form>
 
-  {#if form && !form.success}
-    <div class="text-center">{$t('features.common.account404')}</div>
-  {:else if form && form.success}
-    {#if form.syncToUpdate}
-      <div class="text-center">
-        {$t('features.common.syncUpdate')}
-      </div>
-    {/if}
-
-    <hr />
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div>
-        <h5 class="text-center">{$t('features.blocks.blocked')} [{form.blocks?.sent.length}]</h5>
-        <BlocksTable data={form.blocks?.sent ?? []} perPage={15} />
-      </div>
-      <div class="col-sm-12 col-md-5 my-3">
-        <h5 class="text-center">{$t('features.blocks.blockedBy')} [{form.blocks?.rcvd.length}]</h5>
-        <BlocksTable data={form.blocks?.rcvd ?? []} perPage={15} />
-      </div>
+{#if form && !form.success}
+  <div class="text-center">{$t('features.common.account404')}</div>
+{:else if form && form.success}
+  {#if form.syncToUpdate}
+    <div class="text-center">
+      {$t('features.common.syncUpdate')}
     </div>
   {/if}
-</div>
+
+  <hr />
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div>
+      <h5 class="text-center">{$t('features.blocks.blocked')} [{form.blocks?.sent.length}]</h5>
+      <BlocksTable data={form.blocks?.sent ?? []} perPage={15} />
+    </div>
+    <div class="col-sm-12 col-md-5 my-3">
+      <h5 class="text-center">{$t('features.blocks.blockedBy')} [{form.blocks?.rcvd.length}]</h5>
+      <BlocksTable data={form.blocks?.rcvd ?? []} perPage={15} />
+    </div>
+  </div>
+{/if}

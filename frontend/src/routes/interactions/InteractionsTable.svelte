@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { InteractionsType } from '@common/types';
   import { t } from '$lib/translations';
-  import Pagination from '../Pagination.svelte';
-  import UserRow from '../UserRow.svelte';
+  import Pagination from '#/Pagination.svelte';
+  import UserRow from '#/UserRow.svelte';
 
   export let data: InteractionsType[] | undefined;
   export let perPage: number = 15;
