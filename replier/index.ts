@@ -3,12 +3,13 @@ import 'dotenv/config';
 import { Manager } from 'socket.io-client';
 import { IPost, connectDb } from '../common/db';
 import { FirehoseData } from '../common/types';
-import { getCreationTimestamp, getProfile, maybeInt, maybeStr } from '../common';
+import { getCreationTimestamp, getFirstPost, getProfile, maybeInt, maybeStr } from '../common';
 import { searchInteractions } from '../common/queries/interactions';
 import { createCirclesImage } from '../common/circles';
 import { AppBskyFeedPost, BskyAgent, RichText } from '@atproto/api';
 import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
+import { ids } from '../common/lexicon/lexicons';
 
 export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
@@ -71,6 +72,57 @@ async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
     const reply = await ctx.agent.post(postRecord);
 
     return reply;
+}
+
+async function processFirstPost(ctx: AppContext, repo: string, post: IPost) {
+    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+
+    const record = await getFirstPost(repo);
+    if (!record) return;
+
+    let date: string;
+    let text: string;
+    if (locale.startsWith('pt')) {
+        date = dayjs(record.value.createdAt).format('DD/MM/YYYY');
+        text = `🐈‍⬛ Seu primeiro post foi em ${date}:`;
+    } else {
+        date = dayjs(record.value.createdAt).format('YYYY-MM-DD');
+        text = `🐈‍⬛ You first posted on ${date}`;
+    }
+    const postText = new RichText({
+        text: text
+    });
+
+    await postText.detectFacets(ctx.agent);
+    const postRecord = {
+        $type: ids.AppBskyFeedPost,
+        text: postText.text,
+        embed: {
+            $type: ids.AppBskyEmbedRecord,
+            record: {
+                uri: record.uri,
+                cid: record.cid,
+            }
+        },
+        reply: {
+            parent: {
+                uri: post._id,
+                cid: post.cid
+            },
+            root: {
+                uri: post._id,
+                cid: post.cid
+            }
+        },
+        facets: postText.facets,
+        createdAt: new Date().toISOString()
+    };
+    
+    const validate = AppBskyFeedPost.validateRecord(postRecord);
+    if (validate.success) {
+        const reply = await ctx.agent.post(postRecord);
+        return reply;
+    }
 }
 
 async function processBolas(ctx: AppContext, repo: string, post: IPost) {
@@ -153,6 +205,23 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                 const key = match ? match[1].toLowerCase() : undefined;
                 if (!key) return;
 
+                // !luna primeiro|firstpost
+                // - Quotes first post
+                if (key === 'primeiro' || key === 'firstpost') {
+                    if (await ctx.cache.exists(`luna/firstpost:${repo}`)) {
+                        ctx.log(`[luna/firstpost] try:${repo}`);
+                        return;
+                    };
+                    try {
+                        const reply = await processFirstPost(ctx, repo, post);
+                        if (reply) {
+                            await ctx.cache.hSet('luna/firstpost', post._id, reply.uri)
+                            await ctx.cache.set(`luna/firstpost:${repo}`, 1, { EX: 1*HOUR })
+                            ctx.log(`[luna/firstpost] add:${repo}`)
+                        }
+                    } catch (e) {}
+                }
+
                 // !luna birthday
                 // - Account creation timestamp
                 if (key === 'birthday') {
@@ -192,6 +261,13 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
     if (posts.delete.length > 0) {
         for (const del of posts.delete) {
+            const firstpostPost = await ctx.cache.hGet('luna/firstpost', del.uri)
+            if (firstpostPost) {
+                await ctx.agent.deletePost(firstpostPost)
+                await ctx.cache.hDel('luna/firstpost', del.uri)
+                ctx.log(`[luna/firstpost] del:${repo}`)
+            }
+
             const birthdayPost = await ctx.cache.hGet('luna/birthday', del.uri)
             if (birthdayPost) {
                 await ctx.agent.deletePost(birthdayPost)

@@ -5,7 +5,7 @@ import {
   AppBskyFeedLike,
   AppBskyFeedPost,
   AppBskyFeedRepost,
-  AppBskyGraphBlock
+  AppBskyGraphBlock,
 } from '@atproto/api';
 import Bottleneck from 'bottleneck';
 import { Block, Post, Profile, Interaction, SyncProfile, SyncState } from '../common/db';
@@ -15,6 +15,7 @@ import { OutputSchema as ListReposSchema } from "./lexicon/types/com/atproto/syn
 import { OutputSchema as ListRecordsSchema } from "./lexicon/types/com/atproto/repo/listRecords";
 import dayjs from 'dayjs';
 import minMax from 'dayjs/plugin/minMax';
+import { Record as PostRecord } from './lexicon/types/app/bsky/feed/post';
 dayjs.extend(minMax);
 
 export const getDateTime = (date?: number | Date) => {
@@ -269,6 +270,28 @@ export async function getCreationTimestamp(did: string): Promise<{handle: string
         });
   } catch (e) {
   }
+}
+
+export async function getFirstPost(repo: string) {
+    try {
+        const p = new URLSearchParams({
+            repo: repo,
+            collection: 'app.bsky.feed.post',
+            reverse: String(true),
+            limit: String(1)
+        });
+        return fetch(`https://bsky.social/xrpc/com.atproto.repo.listRecords?${p}`)
+          .then(res => res.json())
+          .then((data: {
+            cursor: string,
+            records: {
+              uri: string,
+              cid: string,
+              value: PostRecord
+            }[]
+          }) => data.records[0]);
+    } catch (e) {}
+    return;
 }
 
 export async function listRecords(
