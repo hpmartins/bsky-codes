@@ -4,17 +4,10 @@ import { getAllBlocks } from '../../../../common/queries';
 import type { BlockType } from '$lib/types';
 import { flog, getProfile, resolveHandle } from '$lib/utils';
 
-export const load: PageServerLoad = async () => {
-  const agg = await Block.aggregate([{ $collStats: { count: {} } }]);
-  return {
-    count: agg[0].count.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ','),
-  };
-};
-
 export const actions = {
   default: async ({ request, locals }) => {
     const input = await request.formData();
-    const { handle } = JSON.parse(String(input.get('actor')));
+    const handle = input.get('handle');
     const did = await resolveHandle(handle as string);
     if (did === undefined) {
       return { handle: handle, success: false };
@@ -37,7 +30,7 @@ export const actions = {
     const blocksSent = await getAllBlocks(did, 'author');
     const blocksRcvd = await getAllBlocks(did, 'subject');
 
-    flog(`searched blocks @${handle} [${did}]`);
+    flog(`searched blocks @${profile.handle} [${did}]`);
 
     return {
       did: did,

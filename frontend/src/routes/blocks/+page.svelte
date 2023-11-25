@@ -1,27 +1,12 @@
 <script lang="ts">
-  import type { ActionData, PageData } from './$types';
+  import type { ActionData } from './$types';
   import { t } from '$lib/translations';
   import BlocksTable from './BlocksTable.svelte';
+  import { enhance } from '$app/forms';
 
-  import AutoComplete from 'simple-svelte-autocomplete';
-  let autocompleteObject:
-    | {
-        [key: string]: string;
-      }
-    | undefined;
-
-  export let data: PageData;
   export let form: ActionData;
 
-  async function searchActors(q: string): Promise<{ [key: string]: string }[]> {
-    return fetch(`https://api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${q}`).then((res) =>
-      res
-        .json()
-        .then((data) =>
-          data.actors.map((x: { [key: string]: string }) => ({ ...x, value: JSON.stringify(x) })),
-        ),
-    );
-  }
+  let inputValue: string;
 </script>
 
 <svelte:head>
@@ -33,47 +18,22 @@
 
 <div class="text-center">
   <p class="text-2xl">{$t('features.blocks.title')}</p>
-  <p class="text-lg">{$t('features.blocks.stats', { count: data.count })}</p>
 </div>
 
-<form method="POST">
+<form method="POST" use:enhance>
   <div class="flex flex-col justify-center items-center">
     <div class="join">
-      <AutoComplete
-        selectName="actor"
-        searchFunction={searchActors}
-        delay="200"
-        localFiltering={false}
-        cleanUserText={false}
-        labelFieldName="handle"
-        valueFieldName="value"
-        bind:value={autocompleteObject}
-        noInputStyles={true}
-        inputClassName="input input-bordered w-full max-w-xs join-item"
-        placeholder="@ {$t('features.common.handle')}"
-      >
-        <div slot="item" let:item let:label>
-          {@const displayName = item.displayName ?? item.handle ?? ''}
-          <div class="flex items-center space-x-2 text-xs">
-            <div class="avatar">
-              <div class="mask mask-squircle w-7 h-7">
-                {#if item.avatar}
-                  <img alt={''} src={item.avatar} />
-                {:else}
-                  <i class="bi bi-person" style="font-size: 1.5rem" />
-                {/if}
-              </div>
-            </div>
-            <div>
-              <div class="font-bold">{displayName}</div>
-              <div class="opacity-50">@{@html label}</div>
-            </div>
-          </div>
-        </div>
-      </AutoComplete>
-      <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
-        >{$t('features.common.search')}</button
-      >
+      <input
+        type="text"
+        class="input input-primary join-item"
+        name="handle"
+        id="handle"
+        placeholder="bluesky handle"
+        bind:value={inputValue}
+      />
+      <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary">
+        {$t('features.common.search')}
+      </button>
     </div>
   </div>
 </form>

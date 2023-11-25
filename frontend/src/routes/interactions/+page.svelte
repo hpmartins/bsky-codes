@@ -10,17 +10,12 @@
   import InteractionsTable from './InteractionsTable.svelte';
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
   import Circles from './Circles.svelte';
-  import AutoComplete from 'simple-svelte-autocomplete';
   import type { InteractionsType } from '@common/types';
 
   export let data: PageData;
   export let form: ActionData;
 
-  let autocompleteObject:
-    | {
-        [key: string]: string;
-      }
-    | undefined;
+  let inputValue: string;
 
   let interactionsData: InteractionsDataType = { found: false };
   let consolidateData = false;
@@ -172,38 +167,14 @@
 <form method="POST">
   <div class="flex justify-center">
     <div class="join">
-      <AutoComplete
-        selectName="actor"
-        searchFunction={searchActors}
-        delay="200"
-        localFiltering={false}
-        cleanUserText={false}
-        labelFieldName="handle"
-        valueFieldName="value"
-        bind:value={autocompleteObject}
-        noInputStyles={true}
-        inputClassName="flex input input-bordered join-item"
-        placeholder="@ {$t('features.common.handle')}"
-      >
-        <div slot="item" let:item let:label>
-          {@const displayName = item.displayName ?? item.handle ?? ''}
-          <div class="flex items-center space-x-2 text-xs">
-            <div class="avatar">
-              <div class="mask mask-squircle w-7 h-7">
-                {#if item.avatar}
-                  <img alt={''} src={item.avatar} />
-                {:else}
-                  <i class="bi bi-person" style="font-size: 1.5rem" />
-                {/if}
-              </div>
-            </div>
-            <div>
-              <div class="font-bold">{displayName}</div>
-              <div class="opacity-50">@{@html label}</div>
-            </div>
-          </div>
-        </div>
-      </AutoComplete>
+      <input
+        type="text"
+        class="input input-primary join-item"
+        name="handle"
+        id="handle"
+        placeholder="bluesky handle"
+        bind:value={inputValue}
+      />
       <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"
         >{$t('features.common.search')}</button
       >

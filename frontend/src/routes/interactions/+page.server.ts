@@ -13,7 +13,7 @@ export const load: PageServerLoad = async () => {
 export const actions = {
   default: async ({ request }) => {
     const input = await request.formData();
-    const { handle } = JSON.parse(String(input.get('actor')));
+    const handle = input.get('handle');
     const did = await resolveHandle(handle as string);
     if (did === undefined) {
       return { handle: handle, success: false };
@@ -35,7 +35,7 @@ export const actions = {
     const profile = await getProfile(did);
     const dates = await getallDates(did);
 
-    flog(`searched dates @${handle} [${did}]`);
+    flog(`searched dates @${profile.handle} [${did}]`);
 
     return {
       success: true,
