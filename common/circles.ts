@@ -38,7 +38,7 @@ export const createCirclesImage = async (
     const options = {
         orbits: 2,
         include_sent: true,
-        include_rcvd: true,
+        include_rcvd: false,
         remove_bots: true,
         add_watermark: true,
         add_date: true,
