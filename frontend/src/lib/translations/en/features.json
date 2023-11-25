@@ -1,6 +1,6 @@
 {
     "common": {
-        "handle": "bluesky handle",
+        "handle": "type a bluesky handle",
         "of": "of",
         "user": "user",
         "count": "count",
@@ -34,8 +34,6 @@
     "blocks": {
         "pagetitle": "Blocks",
         "title": "Blocks",
-        "stats": "{{count}} indexed blocks",
-
         "blocked": "Blocks",
         "blockedBy": "Blocked by"
     },
@@ -43,7 +41,6 @@
     "interactions": {
         "pagetitle": "Interactions",
         "title": "Interactions",
-        "stats": "{{count}} items indexed",
 
         "choose_week": "Choose a week",
         "choose_range": "... or a specific date range",

@@ -4,7 +4,7 @@
   import { t } from '$lib/translations';
   import isoWeek from 'dayjs/plugin/isoWeek';
   import localizedFormat from 'dayjs/plugin/localizedFormat';
-  import type { ActionData, PageData } from './$types';
+  import type { ActionData } from './$types';
   import CalHeatmap from 'cal-heatmap';
   import { getDateOfIsoWeek } from '$lib/utils';
   import InteractionsTable from './InteractionsTable.svelte';
@@ -12,7 +12,6 @@
   import Circles from './Circles.svelte';
   import type { InteractionsType } from '@common/types';
 
-  export let data: PageData;
   export let form: ActionData;
 
   let inputValue: string;
@@ -161,18 +160,17 @@
 
 <div class="text-center">
   <p class="text-2xl">{$t('features.interactions.title')}</p>
-  <p class="text-lg">{$t('features.interactions.stats', { count: data.count })}</p>
 </div>
 
 <form method="POST">
-  <div class="flex justify-center">
+  <div class="flex flex-col justify-center">
     <div class="join">
       <input
         type="text"
         class="input input-primary join-item"
         name="handle"
         id="handle"
-        placeholder="bluesky handle"
+        placeholder={$t('features.common.handle')}
         bind:value={inputValue}
       />
       <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary"

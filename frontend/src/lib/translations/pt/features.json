@@ -1,6 +1,6 @@
 {
     "common": {
-        "handle": "nome no bluesky",
+        "handle": "digite uma conta do bluesky",
         "of": "de",
         "user": "conta",
         "count": "quantidade",
@@ -34,7 +34,6 @@
     "blocks": {
         "pagetitle": "Blocks",
         "title": "Blocks",
-        "stats": "{{count}} blocks indexados",
 
         "blocked": "Contas bloqueadas",
         "blockedBy": "Contas que bloqueiam"
@@ -43,7 +42,6 @@
     "interactions": {
         "pagetitle": "Interações",
         "title": "Interações",
-        "stats": "{{count}} itens indexados",
 
         "choose_week": "Escolha uma semana",
         "choose_range": "... ou um período específico",

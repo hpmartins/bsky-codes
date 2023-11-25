@@ -28,7 +28,7 @@
         class="input input-primary join-item"
         name="handle"
         id="handle"
-        placeholder="bluesky handle"
+        placeholder={$t('features.common.handle')}
         bind:value={inputValue}
       />
       <button class="btn join-item rounded-r-full bg-primary text-secondary normal-case hover:text-primary">
