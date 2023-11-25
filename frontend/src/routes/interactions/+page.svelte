@@ -163,7 +163,7 @@
 </div>
 
 <form method="POST">
-  <div class="flex flex-col justify-center">
+  <div class="flex justify-center">
     <div class="join">
       <input
         type="text"
