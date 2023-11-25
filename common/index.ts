@@ -281,15 +281,22 @@ export async function getFirstPost(repo: string) {
             limit: String(1)
         });
         return fetch(`https://bsky.social/xrpc/com.atproto.repo.listRecords?${p}`)
-          .then(res => res.json())
-          .then((data: {
-            cursor: string,
-            records: {
-              uri: string,
-              cid: string,
-              value: PostRecord
-            }[]
-          }) => data.records[0]);
+          .then(res => {
+            if (!res.ok) return;
+            const data = res.json() as Promise<ListRecordsSchema>;
+            return data.then(x => {
+              if (x.records && x.records.length > 0) {
+                const post = x.records[0]
+                if (AppBskyFeedPost.isRecord(post.value)) {
+                  return {
+                    uri: post.uri,
+                    cid: post.cid,
+                    value: post.value as PostRecord,
+                  }
+                }
+              }
+            })
+          });
     } catch (e) {}
     return;
 }
