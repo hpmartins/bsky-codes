@@ -25,7 +25,7 @@
         <tr class="text-center">
           <td>{row.idx}</td>
           <td class="text-left">
-            <UserRow did={row._id} profile={row.profile} />
+            <UserRow did={row.did} profile={row.profile} />
           </td>
           <td>{new Date(row.createdAt).toLocaleString(locale.get())}</td>
         </tr>
