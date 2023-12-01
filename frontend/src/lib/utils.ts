@@ -22,13 +22,6 @@ export async function getProfile(did: string) {
   return await res.json();
 }
 
-export const DO_NOT_INCLUDE_THESE = [
-  'did:plc:xxno7p4xtpkxtn4ok6prtlcb', // @lovefairy.nl
-  'did:plc:db645kt5coo7teuoxdjhq34x', // @blueskybaddies.bsky.social
-  'did:plc:y4rd5hesgwwbkblvkkidfs73', // @wolfgang
-  'did:plc:iw47x7htlvpkbbizqn2sgnks', // @whatsmid
-];
-
 export function getDateOfIsoWeek(week: number, year: number) {
   if (week < 1 || week > 53) {
     throw new RangeError('ISO 8601 weeks are numbered from 1 to 53');

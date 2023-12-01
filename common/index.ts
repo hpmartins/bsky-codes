@@ -18,6 +18,13 @@ import minMax from 'dayjs/plugin/minMax';
 import { Record as PostRecord } from './lexicon/types/app/bsky/feed/post';
 dayjs.extend(minMax);
 
+export const DO_NOT_INCLUDE_THESE = [
+  'did:plc:xxno7p4xtpkxtn4ok6prtlcb', // @lovefairy.nl
+  'did:plc:db645kt5coo7teuoxdjhq34x', // @blueskybaddies
+  'did:plc:y4rd5hesgwwbkblvkkidfs73', // @wolfgang
+  'did:plc:iw47x7htlvpkbbizqn2sgnks', // @whatsmid
+];
+
 export const getDateTime = (date?: number | Date) => {
   if (!date) return new Date().toISOString().slice(0, 19).replace("T", " ");
   return new Date(date).toISOString().slice(0, 19).replace("T", " ");

@@ -4,6 +4,7 @@ dayjs.extend(localizedFormat);
 
 import canvas, { loadImage } from 'canvas';
 import { InteractionsType, SimpleProfileType } from './types';
+import { DO_NOT_INCLUDE_THESE } from './index';
 
 function hex_is_light(color: string) {
     const hex = color.replace('#', '');
@@ -14,13 +15,6 @@ function hex_is_light(color: string) {
     return brightness > 155;
 }
 const toRad = (x: number) => x * (Math.PI / 180);
-
-export const DO_NOT_INCLUDE_THESE = [
-    'did:plc:xxno7p4xtpkxtn4ok6prtlcb', // @lovefairy.nl
-    'did:plc:db645kt5coo7teuoxdjhq34x', // @blueskybaddies.bsky.social
-    'did:plc:y4rd5hesgwwbkblvkkidfs73', // @wolfgang
-    'did:plc:iw47x7htlvpkbbizqn2sgnks' // @whatsmid
-];
 
 export const createCirclesImage = async (
     profile: SimpleProfileType,

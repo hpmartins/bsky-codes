@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
   import { t } from '$lib/translations';
-  import { DO_NOT_INCLUDE_THESE } from '$lib/utils';
   import { onMount } from 'svelte';
+  import { DO_NOT_INCLUDE_THESE } from '@common';
   import type { InteractionsType, SimpleProfileType } from '@common/types';
   import dayjs from 'dayjs';
 
