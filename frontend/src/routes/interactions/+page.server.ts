@@ -4,39 +4,39 @@ import { getallDates } from '../../../../common/queries';
 import { getProfile, resolveHandle, flog } from '$lib/utils';
 
 export const actions = {
-  default: async ({ request }) => {
-    const input = await request.formData();
-    const handle = input.get('handle');
-    const did = await resolveHandle(handle as string);
-    if (did === undefined) {
-      return { handle: handle, success: false };
-    }
+    default: async ({ request }) => {
+        const input = await request.formData();
+        const handle = input.get('handle');
+        const did = await resolveHandle(handle as string);
+        if (did === undefined) {
+            return { handle: handle, success: false };
+        }
 
-    let syncToUpdate = false;
-    const syncProfile = await SyncProfile.findById(did);
-    if (!syncProfile) {
-      await SyncProfile.updateOne(
-        { _id: did },
-        {
-          updated: false,
-        },
-        { upsert: true },
-      );
-      syncToUpdate = true;
-    }
+        let syncToUpdate = false;
+        const syncProfile = await SyncProfile.findById(did);
+        if (!syncProfile) {
+            await SyncProfile.updateOne(
+                { _id: did },
+                {
+                    updated: false,
+                },
+                { upsert: true },
+            );
+            syncToUpdate = true;
+        }
 
-    const profile = await getProfile(did);
-    const dates = await getallDates(did);
+        const profile = await getProfile(did);
+        const dates = await getallDates(did);
 
-    flog(`searched dates @${profile.handle} [${did}]`);
+        flog(`searched dates @${profile.handle} [${did}]`);
 
-    return {
-      success: true,
-      did: did,
-      handle: profile ? profile.handle : handle,
-      profile: profile,
-      dates: dates,
-      syncToUpdate: syncToUpdate,
-    };
-  },
+        return {
+            success: true,
+            did: did,
+            handle: profile ? profile.handle : handle,
+            profile: profile,
+            dates: dates,
+            syncToUpdate: syncToUpdate,
+        };
+    },
 } satisfies Actions;
