@@ -238,7 +238,7 @@
     });
   });
 
-  function handleCopy() {
+  function handleCopyImage() {
     canvas.toBlob((blob) => {
       if (!blob) return;
       navigator.clipboard
@@ -248,7 +248,7 @@
   }
 </script>
 
-<button class="btn btn-sm btn-primary mb-2" on:click|preventDefault={handleCopy}>
+<button class="btn btn-sm btn-primary mb-2" on:click|preventDefault={handleCopyImage}>
   {$t('features.interactions.bolas.copy')}
 </button>
 <canvas hidden bind:this={canvas} width={600} height={600} />
