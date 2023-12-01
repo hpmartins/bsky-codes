@@ -32,7 +32,7 @@
     },
     {
       key: 'blocks',
-      href: '/top_blocks',
+      href: '/blocks',
     },
     {
       key: 'languages',
