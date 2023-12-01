@@ -67,7 +67,8 @@
             "bg_color": "Background color",
             "border_color": "Border color",
 
-            "copy": "Copy image"
+            "copy": "Copy image",
+            "copyPeople": "Copy people list"
         },
 
         "separate": "Split",

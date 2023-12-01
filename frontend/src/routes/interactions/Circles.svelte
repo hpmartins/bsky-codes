@@ -4,11 +4,13 @@
     import { onMount } from 'svelte';
     import { DO_NOT_INCLUDE_THESE } from '@common/defaults';
     import type { InteractionsType, SimpleProfileType } from '@common/types';
+    import { copy } from 'svelte-copy';
     import dayjs from 'dayjs';
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
     let circlesImage: HTMLImageElement;
+    let peopleList: string = '';
 
     // These are the inputs for this page
     export let profile: SimpleProfileType; // user profile (handle, displayName, avatar)
@@ -203,6 +205,7 @@
             });
 
         // now we iterate the orbits to actually build the full image
+        peopleList = '';
         for (const [orbitIndex, orbit] of config.entries()) {
             const { count, radius, distance, users } = orbit;
 
@@ -217,6 +220,8 @@
                 const offset = orbitIndex * 30;
                 // final angle for this user at this orbit
                 const t = toRad(i * angleSize + offset);
+
+                peopleList += `@${users[i].handle}\n`;
 
                 // push a new image loading thingy into the promises list
                 // with the coordinates and radius for that circle
@@ -255,6 +260,9 @@
 
 <button class="btn btn-sm btn-primary mb-2" on:click|preventDefault={handleCopyImage}>
     {$t('features.interactions.bolas.copy')}
+</button>
+<button class="btn btn-sm btn-primary mb-2" use:copy={peopleList}>
+    {$t('features.interactions.bolas.copyPeople')}
 </button>
 <canvas hidden bind:this={canvas} width={600} height={600} />
 <img bind:this={circlesImage} alt="" />

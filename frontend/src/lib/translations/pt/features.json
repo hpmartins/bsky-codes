@@ -68,7 +68,8 @@
             "bg_color": "Cor de fundo",
             "border_color": "Cor da borda",
 
-            "copy": "Copiar imagem"
+            "copy": "Copiar imagem",
+            "copyPeople": "Copiar arrobas"
         },
 
         "separate": "Separar",
