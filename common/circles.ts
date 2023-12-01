@@ -20,11 +20,10 @@ export const createCirclesImage = async (
     profile: SimpleProfileType,
     data: { [key: string]: InteractionsType[] },
     date: { type: string; start?: Dayjs; end?: Dayjs },
-    locale: string | undefined,
+    locale: string | undefined
 ) => {
-    const width = 600;
-    const height = 600;
-    const cv = canvas.createCanvas(width, height);
+    const imageSize = 900;
+    const cv = canvas.createCanvas(imageSize, imageSize);
     const context = cv.getContext('2d');
 
     if (!locale) locale = 'en';
@@ -62,16 +61,16 @@ export const createCirclesImage = async (
     // - radial distances for each number of orbits
     // - i chose this manually
     const distances: { [key: number]: number[] } = {
-        1: [0, 210, 0, 0],
-        2: [0, 158, 246, 0],
-        3: [0, 120, 196, 260]
+        1: [0, 1/3 + 2/100, 0, 0],
+        2: [0, 1/4 + 1/200, 3/8 + 3/100, 0],
+        3: [0, 1/5 + 1/200, 5/16 + 2/100, 7/16 + 1/300]
     };
 
     // radiuses for every orbit for each number of orbits
     const radiuses: { [key: number]: number[] } = {
-        1: [125, 55, 0, 0],
-        2: [95, 42, 32, 0],
-        3: [75, 32, 28, 22]
+        1: [20/100, 10/100, 0, 0],
+        2: [14/100, 7/100, 6/100, 0],
+        3: [12/100, 6/100, 5/100, 4/100]
     };
 
     // - main input for the image generation later
@@ -103,10 +102,12 @@ export const createCirclesImage = async (
     const textColor = hex_is_light(options.bg_color) ? '#000000' : '#CCCCCC';
 
     context.fillStyle = options.bg_color;
-    context.fillRect(0, 0, width, height);
+    context.fillRect(0, 0, imageSize, imageSize);
 
     context.imageSmoothingEnabled = true;
     // context.imageSmoothingQuality = 'medium';
+
+    const fontSize = imageSize/35;
 
     // date on top left corner
     if (options.add_date) {
@@ -128,25 +129,28 @@ export const createCirclesImage = async (
             const textTo = new Date().toLocaleDateString(locale);
             textFull = `${textFrom} - ${textTo}`;
         }
-        context.font = '20px Arial';
+        context.font = `${fontSize}px Arial`;
         context.fillStyle = textColor;
-        context.fillText(textFull, 12, 28);
+        context.textAlign = 'left';
+        context.textBaseline = 'top';
+        context.fillText(textFull, imageSize/50, imageSize/60);
     }
 
     // site watermark on top right corner
     if (options.add_watermark) {
-        context.font = '20px Arial';
+        context.font = `${fontSize}px Arial`;
         context.fillStyle = textColor;
         context.textAlign = 'right';
-        context.fillText('wolfgang.raios.xyz', 588, 28);
+        context.textBaseline = 'top';
+        context.fillText('wolfgang.raios.xyz', imageSize - imageSize/50, imageSize/60);
     }
 
     // add rounded border
     if (options.add_border) {
         context.strokeStyle = options.border_color;
-        context.lineWidth = 15;
+        context.lineWidth = imageSize/40;
         context.beginPath();
-        context.roundRect(0, 0, width, height, 15);
+        context.roundRect(0, 0, imageSize, imageSize, imageSize/40);
         context.stroke();
     }
     const promises: Promise<any>[] = [];
@@ -154,8 +158,8 @@ export const createCirclesImage = async (
     // this will create the image, load the avatar and return a promise
     const preload = (user: { [key: string]: string | undefined }, opt: { [key: string]: number }) =>
         new Promise(async (resolve, reject) => {
-            const avatar = user.avatar ?? '';
-            return loadImage(avatar)
+            if (!user.avatar) return reject();
+            return loadImage(user.avatar)
                 .then((img) => {
                     context.save();
                     // this draws a circle centered at the image position
@@ -174,7 +178,32 @@ export const createCirclesImage = async (
                     context.restore();
                     return resolve(img);
                 })
-                .catch(() => reject);
+                .catch(async () => {
+                    return loadImage('./common/person-fill.svg')
+                        .then((img) => {
+                            context.save();
+                            context.beginPath();
+                            context.arc(
+                                opt.centerX,
+                                opt.centerY,
+                                opt.radius,
+                                0,
+                                2 * Math.PI,
+                                false
+                            );
+                            context.clip();
+                            context.drawImage(
+                                img,
+                                opt.centerX - opt.radius,
+                                opt.centerY - opt.radius,
+                                opt.radius * 2,
+                                opt.radius * 2
+                            );
+                            context.restore();
+                            return resolve(img);
+                        })
+                        .catch(() => reject());
+                });
         });
 
     // now we iterate the orbits to actually build the full image
@@ -199,9 +228,9 @@ export const createCirclesImage = async (
                 preload(
                     { avatar: users[i].avatar, did: users[i].did },
                     {
-                        centerX: Math.cos(t) * distance + width / 2,
-                        centerY: Math.sin(t) * distance + height / 2,
-                        radius: radius
+                        centerX: Math.cos(t) * imageSize * distance + imageSize / 2,
+                        centerY: Math.sin(t) * imageSize * distance + imageSize / 2,
+                        radius: imageSize * radius
                     }
                 )
             );
