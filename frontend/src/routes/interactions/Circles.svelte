@@ -2,7 +2,7 @@
   import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
   import { t } from '$lib/translations';
   import { onMount } from 'svelte';
-  import { DO_NOT_INCLUDE_THESE } from '@common';
+  import { DO_NOT_INCLUDE_THESE } from '@common/defaults';
   import type { InteractionsType, SimpleProfileType } from '@common/types';
   import dayjs from 'dayjs';
 

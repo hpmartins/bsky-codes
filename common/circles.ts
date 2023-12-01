@@ -4,7 +4,7 @@ dayjs.extend(localizedFormat);
 
 import canvas, { loadImage } from 'canvas';
 import { InteractionsType, SimpleProfileType } from './types';
-import { DO_NOT_INCLUDE_THESE } from './index';
+import { DO_NOT_INCLUDE_THESE } from './defaults';
 
 function hex_is_light(color: string) {
     const hex = color.replace('#', '');
