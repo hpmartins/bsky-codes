@@ -1,15 +1,15 @@
-import type { Actions } from './$types';
+import type { PageServerLoad } from './$types';
 import { SyncProfile } from '@common/db';
 import { getAllDates } from '@common/queries';
 import { getProfile, resolveHandle, flog } from '$lib/utils';
 
-export const actions = {
-    default: async ({ request }) => {
-        const input = await request.formData();
-        const handle = input.get('handle');
-        const did = await resolveHandle(handle as string);
+export const load: PageServerLoad = async ({ params }) => {
+    if (params.handle) {
+        const { handle } = params;
+
+        const did = await resolveHandle(handle);
         if (did === undefined) {
-            return { handle: handle, success: false };
+            return { success: false, handle: handle };
         }
 
         let syncToUpdate = false;
@@ -28,15 +28,19 @@ export const actions = {
         const profile = await getProfile(did);
         const dates = await getAllDates(did);
 
-        flog(`searched dates @${profile.handle} [${did}]`);
+        flog(`searched dates @${handle} [${did}]`);
 
         return {
             success: true,
             did: did,
-            handle: profile ? profile.handle : handle,
+            handle: handle,
             profile: profile,
             dates: dates,
             syncToUpdate: syncToUpdate,
         };
-    },
-} satisfies Actions;
+    } else {
+        return {
+            handle: undefined,
+        };
+    }
+};

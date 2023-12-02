@@ -1,20 +1,28 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import dayjs from 'dayjs';
-    import { t } from '$lib/translations';
-    import isoWeek from 'dayjs/plugin/isoWeek';
-    import localizedFormat from 'dayjs/plugin/localizedFormat';
-    import type { ActionData } from './$types';
-    import CalHeatmap from 'cal-heatmap';
-    import { getDateOfIsoWeek } from '$lib/utils';
-    import InteractionsTable from './InteractionsTable.svelte';
+    import type { PageServerData } from './$types';
     import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
-    import Circles from './Circles.svelte';
     import type { InteractionsType } from '@common/types';
 
-    export let form: ActionData;
+    import { onMount } from 'svelte';
+    
+    import dayjs from 'dayjs';
+    import isoWeek from 'dayjs/plugin/isoWeek';
+    import localizedFormat from 'dayjs/plugin/localizedFormat';
+    import CalHeatmap from 'cal-heatmap';
+
+    import { t } from '$lib/translations';
+    import { getDateOfIsoWeek } from '$lib/utils';
+
+    import InteractionsTable from './InteractionsTable.svelte';
+    import Circles from './Circles.svelte';
+
+    export let data: PageServerData;
 
     let inputValue: string;
+
+    if (data.handle) {
+        inputValue = data.handle;
+    }
 
     let interactionsData: InteractionsDataType = { found: false };
     let consolidateData = false;
@@ -45,8 +53,8 @@
             const test = await fetch('/api/interactions', {
                 method: 'POST',
                 body: JSON.stringify({
-                    did: form?.did,
-                    handle: form?.handle,
+                    did: data.did,
+                    handle: data.handle,
                     weekly: {
                         week: date.isoWeek(),
                         year: date.isoWeekYear(),
@@ -84,7 +92,7 @@
             },
             subDomain: { type: 'week', label: 'W', width: 25, height: 35 },
             data: {
-                source: form?.dates,
+                source: data?.dates,
                 x: (dt: { week: number; year: number }) => {
                     return getDateOfIsoWeek(dt.week, dt.year);
                 },
@@ -99,7 +107,7 @@
                         Math.max.apply(
                             null,
                             Object.values(
-                                form?.dates?.map((x: { count: number }) => x.count) ?? [],
+                                data?.dates?.map((x: { count: number }) => x.count) ?? [],
                             ),
                         ),
                     ],
@@ -121,8 +129,8 @@
         const test = await fetch('/api/interactions', {
             method: 'POST',
             body: JSON.stringify({
-                did: form?.did,
-                handle: form?.handle,
+                did: data?.did,
+                handle: data?.handle,
                 range: type,
             }),
             headers: { 'Content-type': 'application/json' },
@@ -141,22 +149,6 @@
             week: $t('features.interactions.dates.week'),
         };
         dateRangeStr = dateRangeDict[type];
-    }
-
-    async function searchActors(q: string): Promise<{ [key: string]: string }[]> {
-        return fetch(
-            'https://api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=' +
-                encodeURIComponent(q),
-        ).then((res) =>
-            res
-                .json()
-                .then((data) =>
-                    data.actors.map((x: { [key: string]: string }) => ({
-                        ...x,
-                        value: JSON.stringify(x),
-                    })),
-                ),
-        );
     }
 </script>
 
@@ -191,10 +183,8 @@
     </div>
 </form>
 
-{#if form && !form.success}
-    <div class="text-center">{$t('features.common.account404')}</div>
-{:else if form && form.success}
-    {#if form.syncToUpdate}
+{#if data.handle && data.success}
+    {#if data.syncToUpdate}
         <div class="text-center">
             {$t('features.common.syncUpdate')}
         </div>
@@ -235,7 +225,7 @@
         </div>
     </div>
 
-    {#if interactionsData.found && form.profile}
+    {#if interactionsData.found && data.profile}
         <hr />
         <div class="text-center text-2xl font-bold">
             {dateRangeStr}
@@ -346,7 +336,7 @@
                     <div>
                         {#key interactionsData}{#key cOptions}
                                 <Circles
-                                    profile={form.profile}
+                                    profile={data.profile}
                                     data={interactionsData}
                                     options={cOptions}
                                 />
@@ -396,4 +386,6 @@
             </div>
         {/if}
     {/if}
+{:else if data.handle && !data.success}
+    <div class="text-center">{$t('features.common.account404')}</div>
 {/if}
