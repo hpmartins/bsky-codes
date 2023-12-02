@@ -15,6 +15,7 @@
 
     import InteractionsTable from './InteractionsTable.svelte';
     import Circles from './Circles.svelte';
+    import { goto } from '$app/navigation';
 
     export let data: PageServerData;
 
@@ -164,7 +165,7 @@
     <p class="text-2xl">{$t('features.interactions.title')}</p>
 </div>
 
-<form method="POST">
+<form on:submit|preventDefault={() => goto(`${data.base}/${inputValue}`)}>
     <div class="flex justify-center">
         <div class="join">
             <input

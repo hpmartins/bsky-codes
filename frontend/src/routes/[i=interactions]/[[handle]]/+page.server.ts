@@ -3,13 +3,15 @@ import { SyncProfile } from '@common/db';
 import { getAllDates } from '@common/queries';
 import { getProfile, resolveHandle, flog } from '$lib/utils';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ url, params }) => {
+    const base = url.pathname.split('/').slice(0, 2).join('/');
+
     if (params.handle) {
         const { handle } = params;
 
         const did = await resolveHandle(handle);
         if (did === undefined) {
-            return { success: false, handle: handle };
+            return { base: base, success: false, handle: handle };
         }
 
         let syncToUpdate = false;
@@ -31,6 +33,7 @@ export const load: PageServerLoad = async ({ params }) => {
         flog(`searched dates @${handle} [${did}]`);
 
         return {
+            base: base,
             success: true,
             did: did,
             handle: handle,
@@ -40,6 +43,7 @@ export const load: PageServerLoad = async ({ params }) => {
         };
     } else {
         return {
+            base: base,
             handle: undefined,
         };
     }
