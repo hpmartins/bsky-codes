@@ -26,6 +26,8 @@ export const createCirclesImage = async (
     const cv = canvas.createCanvas(imageSize, imageSize);
     const context = cv.getContext('2d');
 
+    let peopleList: SimpleProfileType[] = [];
+
     if (!locale) locale = 'en';
 
     const options = {
@@ -222,6 +224,8 @@ export const createCirclesImage = async (
             // final angle for this user at this orbit
             const t = toRad(i * angleSize + offset);
 
+            peopleList.push(users[i]);
+
             // push a new image loading thingy into the promises list
             // with the coordinates and radius for that circle
             promises.push(
@@ -237,6 +241,10 @@ export const createCirclesImage = async (
         }
     }
 
-    const t = await Promise.allSettled(promises).then(() => cv.toBuffer());
-    return t;
+    const stream = await Promise.allSettled(promises).then(() => cv.toBuffer());
+    
+    return {
+        people: peopleList,
+        image: stream,
+    }
 };

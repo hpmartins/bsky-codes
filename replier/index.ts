@@ -137,7 +137,7 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
     });
     if (!data) return;
 
-    const stream = await createCirclesImage(
+    const circles = await createCirclesImage(
         {
             did: profile.did,
             avatar: profile.avatar,
@@ -148,6 +148,10 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
         { type: 'week' },
         locale
     );
+    if (!circles) return;
+
+    // const listId = Math.random().toString(16).slice(2);
+    // await ctx.cache.set(`luna/bolas:list:${listId}`, JSON.stringify(circles.people))
 
     let text: string;
     if (locale.startsWith('pt')) {
@@ -160,7 +164,7 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
     });
     await postText.detectFacets(ctx.agent);
 
-    return ctx.agent.uploadBlob(stream, { encoding: 'image/png' }).then((res) => {
+    return ctx.agent.uploadBlob(circles.image, { encoding: 'image/png' }).then((res) => {
         if (res.success) {
             const postRecord = {
                 $type: 'app.bsky.feed.post',
