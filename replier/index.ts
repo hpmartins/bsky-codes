@@ -6,10 +6,11 @@ import { FirehoseData } from '../common/types';
 import { getCreationTimestamp, getFirstPost, getProfile, maybeInt, maybeStr } from '../common';
 import { searchInteractions } from '../common/queries/interactions';
 import { createCirclesImage } from '../common/circles';
-import { AppBskyFeedPost, BskyAgent, RichText } from '@atproto/api';
+import { AppBskyFeedPost, BskyAgent, RichText, UnicodeString } from '@atproto/api';
 import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
 import { ids } from '../common/lexicon/lexicons';
+import { PEOPLE_LIST_KEY, uid10 } from '@common/defaults';
 
 export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
@@ -150,19 +151,52 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
     );
     if (!circles) return;
 
-    // const listId = Math.random().toString(16).slice(2);
-    // await ctx.cache.set(`luna/bolas:list:${listId}`, JSON.stringify(circles.people))
+    const listId = uid10();
+    await ctx.cache.hSet(PEOPLE_LIST_KEY, listId, JSON.stringify(circles.people))
 
-    let text: string;
+    let text: UnicodeString;
+    const shorthandle = profile.handle.replace('.bsky.social', '');
     if (locale.startsWith('pt')) {
-        text = `🐈‍⬛ Bolas de @${profile.handle} dos últimos 7 dias 🖤`;
+        text = new UnicodeString(`🐈‍⬛ Bolas de @${profile.handle} dos últimos 7 dias 🖤\nLista de arrobas | wolfgang/i/${shorthandle}`);
     } else {
-        text = `🐈‍⬛ Circles of @${profile.handle} for the last 7 days 🖤`;
+        text = new UnicodeString(`🐈‍⬛ Circles of @${profile.handle} for the last 7 days 🖤\nList of handles | wolfgang/i/${shorthandle}`);
     }
+
     const postText = new RichText({
-        text: text
+        text: text.utf16,
     });
     await postText.detectFacets(ctx.agent);
+
+    const links = [
+        {
+            regex: /(Lista de arrobas|List of handles)/,
+            href: `https://wolfgang.raios.xyz/arr/${listId}`,
+        },
+        {
+            regex: /wolfgang.*$/,
+            href: `https://wolfgang.raios.xyz/i/${shorthandle}`,
+        }
+    ]
+
+    links.forEach(link => {
+        const match = link.regex.exec(text.utf16);
+        if (match) {
+            const start = text.utf16.indexOf(match[0], match.index);
+            const index = { start, end: start + match[0].length };
+            postText.facets?.push({
+                index: {
+                    byteStart: text.utf16IndexToUtf8Index(index.start),
+                    byteEnd: text.utf16IndexToUtf8Index(index.end)
+                },
+                features: [
+                    {
+                        $type: "app.bsky.richtext.facet#link",
+                        uri: link.href,
+                    }
+                ]
+            });
+        }
+    })
 
     return ctx.agent.uploadBlob(circles.image, { encoding: 'image/png' }).then((res) => {
         if (res.success) {
@@ -320,7 +354,9 @@ const run = async () => {
     const agent = new BskyAgent({ service: 'https://bsky.social/' });
     await agent.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
 
-    const cache = await createClient()
+    const cache = await createClient({
+        url: process.env.REDIS_URI,
+    })
         .on('error', (err) => log(`redis error: ${err}`))
         .on('connect', () => log('connected to redis'))
         .connect();
