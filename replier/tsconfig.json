@@ -2,18 +2,10 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "composite": true,
-    "paths": {
-			"@common": [
-				"../common"
-			],
-			"@common/*": [
-				"../common/*"
-			],
-    }
+    "composite": true
   },
   "include": ["./**/*.ts"],
   "references": [
-    { "path": "../common/" },
+    { "path": "../common/" }
   ]
 }

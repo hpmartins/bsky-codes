@@ -10,7 +10,7 @@ import { AppBskyFeedPost, BskyAgent, RichText, UnicodeString } from '@atproto/ap
 import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
 import { ids } from '../common/lexicon/lexicons';
-import { PEOPLE_LIST_KEY, uid10 } from '@common/defaults';
+import { PEOPLE_LIST_KEY, uid10 } from '../common/defaults';
 
 export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
