@@ -224,7 +224,9 @@ export const createCirclesImage = async (
             // final angle for this user at this orbit
             const t = toRad(i * angleSize + offset);
 
-            peopleList.push(users[i]);
+            if (orbitIndex > 0) {
+                peopleList.push(users[i]);
+            }
 
             // push a new image loading thingy into the promises list
             // with the coordinates and radius for that circle
