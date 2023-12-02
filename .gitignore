@@ -137,3 +137,7 @@ dist
 
 # build
 build/
+
+.hintrc
+
+tests/
