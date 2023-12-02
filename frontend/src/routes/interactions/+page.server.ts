@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
-import { SyncProfile } from '../../../../common/db';
-import { getallDates } from '../../../../common/queries';
+import { SyncProfile } from '@common/db';
+import { getAllDates } from '@common/queries';
 import { getProfile, resolveHandle, flog } from '$lib/utils';
 
 export const actions = {
@@ -26,7 +26,7 @@ export const actions = {
         }
 
         const profile = await getProfile(did);
-        const dates = await getallDates(did);
+        const dates = await getAllDates(did);
 
         flog(`searched dates @${profile.handle} [${did}]`);
 

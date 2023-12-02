@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { Interaction } from '../db';
 import { InteractionsType } from '../types';
 
-export const getallDates = async (actor: string) => {
+export const getAllDates = async (actor: string) => {
     return await Interaction.aggregate([
         {
             $match: {

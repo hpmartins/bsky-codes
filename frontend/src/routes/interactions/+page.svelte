@@ -39,6 +39,7 @@
     let dateRangeStr = '';
 
     onMount(async () => {
+        // @ts-ignore
         cal.on('click', async (event, timestamp, value) => {
             const date = dayjs(timestamp).add(1, 'w');
             const test = await fetch('/api/interactions', {
