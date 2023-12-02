@@ -5,3 +5,7 @@ export const DO_NOT_INCLUDE_THESE = [
     'did:plc:iw47x7htlvpkbbizqn2sgnks', // @whatsmid
     'did:plc:fxj7klwmhjh75ow5bmlyp5g2', // @outofcontext
 ];
+
+export const uid10 = () => Math.random().toString(16).slice(2, 12);
+
+export const PEOPLE_LIST_KEY = 'luna/bolas/list';
