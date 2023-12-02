@@ -140,7 +140,9 @@ async function run() {
 
   const api = new AtpAgent({ service: 'https://bsky.social/' })
 
-  const cache = await createClient()
+  const cache = await createClient({
+    url: process.env.REDIS_URI,
+  })
     .on('error', err => log(`redis error: ${err}`))
     .on('connect', () => log('connected to redis'))
     .connect()
