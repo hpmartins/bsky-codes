@@ -41,13 +41,13 @@ export const config: Config<
         {
             locale: 'en',
             key: 'features',
-            routes: ['/interactions', '/languages', '/blocks', /\/top\/.*/],
+            routes: [/\/(i|interactions)/, '/languages', '/blocks', /\/top\/.*/],
             loader: async () => (await import('./en/features.json')).default,
         },
         {
             locale: 'pt',
             key: 'features',
-            routes: ['/interactions', '/languages', '/blocks', /\/top\/.*/],
+            routes: [/\/(i|interactions)/, '/languages', '/blocks', /\/top\/.*/],
             loader: async () => (await import('./pt/features.json')).default,
         },
     ],
