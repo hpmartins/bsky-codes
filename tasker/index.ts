@@ -165,7 +165,7 @@ async function run() {
     log,
   };
 
-  if (!maybeBoolean(process.env.TASKER_DEVEL)) {
+  if (!maybeBoolean(process.env.DEVEL)) {
     log('starting tasks');
     scheduleTasks(ctx);
   }
