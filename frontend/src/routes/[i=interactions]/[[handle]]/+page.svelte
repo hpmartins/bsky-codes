@@ -86,7 +86,7 @@
 
     async function submitHandle() {
         if (inputValue && inputValue.length > 0) {
-            goto(`${data.base}/${inputValue}`);
+            goto(`${data.base}/${inputValue.trim().replace(/^@/, '')}`);
         }
     }
 </script>
