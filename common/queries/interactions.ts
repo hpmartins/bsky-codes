@@ -60,8 +60,8 @@ export const getAllDates = async (actor: string) => {
         },
         {
             $sort: {
-                year: 1,
-                week: 1
+                year: -1,
+                week: -1
             }
         }
     ]);
@@ -73,7 +73,7 @@ export const getInteractions = async (
     week: string,
     year: string
 ): Promise<InteractionsType[]> => {
-    const query = await Interaction.aggregate([
+    const query: InteractionsType[] = await Interaction.aggregate([
         {
             $match: which === 'author' ? { '_id.author': actor } : { '_id.subject': actor }
         },
