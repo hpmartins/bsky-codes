@@ -37,7 +37,7 @@ export const load: PageServerLoad = async ({ url, params }) => {
             base: base,
             success: true,
             did: did,
-            handle: handle,
+            handle: profile.handle,
             profile: profile,
             dates: dates,
             syncToUpdate: syncToUpdate,

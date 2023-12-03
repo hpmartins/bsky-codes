@@ -125,7 +125,8 @@
         </div>
     {/if}
 
-    <hr />
+    <p class="text-2xl">@{data.handle}</p>
+
     <div class="flex flex-col items-center gap-1">
         <b>{$t('features.interactions.choose_week')}:</b>
         <select
