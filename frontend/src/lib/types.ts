@@ -8,11 +8,22 @@ export type BlockType = {
 
 export type InteractionsDataType = {
     found: boolean;
-    date?: { type: string; start?: Dayjs; end?: Dayjs };
     sent?: InteractionsType[];
     rcvd?: InteractionsType[];
     both?: InteractionsType[];
 };
+
+export type DateTypeWeekly = {
+    type: 'weekly';
+    start: Dayjs;
+    end: Dayjs;
+}
+
+export type DateTypeStr = {
+    type: 'all' | 'month' | 'week';
+}
+
+export type InteractionsDateType = DateTypeWeekly | DateTypeStr;
 
 export type CirclesOptionsType = {
     orbits: number;

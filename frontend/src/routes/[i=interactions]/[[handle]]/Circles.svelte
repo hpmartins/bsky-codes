@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
+    import type { CirclesOptionsType, InteractionsDataType, InteractionsDateType } from '$lib/types';
     import { t } from '$lib/translations';
     import { onMount } from 'svelte';
     import { DO_NOT_INCLUDE_THESE } from '@common/defaults';
@@ -15,6 +15,7 @@
     // These are the inputs for this page
     export let profile: SimpleProfileType; // user profile (handle, displayName, avatar)
     export let data: InteractionsDataType; // data.sent, data.rcvd, data.both (interactions)
+    export let date: InteractionsDateType;
     export let options: CirclesOptionsType; // all options
 
     function hex_is_light(color: string) {
@@ -108,22 +109,17 @@
 
         // date on top left corner
         if (options.add_date) {
-            const type = data?.date?.type ?? '';
             let textFull = '';
-            if (type === 'weekly') {
-                const textFrom = data?.date?.start?.toDate().toLocaleDateString();
-                const textTo = data?.date?.end?.toDate().toLocaleDateString();
+            if (date.type === 'weekly') {
+                const textFrom = date.start.toDate().toLocaleDateString();
+                const textTo = date.end.toDate().toLocaleDateString();
                 textFull = `${textFrom} - ${textTo}`;
-            } else if (type === 'all') {
+            } else if (date.type === 'all') {
                 textFull = `${new Date().toLocaleDateString()} (all time)`;
-            } else if (type === 'month') {
+            } else if (date.type === 'month') {
                 textFull = `${new Date().toLocaleDateString()} (month)`;
-            } else if (type === 'week') {
+            } else if (date.type === 'week') {
                 const textFrom = dayjs().subtract(1, 'week').toDate().toLocaleDateString();
-                const textTo = new Date().toLocaleDateString();
-                textFull = `${textFrom} - ${textTo}`;
-            } else if (type === 'day') {
-                const textFrom = dayjs().subtract(24, 'hour').toDate().toLocaleDateString();
                 const textTo = new Date().toLocaleDateString();
                 textFull = `${textFrom} - ${textTo}`;
             }

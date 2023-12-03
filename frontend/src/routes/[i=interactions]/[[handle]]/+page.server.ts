@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { SyncProfile } from '@common/db';
 import { getAllDates } from '@common/queries';
-import { getProfile, resolveHandle, flog } from '$lib/utils';
+import { getProfile, resolveHandle, flog, getDateOfIsoWeek } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ url, params }) => {
     const base = url.pathname.split('/').slice(0, 2).join('/');
@@ -28,7 +28,8 @@ export const load: PageServerLoad = async ({ url, params }) => {
         }
 
         const profile = await getProfile(did);
-        const dates = await getAllDates(did);
+        let dates: { week: number; year: number; count: number; date?: Date }[] = await getAllDates(did);
+        dates = dates.map(x => ({...x, date: getDateOfIsoWeek(x.week, x.year)}))
 
         flog(`searched dates @${handle} [${did}]`);
 

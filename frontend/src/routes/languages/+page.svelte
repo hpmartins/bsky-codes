@@ -9,10 +9,6 @@
 </script>
 
 <svelte:head>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css" />
-    <link rel="stylesheet" href="/style.css" />
     <title>Wolfgang - {$t('features.languages.pagetitle')}</title>
 </svelte:head>
 

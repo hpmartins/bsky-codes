@@ -17,7 +17,10 @@ export const POST: RequestHandler = async ({ request }) => {
 
     const interactions = await searchInteractions(input);
     if (interactions) {
-        return new Response(JSON.stringify(interactions));
+        return new Response(JSON.stringify({
+            found: true,
+            ...interactions,
+        }));
     }
-    return new Response();
+    return new Response(JSON.stringify({ found: false }));
 };

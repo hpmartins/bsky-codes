@@ -1,14 +1,10 @@
 <script lang="ts">
     import type { PageServerData } from './$types';
-    import type { CirclesOptionsType, InteractionsDataType } from '$lib/types';
-    import type { InteractionsType } from '@common/types';
+    import type { CirclesOptionsType, DateTypeStr, InteractionsDataType, InteractionsDateType } from '$lib/types';
 
-    import { onMount } from 'svelte';
-    
     import dayjs from 'dayjs';
     import isoWeek from 'dayjs/plugin/isoWeek';
     import localizedFormat from 'dayjs/plugin/localizedFormat';
-    import CalHeatmap from 'cal-heatmap';
 
     import { t } from '$lib/translations';
     import { getDateOfIsoWeek } from '$lib/utils';
@@ -21,14 +17,20 @@
 
     let inputValue: string;
 
-    if (data.handle) {
-        inputValue = data.handle;
-    }
+    let dates:
+        | {
+              week: number;
+              year: number;
+              count: number;
+          }[]
+        | undefined;
+    $: ({ dates } = data);
+    let selectedDate: string;
 
     let interactionsData: InteractionsDataType = { found: false };
     let consolidateData = false;
 
-    let cOptions: CirclesOptionsType = {
+    let circlesOptions: CirclesOptionsType = {
         orbits: 2,
         include_sent: true,
         include_rcvd: true,
@@ -43,91 +45,28 @@
     dayjs.extend(isoWeek);
     dayjs.extend(localizedFormat);
 
-    const cal: CalHeatmap = new CalHeatmap();
-
     let dateRangeStr = '';
+    let circlesDate: InteractionsDateType;
 
-    onMount(async () => {
-        // @ts-ignore
-        cal.on('click', async (event, timestamp, value) => {
-            const date = dayjs(timestamp).add(1, 'w');
-            const test = await fetch('/api/interactions', {
-                method: 'POST',
-                body: JSON.stringify({
-                    did: data.did,
-                    handle: data.handle,
-                    weekly: {
-                        week: date.isoWeek(),
-                        year: date.isoWeekYear(),
-                    },
-                }),
-                headers: { 'Content-type': 'application/json' },
-            });
-            const res = await test.json();
-            interactionsData = {
-                found: true,
-                date: { type: 'weekly', start: date.subtract(1, 'week'), end: date },
-                sent: res.sent as InteractionsType[],
-                rcvd: res.rcvd as InteractionsType[],
-                both: res.both as InteractionsType[],
-            };
-            dateRangeStr = `${dayjs(interactionsData.date?.start).format('L')} to ${dayjs(
-                interactionsData.date?.end,
-            ).format('L')}`;
-        });
+    async function handleSelectedDate() {
+        const parsedDate: { week: number; year: number } = JSON.parse(selectedDate);
+        const chosenDate = dayjs(getDateOfIsoWeek(parsedDate.week, parsedDate.year));
 
-        await cal.paint({
-            range: 3,
-            date: {
-                locale: { weekStart: 1 },
-                min: dayjs('2022-11-01'),
-                max: dayjs(),
-                start: dayjs('2022-11-01'),
-            },
-            itemSelector: '#interactions-heatmap',
-            domain: {
-                type: 'month',
-                label: {
-                    textAlign: 'middle',
-                },
-            },
-            subDomain: { type: 'week', label: 'W', width: 25, height: 35 },
-            data: {
-                source: data?.dates,
-                x: (dt: { week: number; year: number }) => {
-                    return getDateOfIsoWeek(dt.week, dt.year);
-                },
-                y: 'count',
-            },
-            verticalOrientation: false,
-            scale: {
-                color: {
-                    type: 'linear',
-                    domain: [
-                        0,
-                        Math.max.apply(
-                            null,
-                            Object.values(
-                                data?.dates?.map((x: { count: number }) => x.count) ?? [],
-                            ),
-                        ),
-                    ],
-                },
-            },
-        });
-
-        await cal.jumpTo(new Date());
-    });
-
-    async function handlePrevious() {
-        cal.previous();
-    }
-    async function handleNext() {
-        cal.next();
+        interactionsData = await fetch('/api/interactions', {
+            method: 'POST',
+            body: JSON.stringify({
+                did: data.did,
+                handle: data.handle,
+                weekly: parsedDate,
+            }),
+            headers: { 'Content-type': 'application/json' },
+        }).then((res) => res.json());
+        circlesDate = { type: 'weekly', start: chosenDate, end: chosenDate.add(1, 'week') };
+        dateRangeStr = `${chosenDate.format('L')} to ${chosenDate.add(1, 'week').format('L')}`;
     }
 
-    async function handleDatePeriod(type: string) {
-        const test = await fetch('/api/interactions', {
+    async function handleDatePeriod(type: DateTypeStr["type"]) {
+        interactionsData = await fetch('/api/interactions', {
             method: 'POST',
             body: JSON.stringify({
                 did: data?.did,
@@ -135,15 +74,8 @@
                 range: type,
             }),
             headers: { 'Content-type': 'application/json' },
-        });
-        const res = await test.json();
-        interactionsData = {
-            found: true,
-            date: { type: type },
-            sent: res.sent as InteractionsType[],
-            rcvd: res.rcvd as InteractionsType[],
-            both: res.both as InteractionsType[],
-        };
+        }).then((res) => res.json());
+        circlesDate = { type: type };
         const dateRangeDict: { [key: string]: string } = {
             all: $t('features.interactions.dates.all'),
             month: $t('features.interactions.dates.month'),
@@ -151,13 +83,15 @@
         };
         dateRangeStr = dateRangeDict[type];
     }
+
+    async function submitHandle() {
+        if (inputValue && inputValue.length > 0) {
+            goto(`${data.base}/${inputValue}`);
+        }
+    }
 </script>
 
 <svelte:head>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css" />
-    <link rel="stylesheet" href="/style.css" />
     <title>Wolfgang - {$t('features.interactions.pagetitle')}</title>
 </svelte:head>
 
@@ -165,7 +99,7 @@
     <p class="text-2xl">{$t('features.interactions.title')}</p>
 </div>
 
-<form on:submit|preventDefault={() => goto(`${data.base}/${inputValue}`)}>
+<form on:submit|preventDefault={submitHandle}>
     <div class="flex justify-center">
         <div class="join">
             <input
@@ -194,18 +128,21 @@
     <hr />
     <div class="flex flex-col items-center gap-1">
         <b>{$t('features.interactions.choose_week')}:</b>
-        <div class="join">
-            <button class="join-item btn btn-xs" on:click|preventDefault={handlePrevious}>
-                <i class="bi bi-chevron-double-left" />
-                {$t('features.common.prev')}
-            </button>
-            <button class="join-item btn btn-xs" on:click|preventDefault={handleNext}>
-                {$t('features.common.next')} <i class="bi bi-chevron-double-right" />
-            </button>
-        </div>
-        <div class="flex justify-center items-center">
-            <div id="interactions-heatmap" class="max-w-sm" />
-        </div>
+        <select
+            bind:value={selectedDate}
+            on:change={handleSelectedDate}
+            class="select select-bordered w-full max-w-xs"
+        >
+            <option disabled selected />
+            {#if dates && dates.length > 0}
+                {#each dates as item, idx}
+                    {@const itemDate = dayjs(getDateOfIsoWeek(item.week, item.year))}
+                    <option value={JSON.stringify(item)}>
+                        [{itemDate.format('MMM')}] {item.week}/{item.year} - {item.count}
+                    </option>
+                {/each}
+            {/if}
+        </select>
         <b>{$t('features.interactions.choose_range')}:</b>
         <div>
             <a class="link" href={'#'} on:click|preventDefault={() => handleDatePeriod('all')}>
@@ -247,7 +184,7 @@
                                 <input
                                     class="checkbox checkbox-sm checkbox-secondary"
                                     type="checkbox"
-                                    bind:checked={cOptions.include_sent}
+                                    bind:checked={circlesOptions.include_sent}
                                 />
                                 <span class="label-text"
                                     >{$t('features.interactions.bolas.sent')}</span
@@ -257,7 +194,7 @@
                                 <input
                                     class="checkbox checkbox-sm checkbox-secondary"
                                     type="checkbox"
-                                    bind:checked={cOptions.include_rcvd}
+                                    bind:checked={circlesOptions.include_rcvd}
                                 />
                                 <span class="label-text"
                                     >{$t('features.interactions.bolas.received')}</span
@@ -270,7 +207,7 @@
                                 <input
                                     class="checkbox checkbox-sm checkbox-secondary"
                                     type="checkbox"
-                                    bind:checked={cOptions.remove_bots}
+                                    bind:checked={circlesOptions.remove_bots}
                                 />
                                 <span class="label-text"
                                     >{$t('features.interactions.bolas.remove_bots')}</span
@@ -280,7 +217,7 @@
                                 <input
                                     class="checkbox checkbox-sm checkbox-secondary"
                                     type="checkbox"
-                                    bind:checked={cOptions.add_date}
+                                    bind:checked={circlesOptions.add_date}
                                 />
                                 <span class="label-text"
                                     >{$t('features.interactions.bolas.add_date')}</span
@@ -290,7 +227,7 @@
                                 <input
                                     class="checkbox checkbox-sm checkbox-secondary"
                                     type="checkbox"
-                                    bind:checked={cOptions.add_watermark}
+                                    bind:checked={circlesOptions.add_watermark}
                                 />
                                 <span class="label-text"
                                     >{$t('features.interactions.bolas.add_watermark')}</span
@@ -305,7 +242,7 @@
                                     class="range range-xs range-primary"
                                     min="1"
                                     max="3"
-                                    bind:value={cOptions.orbits}
+                                    bind:value={circlesOptions.orbits}
                                 />
                             </div>
                             <div>
@@ -313,7 +250,7 @@
                                 <input
                                     type="color"
                                     style="width:100%;"
-                                    bind:value={cOptions.bg_color}
+                                    bind:value={circlesOptions.bg_color}
                                 />
                             </div>
                             <div>
@@ -321,25 +258,26 @@
                                     <input
                                         class="checkbox checkbox-sm checkbox-secondary"
                                         type="checkbox"
-                                        bind:checked={cOptions.add_border}
+                                        bind:checked={circlesOptions.add_border}
                                     />
                                     <p>{$t('features.interactions.bolas.border_color')}:</p>
                                 </label>
                                 <input
                                     type="color"
                                     style="width:100%;"
-                                    bind:value={cOptions.border_color}
+                                    bind:value={circlesOptions.border_color}
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        {#key interactionsData}{#key cOptions}
+                        {#key interactionsData}{#key circlesOptions}
                                 <Circles
                                     profile={data.profile}
                                     data={interactionsData}
-                                    options={cOptions}
+                                    date={circlesDate}
+                                    options={circlesOptions}
                                 />
                             {/key}{/key}
                     </div>

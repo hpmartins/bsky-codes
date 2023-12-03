@@ -44,7 +44,6 @@
     },
     "type": "module",
     "dependencies": {
-        "cal-heatmap": "^4.2.3",
         "dayjs": "^1.11.10",
         "mongoose": "^7.6.3",
         "svelte-canvas": "^1.0.2",
