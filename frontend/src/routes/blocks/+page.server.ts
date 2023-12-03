@@ -7,8 +7,8 @@ import { flog, getProfile, resolveHandle } from '$lib/utils';
 export const actions = {
     default: async ({ request, locals }) => {
         const input = await request.formData();
-        const handle = input.get('handle');
-        const did = await resolveHandle(handle as string);
+        const handle = String(input.get('handle')).replace(/^@/, '');
+        const did = await resolveHandle(handle);
         if (did === undefined) {
             return { handle: handle, success: false };
         }
