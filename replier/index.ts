@@ -402,7 +402,9 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
             const remindmePost = await ctx.cache.hGet('luna/remindme', del.uri)
             if (remindmePost) {
                 const remindmePostData: { [key: string]: string } = JSON.parse(remindmePost)
-                await ctx.agent.deletePost(remindmePostData.replyUri)
+                if (remindmePostData.replyUri) {
+                    await ctx.agent.deletePost(remindmePostData.replyUri)
+                }
                 await ctx.cache.hDel('luna/remindme', del.uri)
                 ctx.log(`[luna/remindme] del:${repo}`)
             }
