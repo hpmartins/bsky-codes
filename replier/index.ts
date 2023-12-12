@@ -32,32 +32,32 @@ export type AppContext = {
     log: (text: string) => void;
 };
 
-async function processRemindMe(ctx: AppContext, repo: string, post: IPost, precmd: string) {
+async function processRemindMe(ctx: AppContext, post: IPost, precmd: string) {
     const text = post.text.toLowerCase().replace(precmd, '');
-    const match = text.match(/^([0-9]+\s*(?:min(?:uto)?s?|h(?:our|ora)?s?|hr|d|days?|dias?|w|weeks?|s|semanas?|y|years?|a|anos?)[\s,]*)+/i);
-    if (match && match.input) {
-        const message = match.input.replace(match[0], '');
-        const keys = match[0].toLowerCase().replaceAll(',', ' ').replaceAll(/\s+/g, ' ').trim()
+    const match = text.match(/^([0-9]+\s*(?:mes|mês|meses|months|m(?:in(?:uto|ute)?s?)?|h(?:ours?|oras?|rs?)?|d(?:ays?|ias?)?|w(?:eeks?)?|s(?:emanas?)?|y(?:ears?)?|a(?:nos?)?)[\s,]*)+/gi);
+
+    if (match) {
+        const message = post.text.replace(match[0], '');
+        const keys = match[0].matchAll(/([0-9]+)\s*(mes|mês|meses|months?|m(?:in(?:uto|ute)?s?)?|h(?:ours?|oras?|rs?)?|d(?:ays?|ias?)?|w(?:eeks?)?|s(?:emanas?)?|y(?:ears?)?|a(?:nos?)?)[\s,]*/gi)
 
         let targetDate = dayjs()
-        keys.split(' ').forEach((val) => {
-            const m = val.match(/([0-9]+)([a-z])/)
-            if (m) {
-                const timeAmount = Number(m[1])
-                const timeType = String(m[2])
-                if (timeType == 'm') {
-                    targetDate = targetDate.add(timeAmount, 'minutes');
-                } else if (timeType == 'h') {
-                    targetDate = targetDate.add(timeAmount, 'hours');
-                } else if (timeType == 'd') {
-                    targetDate = targetDate.add(timeAmount, 'days');
-                } else if (timeType == 'w' || timeType == 's') {
-                    targetDate = targetDate.add(timeAmount, 'weeks');
-                } else if (timeType == 'y' || timeType == 'a') {
-                    targetDate = targetDate.add(timeAmount, 'years')
-                }
+        for (const key of keys) {
+            const timeAmount = Number(key[1])
+            const timeType = String(key[2])
+            if (timeType.match(/mes|mês|meses|months?/i)) {
+                targetDate = targetDate.add(timeAmount, 'months');
+            } else if (timeType.startsWith('m')) {
+                targetDate = targetDate.add(timeAmount, 'minutes');
+            } else if (timeType.startsWith('h')) {
+                targetDate = targetDate.add(timeAmount, 'hours');
+            } else if (timeType.startsWith('d')) {
+                targetDate = targetDate.add(timeAmount, 'days');
+            } else if (timeType.startsWith('w') || timeType.startsWith('s')) {
+                targetDate = targetDate.add(timeAmount, 'weeks');
+            } else if (timeType.startsWith('y') || timeType.startsWith('a')) {
+                targetDate = targetDate.add(timeAmount, 'years')
             }
-        })
+        }
 
         if (targetDate.isAfter()) {
             await ctx.agent.like(post._id, post.cid)
@@ -326,9 +326,9 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
                 // !luna remindme
                 // - Remind me
-                if (command === 'remindme') {
+                if (command === 'remindme' || command === 'lembrar') {
                     try {
-                        const remindme = await processRemindMe(ctx, repo, post, match[0]);
+                        const remindme = await processRemindMe(ctx, post, match[0]);
                         if (remindme) {
                             await ctx.cache.hSet('luna/remindme', post._id, JSON.stringify({
                                 cid: post.cid,
