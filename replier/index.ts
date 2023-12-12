@@ -101,6 +101,8 @@ async function processRemindMeTask(ctx: AppContext) {
             };
             const reply = await ctx.agent.post(postRecord);
 
+            ctx.log(`[luna/remindme] post:${reply.uri}`);
+
             await ctx.cache.hSet('luna/remindme', task.uri, JSON.stringify({
                 ...task, replyUri: reply.uri,
             }))
