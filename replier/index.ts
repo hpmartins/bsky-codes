@@ -1,3 +1,4 @@
+var cron = require('node-cron');
 import 'module-alias/register';
 import 'dotenv/config';
 import { Manager } from 'socket.io-client';
@@ -30,6 +31,82 @@ export type AppContext = {
     cache: redis.RedisClientType<any, any, any>;
     log: (text: string) => void;
 };
+
+async function processRemindMe(ctx: AppContext, repo: string, post: IPost, precmd: string) {
+    const text = post.text.toLowerCase().replace(precmd, '');
+    const match = text.match(/^([0-9]+\s*(?:min(?:uto)?s?|h(?:our|ora)?s?|hr|d|days?|dias?|w|weeks?|s|semanas?|y|years?|a|anos?)[\s,]*)+/i);
+    if (match && match.input) {
+        const message = match.input.replace(match[0], '');
+        const keys = match[0].toLowerCase().replaceAll(',', ' ').replaceAll(/\s+/g, ' ').trim()
+
+        let targetDate = dayjs()
+        keys.split(' ').forEach((val) => {
+            const m = val.match(/([0-9]+)([a-z])/)
+            if (m) {
+                const timeAmount = Number(m[1])
+                const timeType = String(m[2])
+                if (timeType == 'm') {
+                    targetDate = targetDate.add(timeAmount, 'minutes');
+                } else if (timeType == 'h') {
+                    targetDate = targetDate.add(timeAmount, 'hours');
+                } else if (timeType == 'd') {
+                    targetDate = targetDate.add(timeAmount, 'days');
+                } else if (timeType == 'w' || timeType == 's') {
+                    targetDate = targetDate.add(timeAmount, 'weeks');
+                } else if (timeType == 'y' || timeType == 'a') {
+                    targetDate = targetDate.add(timeAmount, 'years')
+                }
+            }
+        })
+
+        if (targetDate.isAfter()) {
+            await ctx.agent.like(post._id, post.cid)
+            return {
+                date: targetDate,
+                message: message,
+            }
+        }
+    }
+}
+
+async function processRemindMeTask(ctx: AppContext) {
+    const allKeys = await ctx.cache.hGetAll('luna/remindme');
+    const allTasks = Object.entries(allKeys).map(x => ({
+        uri: x[0],
+        ...JSON.parse(x[1]) as {
+            cid: string;
+            date: string;
+            message: string;
+            replyUri?: string;
+        }
+    }));
+
+    for (const task of allTasks) {
+        if (dayjs(task.date).isBefore()) {
+            const postRecord = {
+                $type: 'app.bsky.feed.post',
+                text: `🐈‍⬛ RemindMe: ${task.message}`,
+                reply: {
+                    parent: {
+                        uri: task.uri,
+                        cid: task.cid
+                    },
+                    root: {
+                        uri: task.uri,
+                        cid: task.cid
+                    }
+                },
+                createdAt: new Date().toISOString()
+            };
+            const reply = await ctx.agent.post(postRecord);
+
+            await ctx.cache.hSet('luna/remindme', task.uri, JSON.stringify({
+                ...task, replyUri: reply.uri,
+            }))
+            return reply;
+        }
+    }
+}
 
 async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
     const locale = post.langs.length > 0 ? post.langs[0] : 'en';
@@ -230,6 +307,10 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
     });
 }
 
+export async function processFirehoseStreamDevel(ctx: AppContext, data: FirehoseData) {
+    const { repo, posts } = data;
+}
+
 export async function processFirehoseStream(ctx: AppContext, data: FirehoseData) {
     const { repo, posts } = data;
 
@@ -239,13 +320,29 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
             // Luna
             if (text.startsWith('!luna')) {
-                const match = text.match(/!luna\s+(\w+)/i);
-                const key = match ? match[1].toLowerCase() : undefined;
-                if (!key) return;
+                const match = text.match(/!luna(\s*\w+\s*)/i);
+                const command = match ? match[1].toLowerCase().trim() : undefined;
+                if (!match || !command) return;
+
+                // !luna remindme
+                // - Remind me
+                if (command === 'remindme') {
+                    try {
+                        const remindme = await processRemindMe(ctx, repo, post, match[0]);
+                        if (remindme) {
+                            await ctx.cache.hSet('luna/remindme', post._id, JSON.stringify({
+                                cid: post.cid,
+                                ...remindme,
+                            }))
+                            ctx.log(`[luna/remindme] add:${repo}`)
+                        }
+                    }
+                    catch (e) {}
+                }
 
                 // !luna primeiro|firstpost
                 // - Quotes first post
-                if (key === 'primeiro' || key === 'firstpost') {
+                if (command === 'primeiro' || command === 'firstpost') {
                     if (await ctx.cache.exists(`luna/firstpost:${repo}`)) {
                         ctx.log(`[luna/firstpost] try:${repo}`);
                         return;
@@ -262,7 +359,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
                 // !luna birthday
                 // - Account creation timestamp
-                if (key === 'birthday') {
+                if (command === 'birthday') {
                     if (await ctx.cache.exists(`luna/birthday:${repo}`)) {
                         ctx.log(`[luna/birthday] try:${repo}`);
                         return;
@@ -279,7 +376,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
                 // !luna bolas|circles
                 // - Default bolas
-                if (key === 'bolas' || key === 'circles') {
+                if (command === 'bolas' || command === 'circles') {
                     if (await ctx.cache.exists(`luna/bolas:${repo}`)) {
                         ctx.log(`[luna/bolas] try:${repo}`);
                         return;
@@ -299,6 +396,14 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
     if (posts.delete.length > 0) {
         for (const del of posts.delete) {
+            const remindmePost = await ctx.cache.hGet('luna/remindme', del.uri)
+            if (remindmePost) {
+                const remindmePostData: { [key: string]: string } = JSON.parse(remindmePost)
+                await ctx.agent.deletePost(remindmePostData.replyUri)
+                await ctx.cache.hDel('luna/remindme', del.uri)
+                ctx.log(`[luna/remindme] del:${repo}`)
+            }
+
             const firstpostPost = await ctx.cache.hGet('luna/firstpost', del.uri)
             if (firstpostPost) {
                 await ctx.agent.deletePost(firstpostPost)
@@ -368,9 +473,17 @@ const run = async () => {
         log
     };
 
+    cron.schedule('*/2 * * * *', async () => {
+        await processRemindMeTask(ctx);
+    });
+
     socket.on('data', async (data: FirehoseData): Promise<void> => {
         try {
-            await processFirehoseStream(ctx, data);
+            if (process.env.DEVEL) {
+                await processFirehoseStreamDevel(ctx, data);
+            } else {
+                await processFirehoseStream(ctx, data);
+            }
         } catch (e) {
             log('Error');
             console.log(data);
