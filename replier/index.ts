@@ -19,6 +19,7 @@ export const DAY = HOUR * 24;
 export const WEEK = DAY * 7;
 
 type AppConfig = {
+    devel: boolean;
     bskyDid: string;
     bskyPwd: string;
     redisHost: string;
@@ -445,7 +446,7 @@ const run = async () => {
         log(`reconnecting to listener... [${attempt}]`);
     });
 
-    const cfg = {
+    const cfg: AppConfig = {
         devel: maybeBoolean(process.env.DEVEL) ?? true,
         bskyDid: maybeStr(process.env.LUNA_BSKY_DID) ?? '',
         bskyPwd: maybeStr(process.env.LUNA_BSKY_PASSWORD) ?? '',

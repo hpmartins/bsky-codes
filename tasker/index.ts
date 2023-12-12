@@ -19,6 +19,7 @@ export const DAY = HOUR * 24;
 export const WEEK = DAY * 7;
 
 type AppConfig = {
+  devel: boolean;
   bskyDid: string;
   bskyPwd: string;
   redisHost: string;
@@ -119,6 +120,7 @@ async function run() {
   })
 
   const cfg: AppConfig = {
+    devel: maybeBoolean(process.env.DEVEL) ?? true,
     bskyDid: maybeStr(process.env.WOLFGANG_BSKY_DID) ?? '',
     bskyPwd: maybeStr(process.env.WOLFGANG_BSKY_PASSWORD) ?? '',
     redisHost: maybeStr(process.env.REDIS_HOST) ?? 'localhost',
@@ -167,7 +169,7 @@ async function run() {
     log,
   };
 
-  if (!maybeBoolean(process.env.DEVEL)) {
+  if (!cfg.devel) {
     log('starting tasks');
     scheduleTasks(ctx);
   }
