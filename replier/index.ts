@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { Manager } from 'socket.io-client';
 import { IPost, connectDb } from '../common/db';
 import { FirehoseData } from '../common/types';
-import { getCreationTimestamp, getFirstPost, getProfile, maybeInt, maybeStr } from '../common';
+import { getCreationTimestamp, getFirstPost, getProfile, maybeBoolean, maybeInt, maybeStr } from '../common';
 import { searchInteractions } from '../common/queries/interactions';
 import { createCirclesImage } from '../common/circles';
 import { AppBskyFeedPost, BskyAgent, RichText, UnicodeString } from '@atproto/api';
@@ -446,6 +446,7 @@ const run = async () => {
     });
 
     const cfg = {
+        devel: maybeBoolean(process.env.DEVEL) ?? true,
         bskyDid: maybeStr(process.env.LUNA_BSKY_DID) ?? '',
         bskyPwd: maybeStr(process.env.LUNA_BSKY_PASSWORD) ?? '',
         redisHost: maybeStr(process.env.REDIS_HOST) ?? 'localhost',
@@ -479,7 +480,7 @@ const run = async () => {
 
     socket.on('data', async (data: FirehoseData): Promise<void> => {
         try {
-            if (process.env.DEVEL) {
+            if (cfg.devel) {
                 await processFirehoseStreamDevel(ctx, data);
             } else {
                 await processFirehoseStream(ctx, data);
