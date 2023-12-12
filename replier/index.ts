@@ -34,11 +34,11 @@ export type AppContext = {
 };
 
 async function processRemindMe(ctx: AppContext, post: IPost, precmd: string) {
-    const text = post.text.toLowerCase().replace(precmd, '');
+    const text = post.text.replace(precmd, '');
     const match = text.match(/^([0-9]+\s*(?:mes|mês|meses|months|m(?:in(?:uto|ute)?s?)?|h(?:ours?|oras?|rs?)?|d(?:ays?|ias?)?|w(?:eeks?)?|s(?:emanas?)?|y(?:ears?)?|a(?:nos?)?)[\s,]*)+/gi);
 
     if (match) {
-        const message = post.text.replace(match[0], '');
+        const message = text.replace(match[0], '');
         const keys = match[0].matchAll(/([0-9]+)\s*(mes|mês|meses|months?|m(?:in(?:uto|ute)?s?)?|h(?:ours?|oras?|rs?)?|d(?:ays?|ias?)?|w(?:eeks?)?|s(?:emanas?)?|y(?:ears?)?|a(?:nos?)?)[\s,]*/gi)
 
         let targetDate = dayjs()
