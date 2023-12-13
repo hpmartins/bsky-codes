@@ -83,7 +83,7 @@ async function processRemindMeTask(ctx: AppContext) {
     }));
 
     for (const task of allTasks) {
-        if (dayjs(task.date).isBefore()) {
+        if (dayjs(task.date).isBefore() && !task.replyUri) {
             const postRecord = {
                 $type: 'app.bsky.feed.post',
                 text: `🐈‍⬛ RemindMe: ${task.message}`,
