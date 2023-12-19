@@ -7,7 +7,7 @@ import { EXCLUDE_WORDS } from '../const';
 import sharp from 'sharp';
 import D3Node from 'd3-node';
 import chroma from 'chroma-js';
-import { AppContext } from 'index';
+import { AppContext } from '../index';
 import { AppBskyEmbedImages, AppBskyFeedPost } from '@atproto/api';
 
 import utc from 'dayjs/plugin/utc';
