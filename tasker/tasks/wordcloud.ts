@@ -5,6 +5,8 @@ import canvas from 'canvas';
 import cloud, { Word } from 'd3-cloud';
 import { EXCLUDE_WORDS } from '../const';
 import sharp from 'sharp';
+
+// @ts-ignore
 import D3Node from 'd3-node';
 import chroma from 'chroma-js';
 import { AppContext } from '../index';
