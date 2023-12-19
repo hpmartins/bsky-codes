@@ -12,5 +12,14 @@
     "dotenv": "^16.3.1",
     "module-alias": "^2.2.3",
     "node-cron": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/chroma-js": "^2.4.3",
+    "@types/d3-cloud": "^1.2.9",
+    "@types/sharp": "^0.32.0",
+    "chroma-js": "^2.4.2",
+    "d3-cloud": "^1.2.7",
+    "d3-node": "^3.0.0",
+    "sharp": "^0.33.1"
   }
 }
