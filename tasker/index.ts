@@ -27,7 +27,7 @@ import { updateLickablePeople, updateLickablePosts } from './tasks/wolfgang';
 import { Manager } from 'socket.io-client';
 import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
-import { createLatestEmojiCloud, createLatestWordCloud, postClouds } from './tasks/wordcloud';
+import { postClouds } from './tasks/wordcloud';
 
 export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
@@ -90,15 +90,15 @@ function scheduleTasks(ctx: AppContext) {
     });
 
     cron.schedule(
-        '0 2-6/2 * * *', // every 2 hours from 2-6 am
+        '0 3-6/3 * * *', // every 2 hours from 2-6 am
         async () => {
-            await postClouds(ctx, 135);
+            await postClouds(ctx, 180);
         },
         { timezone: 'America/Sao_Paulo' }
     );
 
     cron.schedule(
-        '0 7-23,0 * * *', // every hour from 7-23 and 0
+        '0 0,7-23 * * *', // every hour from 7-23 and 0
         async () => {
             await postClouds(ctx, 75);
         },

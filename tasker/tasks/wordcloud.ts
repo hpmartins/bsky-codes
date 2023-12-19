@@ -83,7 +83,7 @@ export const createLatestWordCloud = async (minutes: number) => {
 
     cloud()
         .size([900, 900])
-        .words(normalizedWords)
+        .words(JSON.parse(JSON.stringify(normalizedWords)))
         .rotate(() => ~~(Math.random() * 2) * 45)
         .canvas(() => canvas.createCanvas(1, 1))
         .random(() => 0.5)
@@ -93,7 +93,7 @@ export const createLatestWordCloud = async (minutes: number) => {
         .on('end', draw)
         .start();
 
-    async function draw(words: { [key: string]: any }[], bounds: { [key: string]: number }[]) {
+    async function draw(cloudWords: { [key: string]: any }[], bounds: { [key: string]: number }[]) {
         const { x: width, y: height } = bounds[1];
 
         const svg = d3n.createSVG(width, height);
@@ -102,7 +102,7 @@ export const createLatestWordCloud = async (minutes: number) => {
         svg.append('g')
             .attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')')
             .selectAll('text')
-            .data(words)
+            .data(cloudWords)
             .enter()
             .append('text')
             .style('font-size', (d: Word) => d.size + 'px')
@@ -118,7 +118,7 @@ export const createLatestWordCloud = async (minutes: number) => {
     return {
         alt: normalizedWords
             .slice(0, 40)
-            .map((word, idx) => `${idx + 1}. ${word.text} (${word.size})`)
+            .map((w, idx) => `${idx + 1}. ${w.text} (${w.size})`)
             .join('\n'),
         image: await sharp(Buffer.from(d3n.svgString())).png().toBuffer()
     };
@@ -138,7 +138,7 @@ export const createLatestEmojiCloud = async (minutes: number) => {
 
     cloud()
         .size([900, 900])
-        .words(normalizedWords)
+        .words(JSON.parse(JSON.stringify(normalizedWords)))
         .rotate(0)
         .canvas(() => canvas.createCanvas(1, 1))
         .random(() => Math.random())
@@ -149,7 +149,7 @@ export const createLatestEmojiCloud = async (minutes: number) => {
         .on('end', draw)
         .start();
 
-    async function draw(words: { [key: string]: any }[], bounds: { [key: string]: number }[]) {
+    async function draw(cloudWords: { [key: string]: any }[], bounds: { [key: string]: number }[]) {
         const { x: width, y: height } = bounds[1];
 
         cv.width = width;
@@ -163,7 +163,7 @@ export const createLatestEmojiCloud = async (minutes: number) => {
         ctx.textBaseline = 'middle';
         ctx.textDrawingMode = 'glyph';
 
-        for (let word of words) {
+        for (let word of cloudWords) {
             ctx.font = `${word.size}px ${word.font}`;
             ctx.fillText(word.text, width / 2 + word.x, height / 2 + word.y);
         }
