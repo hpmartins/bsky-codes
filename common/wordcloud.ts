@@ -373,7 +373,7 @@ export const getUserWordCloud = async (
             }
         })
         .sortByCount('$words')
-        .limit(100);
+        .limit(300);
 
     const query = await qb.exec()
 
