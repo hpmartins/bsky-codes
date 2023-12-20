@@ -173,7 +173,7 @@ export const createLatestEmojiCloud = async (minutes: number) => {
         alt: normalizedWords
             .slice(0, 40)
             .map((word, idx) => `${idx + 1}. ${word.text} (${word.size})`)
-            .join('\n'),
+            .join(', '),
         image: cv.toBuffer()
     };
 };
@@ -234,7 +234,7 @@ export const createUserWordCloud = async (repo: string, days?: number) => {
         alt: normalizedWords
             .slice(0, 40)
             .map((w, idx) => `${idx + 1}. ${w.text} (${w.size})`)
-            .join('\n'),
+            .join(', '),
         image: await sharp(Buffer.from(d3n.svgString())).png().toBuffer()
     };
 };
