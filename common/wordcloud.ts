@@ -658,4 +658,9 @@ const EXCLUDE_WORDS = [
     'tb',
     'tbm',
     'mim',
+    'hj',
+    'sei',
+    'né',
+    'faz',
+    'vê',
 ];
