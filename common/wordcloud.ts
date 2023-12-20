@@ -322,7 +322,7 @@ export const getLatestWordCloud = async (
             }
         })
         .sortByCount('$words')
-        .limit(100);
+        .limit(500);
 
     return query.filter((x) => x._id.length > 1).filter((x) => !/\p{Emoji}/u.test(x._id));
 };
@@ -373,7 +373,7 @@ export const getUserWordCloud = async (
             }
         })
         .sortByCount('$words')
-        .limit(300);
+        .limit(500);
 
     const query = await qb.exec()
 
