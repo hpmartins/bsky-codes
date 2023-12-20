@@ -2,18 +2,20 @@ var cron = require('node-cron');
 import 'module-alias/register';
 import 'dotenv/config';
 import { Manager } from 'socket.io-client';
-import { IPost, SyncProfile, connectDb } from '../common/db';
+import { connectDb } from '../common/db';
 import { FirehoseData } from '../common/types';
-import { getCreationTimestamp, getFirstPost, getProfile, maybeBoolean, maybeInt, maybeStr, syncRecords } from '../common';
-import { searchInteractions } from '../common/queries/interactions';
-import { createCirclesImage } from '../common/circles';
-import { AppBskyFeedPost, BskyAgent, RichText, UnicodeString } from '@atproto/api';
+import { maybeBoolean, maybeInt, maybeStr } from '../common';
+import { AppBskyFeedPost, BskyAgent } from '@atproto/api';
 import redis, { createClient } from 'redis';
-import dayjs from 'dayjs';
-import { ids } from '../common/lexicon/lexicons';
-import { PEOPLE_LIST_KEY, uid10 } from '../common/defaults';
 import { DidResolver } from '@atproto/identity';
-import { createUserWordCloud } from '../common/wordcloud';
+import {
+    processWordCloud,
+    processRemindMe,
+    processRemindMeTask,
+    processFirstPost,
+    processBirthday,
+    processBolas
+} from './commands';
 
 export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
@@ -36,325 +38,14 @@ export type AppContext = {
     log: (text: string) => void;
 };
 
-async function processRemindMe(ctx: AppContext, post: IPost, precmd: string) {
-    const text = post.text.replace(precmd, '');
-    const match = text.match(/^([0-9]+\s*(?:mes|mês|meses|months|m(?:in(?:uto|ute)?s?)?|h(?:ours?|oras?|rs?)?|d(?:ays?|ias?)?|w(?:eeks?)?|s(?:emanas?)?|y(?:ears?)?|a(?:nos?)?)[\s,]*)+/gi);
-
-    if (match) {
-        const message = text.replace(match[0], '');
-        const keys = match[0].matchAll(/([0-9]+)\s*(mes|mês|meses|months?|m(?:in(?:uto|ute)?s?)?|h(?:ours?|oras?|rs?)?|d(?:ays?|ias?)?|w(?:eeks?)?|s(?:emanas?)?|y(?:ears?)?|a(?:nos?)?)[\s,]*/gi)
-
-        let targetDate = dayjs()
-        for (const key of keys) {
-            const timeAmount = Number(key[1])
-            const timeType = String(key[2])
-            if (timeType.match(/mes|mês|meses|months?/i)) {
-                targetDate = targetDate.add(timeAmount, 'months');
-            } else if (timeType.startsWith('m')) {
-                targetDate = targetDate.add(timeAmount, 'minutes');
-            } else if (timeType.startsWith('h')) {
-                targetDate = targetDate.add(timeAmount, 'hours');
-            } else if (timeType.startsWith('d')) {
-                targetDate = targetDate.add(timeAmount, 'days');
-            } else if (timeType.startsWith('w') || timeType.startsWith('s')) {
-                targetDate = targetDate.add(timeAmount, 'weeks');
-            } else if (timeType.startsWith('y') || timeType.startsWith('a')) {
-                targetDate = targetDate.add(timeAmount, 'years')
-            }
-        }
-
-        if (targetDate.isAfter()) {
-            await ctx.agent.like(post._id, post.cid)
-            return {
-                date: targetDate,
-                message: message,
-            }
-        }
+export const checkValidateAndPost = async (agent: BskyAgent, postRecord: unknown) => {
+    if (
+        AppBskyFeedPost.isRecord(postRecord) &&
+        AppBskyFeedPost.validateRecord(postRecord).success
+    ) {
+        return await agent.post(postRecord);
     }
-}
-
-async function processRemindMeTask(ctx: AppContext) {
-    const allKeys = await ctx.cache.hGetAll('luna/remindme');
-    const allTasks = Object.entries(allKeys).map(x => ({
-        uri: x[0],
-        ...JSON.parse(x[1]) as {
-            cid: string;
-            date: string;
-            message: string;
-            replyUri?: string;
-        }
-    }));
-
-    for (const task of allTasks) {
-        if (task.replyUri !== undefined) continue;
-
-        if (dayjs(task.date).isBefore() && dayjs(task.date).isAfter(dayjs().subtract(10, 'minute'))) {
-            const postRecord = {
-                $type: 'app.bsky.feed.post',
-                text: `🐈‍⬛ RemindMe: ${task.message}`,
-                reply: {
-                    parent: {
-                        uri: task.uri,
-                        cid: task.cid
-                    },
-                    root: {
-                        uri: task.uri,
-                        cid: task.cid
-                    }
-                },
-                createdAt: new Date().toISOString()
-            };
-            const reply = await ctx.agent.post(postRecord);
-
-            ctx.log(`[luna/remindme] post:${reply.uri}`);
-
-            await ctx.cache.hSet('luna/remindme', task.uri, JSON.stringify({
-                ...task, replyUri: reply.uri,
-            }))
-            return reply;
-        }
-    }
-}
-
-async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
-
-    const ts_data = await getCreationTimestamp(repo);
-    if (!ts_data) return;
-
-    const { handle, indexedAt } = ts_data;
-
-    let date: string;
-    let text: string;
-    if (locale.startsWith('pt')) {
-        date = dayjs(indexedAt).format('DD/MM/YYYY [às] HH:mm:ss');
-        text = `🐈‍⬛ @${handle}, sua conta foi criada em ${date}`;
-    } else {
-        date = dayjs(indexedAt).format('YYYY-MM-DD [at] h:mm:ss A');
-        text = `🐈‍⬛ @${handle}, your account was created on ${date}`;
-    }
-    const postText = new RichText({
-        text: text
-    });
-
-    await postText.detectFacets(ctx.agent);
-    const postRecord = {
-        $type: 'app.bsky.feed.post',
-        text: postText.text,
-        reply: {
-            parent: {
-                uri: post._id,
-                cid: post.cid
-            },
-            root: {
-                uri: post._id,
-                cid: post.cid
-            }
-        },
-        facets: postText.facets,
-        createdAt: new Date().toISOString()
-    };
-    
-    const reply = await ctx.agent.post(postRecord);
-
-    return reply;
-}
-
-async function processFirstPost(ctx: AppContext, repo: string, post: IPost) {
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
-
-    const record = await getFirstPost(repo);
-    if (!record) return;
-
-    let date: string;
-    let text: string;
-    if (locale.startsWith('pt')) {
-        date = dayjs(record.value.createdAt).format('DD/MM/YYYY');
-        text = `🐈‍⬛ Seu primeiro post foi em ${date}:`;
-    } else {
-        date = dayjs(record.value.createdAt).format('YYYY-MM-DD');
-        text = `🐈‍⬛ You first posted on ${date}`;
-    }
-    const postText = new RichText({
-        text: text
-    });
-
-    await postText.detectFacets(ctx.agent);
-    const postRecord = {
-        $type: ids.AppBskyFeedPost,
-        text: postText.text,
-        embed: {
-            $type: ids.AppBskyEmbedRecord,
-            record: {
-                uri: record.uri,
-                cid: record.cid,
-            }
-        },
-        reply: {
-            parent: {
-                uri: post._id,
-                cid: post.cid
-            },
-            root: {
-                uri: post._id,
-                cid: post.cid
-            }
-        },
-        facets: postText.facets,
-        createdAt: new Date().toISOString()
-    };
-    
-    const validate = AppBskyFeedPost.validateRecord(postRecord);
-    if (validate.success) {
-        const reply = await ctx.agent.post(postRecord);
-        return reply;
-    }
-}
-
-export async function processWordCloud(ctx: AppContext, repo: string, post: IPost) {
-    const syncProfile = await SyncProfile.findById(repo);
-    if (!syncProfile || !syncProfile.updated) {
-        const doc = await ctx.didres.resolveAtprotoData(repo);
-        if (!doc) return;
-        await syncRecords(doc, 'app.bsky.feed.post');
-    }
-
-    const wordCloud = await createUserWordCloud(repo);
-
-    return ctx.agent.uploadBlob(wordCloud.image, { encoding: 'image/png' }).then((res) => {
-        if (res.success) {
-            const postRecord = {
-                $type: 'app.bsky.feed.post',
-                text: 'test',
-                createdAt: new Date().toISOString(),
-                embed: {
-                    $type: 'app.bsky.embed.images',
-                    images: [{ image: res.data.blob, alt: '' }]
-                },
-                reply: {
-                    parent: {
-                        uri: post._id,
-                        cid: post.cid
-                    },
-                    root: {
-                        uri: post._id,
-                        cid: post.cid
-                    }
-                }
-            };
-            if (AppBskyFeedPost.isRecord(postRecord)) {
-                const val = AppBskyFeedPost.validateRecord(postRecord);
-                if (val.success) {
-                    return ctx.agent.post(postRecord);
-                }
-            }
-        }
-    });
-}
-
-async function processBolas(ctx: AppContext, repo: string, post: IPost) {
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
-
-    const profile = await getProfile(repo);
-    if (!profile) return;
-    const data = await searchInteractions({
-        did: profile.did,
-        handle: profile.handle,
-        range: 'week'
-    });
-    if (!data) return;
-
-    const circles = await createCirclesImage(
-        {
-            did: profile.did,
-            avatar: profile.avatar,
-            displayName: profile.displayName,
-            handle: profile.handle
-        },
-        data,
-        { type: 'week' },
-        locale
-    );
-    if (!circles) return;
-
-    const listId = uid10();
-    await ctx.cache.hSet(PEOPLE_LIST_KEY, listId, JSON.stringify(circles.people))
-
-    let text: UnicodeString;
-    const shorthandle = profile.handle.replace('.bsky.social', '');
-    if (locale.startsWith('pt')) {
-        text = new UnicodeString(`🐈‍⬛ Bolas de @${profile.handle} dos últimos 7 dias 🖤\nLista de arrobas | wolfgang/i/${shorthandle}`);
-    } else {
-        text = new UnicodeString(`🐈‍⬛ Circles of @${profile.handle} for the last 7 days 🖤\nList of handles | wolfgang/i/${shorthandle}`);
-    }
-
-    const postText = new RichText({
-        text: text.utf16,
-    });
-    await postText.detectFacets(ctx.agent);
-
-    const links = [
-        {
-            regex: /(Lista de arrobas|List of handles)/,
-            href: `https://wolfgang.raios.xyz/arr/${listId}`,
-        },
-        {
-            regex: /wolfgang.*$/,
-            href: `https://wolfgang.raios.xyz/i/${shorthandle}`,
-        }
-    ]
-
-    links.forEach(link => {
-        const match = link.regex.exec(text.utf16);
-        if (match) {
-            const start = text.utf16.indexOf(match[0], match.index);
-            const index = { start, end: start + match[0].length };
-            postText.facets?.push({
-                index: {
-                    byteStart: text.utf16IndexToUtf8Index(index.start),
-                    byteEnd: text.utf16IndexToUtf8Index(index.end)
-                },
-                features: [
-                    {
-                        $type: "app.bsky.richtext.facet#link",
-                        uri: link.href,
-                    }
-                ]
-            });
-        }
-    })
-
-    return ctx.agent.uploadBlob(circles.image, { encoding: 'image/png' }).then((res) => {
-        if (res.success) {
-            const postRecord = {
-                $type: 'app.bsky.feed.post',
-                text: postText.text,
-                facets: postText.facets,
-                createdAt: new Date().toISOString(),
-                embed: {
-                    $type: 'app.bsky.embed.images',
-                    images: [{ image: res.data.blob, alt: '' }]
-                },
-                reply: {
-                    parent: {
-                        uri: post._id,
-                        cid: post.cid
-                    },
-                    root: {
-                        uri: post._id,
-                        cid: post.cid
-                    }
-                },
-            };
-            if (AppBskyFeedPost.isRecord(postRecord)) {
-                const val = AppBskyFeedPost.validateRecord(postRecord);
-                if (val.success) {
-                    return ctx.agent.post(postRecord);
-                }
-            }
-        }
-    });
-}
+};
 
 export async function processFirehoseStreamDevel(ctx: AppContext, data: FirehoseData) {
     const { repo, posts } = data;
@@ -392,14 +83,17 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                     try {
                         const remindme = await processRemindMe(ctx, post, match[0]);
                         if (remindme) {
-                            await ctx.cache.hSet('luna/remindme', post._id, JSON.stringify({
-                                cid: post.cid,
-                                ...remindme,
-                            }))
-                            ctx.log(`[luna/remindme] add:${repo}`)
+                            await ctx.cache.hSet(
+                                'luna/remindme',
+                                post._id,
+                                JSON.stringify({
+                                    cid: post.cid,
+                                    ...remindme
+                                })
+                            );
+                            ctx.log(`[luna/remindme] add:${repo}`);
                         }
-                    }
-                    catch (e) {}
+                    } catch (e) {}
                 }
 
                 // !luna nuvem|wordcloud
@@ -415,8 +109,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                             await ctx.cache.set(`luna/wordcloud:${repo}`, 1, { EX: 1 * HOUR });
                             ctx.log(`[luna/wordcloud] add:${repo}`);
                         }
-                    }
-                    catch (e) {}
+                    } catch (e) {}
                 }
 
                 // !luna primeiro|firstpost
@@ -425,13 +118,13 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                     if (await ctx.cache.exists(`luna/firstpost:${repo}`)) {
                         ctx.log(`[luna/firstpost] try:${repo}`);
                         return;
-                    };
+                    }
                     try {
                         const reply = await processFirstPost(ctx, repo, post);
                         if (reply) {
-                            await ctx.cache.hSet('luna/firstpost', post._id, reply.uri)
-                            await ctx.cache.set(`luna/firstpost:${repo}`, 1, { EX: 1*HOUR })
-                            ctx.log(`[luna/firstpost] add:${repo}`)
+                            await ctx.cache.hSet('luna/firstpost', post._id, reply.uri);
+                            await ctx.cache.set(`luna/firstpost:${repo}`, 1, { EX: 1 * HOUR });
+                            ctx.log(`[luna/firstpost] add:${repo}`);
                         }
                     } catch (e) {}
                 }
@@ -442,13 +135,13 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                     if (await ctx.cache.exists(`luna/birthday:${repo}`)) {
                         ctx.log(`[luna/birthday] try:${repo}`);
                         return;
-                    };
+                    }
                     try {
                         const reply = await processBirthday(ctx, repo, post);
                         if (reply) {
-                            await ctx.cache.hSet('luna/birthday', post._id, reply.uri)
-                            await ctx.cache.set(`luna/birthday:${repo}`, 1, { EX: 1*HOUR })
-                            ctx.log(`[luna/birthday] add:${repo}`)
+                            await ctx.cache.hSet('luna/birthday', post._id, reply.uri);
+                            await ctx.cache.set(`luna/birthday:${repo}`, 1, { EX: 1 * HOUR });
+                            ctx.log(`[luna/birthday] add:${repo}`);
                         }
                     } catch (e) {}
                 }
@@ -459,13 +152,13 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                     if (await ctx.cache.exists(`luna/bolas:${repo}`)) {
                         ctx.log(`[luna/bolas] try:${repo}`);
                         return;
-                    };
+                    }
                     try {
                         const reply = await processBolas(ctx, repo, post);
                         if (reply) {
-                            await ctx.cache.hSet('luna/bolas', post._id, reply.uri)
-                            await ctx.cache.set(`luna/bolas:${repo}`, 1, { EX: 1*HOUR })
-                            ctx.log(`[luna/bolas] add:${repo}`)
+                            await ctx.cache.hSet('luna/bolas', post._id, reply.uri);
+                            await ctx.cache.set(`luna/bolas:${repo}`, 1, { EX: 1 * HOUR });
+                            ctx.log(`[luna/bolas] add:${repo}`);
                         }
                     } catch (e) {}
                 }
@@ -475,35 +168,35 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
 
     if (posts.delete.length > 0) {
         for (const del of posts.delete) {
-            const remindmePost = await ctx.cache.hGet('luna/remindme', del.uri)
+            const remindmePost = await ctx.cache.hGet('luna/remindme', del.uri);
             if (remindmePost) {
-                const remindmePostData: { [key: string]: string } = JSON.parse(remindmePost)
+                const remindmePostData: { [key: string]: string } = JSON.parse(remindmePost);
                 if (remindmePostData.replyUri) {
-                    await ctx.agent.deletePost(remindmePostData.replyUri)
+                    await ctx.agent.deletePost(remindmePostData.replyUri);
                 }
-                await ctx.cache.hDel('luna/remindme', del.uri)
-                ctx.log(`[luna/remindme] del:${repo}`)
+                await ctx.cache.hDel('luna/remindme', del.uri);
+                ctx.log(`[luna/remindme] del:${repo}`);
             }
 
-            const firstpostPost = await ctx.cache.hGet('luna/firstpost', del.uri)
+            const firstpostPost = await ctx.cache.hGet('luna/firstpost', del.uri);
             if (firstpostPost) {
-                await ctx.agent.deletePost(firstpostPost)
-                await ctx.cache.hDel('luna/firstpost', del.uri)
-                ctx.log(`[luna/firstpost] del:${repo}`)
+                await ctx.agent.deletePost(firstpostPost);
+                await ctx.cache.hDel('luna/firstpost', del.uri);
+                ctx.log(`[luna/firstpost] del:${repo}`);
             }
 
-            const birthdayPost = await ctx.cache.hGet('luna/birthday', del.uri)
+            const birthdayPost = await ctx.cache.hGet('luna/birthday', del.uri);
             if (birthdayPost) {
-                await ctx.agent.deletePost(birthdayPost)
-                await ctx.cache.hDel('luna/birthday', del.uri)
-                ctx.log(`[luna/birthday] del:${repo}`)
+                await ctx.agent.deletePost(birthdayPost);
+                await ctx.cache.hDel('luna/birthday', del.uri);
+                ctx.log(`[luna/birthday] del:${repo}`);
             }
 
-            const bolasPost = await ctx.cache.hGet('luna/bolas', del.uri)
+            const bolasPost = await ctx.cache.hGet('luna/bolas', del.uri);
             if (bolasPost) {
-                await ctx.agent.deletePost(bolasPost)
-                await ctx.cache.hDel('luna/bolas', del.uri)
-                ctx.log(`[luna/bolas] del:${repo}`)
+                await ctx.agent.deletePost(bolasPost);
+                await ctx.cache.hDel('luna/bolas', del.uri);
+                ctx.log(`[luna/bolas] del:${repo}`);
             }
 
             const wordcloudPost = await ctx.cache.hGet('luna/wordcloud', del.uri);
@@ -551,7 +244,7 @@ const run = async () => {
     const didres = new DidResolver({});
 
     const cache = await createClient({
-        url: process.env.REDIS_URI,
+        url: process.env.REDIS_URI
     })
         .on('error', (err) => log(`redis error: ${err}`))
         .on('connect', () => log('connected to redis'))
