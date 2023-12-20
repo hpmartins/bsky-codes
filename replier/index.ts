@@ -2,9 +2,9 @@ var cron = require('node-cron');
 import 'module-alias/register';
 import 'dotenv/config';
 import { Manager } from 'socket.io-client';
-import { IPost, connectDb } from '../common/db';
+import { IPost, SyncProfile, connectDb } from '../common/db';
 import { FirehoseData } from '../common/types';
-import { getCreationTimestamp, getFirstPost, getProfile, maybeBoolean, maybeInt, maybeStr } from '../common';
+import { getCreationTimestamp, getFirstPost, getProfile, maybeBoolean, maybeInt, maybeStr, syncRecords } from '../common';
 import { searchInteractions } from '../common/queries/interactions';
 import { createCirclesImage } from '../common/circles';
 import { AppBskyFeedPost, BskyAgent, RichText, UnicodeString } from '@atproto/api';
@@ -12,6 +12,8 @@ import redis, { createClient } from 'redis';
 import dayjs from 'dayjs';
 import { ids } from '../common/lexicon/lexicons';
 import { PEOPLE_LIST_KEY, uid10 } from '../common/defaults';
+import { DidResolver } from '@atproto/identity';
+import { createUserWordCloud } from '../common/wordcloud';
 
 export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
@@ -29,6 +31,7 @@ type AppConfig = {
 export type AppContext = {
     cfg: AppConfig;
     agent: BskyAgent;
+    didres: DidResolver;
     cache: redis.RedisClientType<any, any, any>;
     log: (text: string) => void;
 };
@@ -208,6 +211,47 @@ async function processFirstPost(ctx: AppContext, repo: string, post: IPost) {
     }
 }
 
+export async function processWordCloud(ctx: AppContext, repo: string, post: IPost) {
+    const syncProfile = await SyncProfile.findById(repo);
+    if (!syncProfile || !syncProfile.updated) {
+        const doc = await ctx.didres.resolveAtprotoData(repo);
+        if (!doc) return;
+        await syncRecords(doc, 'app.bsky.feed.post');
+    }
+
+    const wordCloud = await createUserWordCloud(repo);
+
+    return ctx.agent.uploadBlob(wordCloud.image, { encoding: 'image/png' }).then((res) => {
+        if (res.success) {
+            const postRecord = {
+                $type: 'app.bsky.feed.post',
+                text: 'test',
+                createdAt: new Date().toISOString(),
+                embed: {
+                    $type: 'app.bsky.embed.images',
+                    images: [{ image: res.data.blob, alt: '' }]
+                },
+                reply: {
+                    parent: {
+                        uri: post._id,
+                        cid: post.cid
+                    },
+                    root: {
+                        uri: post._id,
+                        cid: post.cid
+                    }
+                }
+            };
+            if (AppBskyFeedPost.isRecord(postRecord)) {
+                const val = AppBskyFeedPost.validateRecord(postRecord);
+                if (val.success) {
+                    return ctx.agent.post(postRecord);
+                }
+            }
+        }
+    });
+}
+
 async function processBolas(ctx: AppContext, repo: string, post: IPost) {
     const locale = post.langs.length > 0 ? post.langs[0] : 'en';
 
@@ -314,6 +358,19 @@ async function processBolas(ctx: AppContext, repo: string, post: IPost) {
 
 export async function processFirehoseStreamDevel(ctx: AppContext, data: FirehoseData) {
     const { repo, posts } = data;
+    if (posts.create.length > 0) {
+        for (const post of posts.create) {
+            const text = post.text.toLowerCase().trim();
+            if (text.startsWith('!luna')) {
+                const match = text.match(/!luna(\s*\w+\s*)/i);
+                const command = match ? match[1].toLowerCase().trim() : undefined;
+                if (!match || !command) return;
+
+                if (command === 'retrospectiva' || command === 'wrapped') {
+                }
+            }
+        }
+    }
 }
 
 export async function processFirehoseStream(ctx: AppContext, data: FirehoseData) {
@@ -340,6 +397,23 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                                 ...remindme,
                             }))
                             ctx.log(`[luna/remindme] add:${repo}`)
+                        }
+                    }
+                    catch (e) {}
+                }
+
+                // !luna nuvem|wordcloud
+                if (command === 'nuvem' || command === 'wordcloud') {
+                    if (await ctx.cache.exists(`luna/wordcloud:${repo}`)) {
+                        ctx.log(`[luna/wordcloud] try:${repo}`);
+                        return;
+                    }
+                    try {
+                        const reply = await processWordCloud(ctx, repo, post);
+                        if (reply) {
+                            await ctx.cache.hSet('luna/wordcloud', post._id, reply.uri);
+                            await ctx.cache.set(`luna/wordcloud:${repo}`, 1, { EX: 1 * HOUR });
+                            ctx.log(`[luna/wordcloud] add:${repo}`);
                         }
                     }
                     catch (e) {}
@@ -431,6 +505,13 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                 await ctx.cache.hDel('luna/bolas', del.uri)
                 ctx.log(`[luna/bolas] del:${repo}`)
             }
+
+            const wordcloudPost = await ctx.cache.hGet('luna/wordcloud', del.uri);
+            if (wordcloudPost) {
+                await ctx.agent.deletePost(wordcloudPost);
+                await ctx.cache.hDel('luna/wordcloud', del.uri);
+                ctx.log(`[luna/wordcloud] del:${repo}`);
+            }
         }
     }
 }
@@ -467,6 +548,8 @@ const run = async () => {
     const agent = new BskyAgent({ service: 'https://bsky.social/' });
     await agent.login({ identifier: cfg.bskyDid, password: cfg.bskyPwd });
 
+    const didres = new DidResolver({});
+
     const cache = await createClient({
         url: process.env.REDIS_URI,
     })
@@ -477,6 +560,7 @@ const run = async () => {
     const ctx: AppContext = {
         cfg,
         agent,
+        didres,
         cache,
         log
     };
