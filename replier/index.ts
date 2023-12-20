@@ -106,7 +106,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                         const reply = await processWordCloud(ctx, repo, post);
                         if (reply) {
                             await ctx.cache.hSet('luna/wordcloud', post._id, reply.uri);
-                            await ctx.cache.set(`luna/wordcloud:${repo}`, 1, { EX: 1 * HOUR });
+                            await ctx.cache.set(`luna/wordcloud:${repo}`, 1, { EX: 10 * MINUTE });
                             ctx.log(`[luna/wordcloud] add:${repo}`);
                         }
                     } catch (e) {}
@@ -123,7 +123,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                         const reply = await processFirstPost(ctx, repo, post);
                         if (reply) {
                             await ctx.cache.hSet('luna/firstpost', post._id, reply.uri);
-                            await ctx.cache.set(`luna/firstpost:${repo}`, 1, { EX: 1 * HOUR });
+                            await ctx.cache.set(`luna/firstpost:${repo}`, 1, { EX: 10 * MINUTE });
                             ctx.log(`[luna/firstpost] add:${repo}`);
                         }
                     } catch (e) {}
@@ -140,7 +140,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                         const reply = await processBirthday(ctx, repo, post);
                         if (reply) {
                             await ctx.cache.hSet('luna/birthday', post._id, reply.uri);
-                            await ctx.cache.set(`luna/birthday:${repo}`, 1, { EX: 1 * HOUR });
+                            await ctx.cache.set(`luna/birthday:${repo}`, 1, { EX: 10 * MINUTE });
                             ctx.log(`[luna/birthday] add:${repo}`);
                         }
                     } catch (e) {}
@@ -157,7 +157,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                         const reply = await processBolas(ctx, repo, post);
                         if (reply) {
                             await ctx.cache.hSet('luna/bolas', post._id, reply.uri);
-                            await ctx.cache.set(`luna/bolas:${repo}`, 1, { EX: 1 * HOUR });
+                            await ctx.cache.set(`luna/bolas:${repo}`, 1, { EX: 10 * MINUTE });
                             ctx.log(`[luna/bolas] add:${repo}`);
                         }
                     } catch (e) {}
