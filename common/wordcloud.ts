@@ -21,26 +21,34 @@ dayjs.extend(timezone);
 
 const TIMEZONE = 'America/Sao_Paulo';
 
-const EN_EXCLUDED_WORDS = getWordsList('english', 150)
-const PT_EXCLUDED_WORDS = getWordsList('portuguese', 150)
+const EN_EXCLUDED_WORDS = getWordsList('english', 300);
+const PT_EXCLUDED_WORDS = getWordsList('portuguese', 300);
+const DE_EXCLUDED_WORDS = getWordsList('german', 300);
 
 const EXCLUDE_WORDS = [
     ...EN_EXCLUDED_WORDS,
     ...PT_EXCLUDED_WORDS,
+    ...DE_EXCLUDED_WORDS,
     '',
     'vc',
     'vcs',
     'ta',
+    'tá',
+    'uns',
     'ja',
-    "i'm",
-    "it's",
-    "nao",
-    "É",
-    "tô",
-    "pq",
-    "à",
-
-]
+    'very',
+    'every',
+    'she',
+    'he',
+    'nao',
+    'É',
+    'tô',
+    'pq',
+    'à',
+    'às',
+    'hoje',
+    'pela',
+];
 
 export const postClouds = async (agent: BskyAgent, minutes: number) => {
     const clouds = [await createLatestWordCloud(minutes), await createLatestEmojiCloud(minutes)];
@@ -328,7 +336,11 @@ export const getLatestWordCloud = async (
             _id: 0,
             words: {
                 $map: {
-                    input: { $split: ['$text', ' '] },
+                    input: { $split: [{ $replaceAll: {
+                        input: '$text',
+                        find: '\n',
+                        replacement: ' ',
+                    } }, ' '] },
                     as: 'str',
                     in: {
                         $trim: {
@@ -342,7 +354,9 @@ export const getLatestWordCloud = async (
         .unwind('$words')
         .match({
             words: {
-                $nin: EXCLUDE_WORDS
+                $not: {
+                    $regex: /['‘’]/,
+                }
             }
         })
         .sortByCount('$words')
@@ -379,7 +393,11 @@ export const getUserWordCloud = async (
             _id: 0,
             words: {
                 $map: {
-                    input: { $split: ['$text', ' '] },
+                    input: { $split: [{ $replaceAll: {
+                        input: '$text',
+                        find: '\n',
+                        replacement: ' ',
+                    } }, ' '] },
                     as: 'str',
                     in: {
                         $trim: {
@@ -396,10 +414,17 @@ export const getUserWordCloud = async (
                 $nin: EXCLUDE_WORDS
             }
         })
+        .match({
+            words: {
+                $not: {
+                    $regex: /['‘’]/,
+                }
+            }
+        })
         .sortByCount('$words')
         .limit(500);
 
-    const query = await qb.exec()
+    const query = await qb.exec();
 
     return query.filter((x) => x._id.length > 1).filter((x) => !/\p{Emoji}/u.test(x._id));
 };
