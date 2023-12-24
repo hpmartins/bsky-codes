@@ -96,17 +96,12 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                     } catch (e) {}
                 }
 
-                // !luna nuvem|wordcloud
+                // !luna nuvem|wordcloud all|todos
                 if (command === 'nuvem' || command === 'wordcloud') {
-                    if (await ctx.cache.exists(`luna/wordcloud:${repo}`)) {
-                        ctx.log(`[luna/wordcloud] try:${repo}`);
-                        return;
-                    }
                     try {
-                        const reply = await processWordCloud(ctx, repo, post);
+                        const reply = await processWordCloud(ctx, repo, post, match[0]);
                         if (reply) {
                             await ctx.cache.hSet('luna/wordcloud', post._id, reply.uri);
-                            await ctx.cache.set(`luna/wordcloud:${repo}`, 1, { EX: 10 * MINUTE });
                             ctx.log(`[luna/wordcloud] add:${repo}`);
                         }
                     } catch (e) {}
