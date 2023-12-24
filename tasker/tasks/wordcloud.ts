@@ -42,7 +42,7 @@ export const postClouds = async (ctx: AppContext, minutes: number) => {
         const shortEmojiList = embed.images[1].alt.split(', ').slice(0, 3).join(', ');
         const postRecord = {
             $type: 'app.bsky.feed.post',
-            text: `Nuvem de palavras e emojis de posts em português (${timeFrom} até ${timeTo})\n\n${shortWordList}\n\n${shortEmojiList}`,
+            text: `Nuvem de palavras e emojis de posts em português (${timeFrom} até ${timeTo})\n${shortWordList}\n${shortEmojiList}`,
             createdAt: new Date().toISOString(),
             embed: embed
         };
