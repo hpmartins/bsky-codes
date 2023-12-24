@@ -175,7 +175,7 @@ export const createLatestEmojiCloud = async (minutes: number) => {
         .canvas(() => canvas.createCanvas(1, 1))
         .random(() => Math.random())
         .font('Noto Color Emoji')
-        .fontSize((d) => (d.size ? 100 * Math.pow(d.size / words[0].count, 0.25) : 0))
+        .fontSize((d) => (d.size ? 100 * Math.pow(d.size / words[0].count, 0.35) : 0))
         .padding(15)
         .spiral('rectangular')
         .on('end', draw)
@@ -275,7 +275,7 @@ export const createUserEmojiCloud = async (repo: string, days?: number) => {
     const words = await getUserEmojiCloud(repo, days);
 
     const normalizedWords = words
-        .filter((x) => !['❌', '⬛', '🟩', '🟨', '🟥', '🟪', '🟦', '⬜'].includes(x._id))
+        .filter((x) => !['⬛', '🟩', '🟨', '🟥', '🟪', '🟦', '⬜'].includes(x._id))
         .map((x) => ({
             text: x._id,
             size: x.count
@@ -290,7 +290,7 @@ export const createUserEmojiCloud = async (repo: string, days?: number) => {
         .canvas(() => canvas.createCanvas(1, 1))
         .random(() => Math.random())
         .font('Noto Color Emoji')
-        .fontSize((d) => (d.size ? 100 * Math.pow(d.size / words[0].count, 0.25) : 0))
+        .fontSize((d) => (d.size ? 100 * Math.pow(d.size / words[0].count, 0.35) : 0))
         .padding(15)
         .spiral('rectangular')
         .on('end', draw)
