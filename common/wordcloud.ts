@@ -271,6 +271,60 @@ export const createUserWordCloud = async (repo: string, days?: number) => {
     };
 };
 
+export const createUserEmojiCloud = async (repo: string, days?: number) => {
+    const words = await getUserEmojiCloud(repo, days);
+
+    const normalizedWords = words
+        .filter((x) => !['❌', '⬛', '🟩', '🟨', '🟥', '🟪', '🟦', '⬜'].includes(x._id))
+        .map((x) => ({
+            text: x._id,
+            size: x.count
+        }));
+
+    const cv = canvas.createCanvas(1, 1);
+
+    cloud()
+        .size([900, 900])
+        .words(JSON.parse(JSON.stringify(normalizedWords)))
+        .rotate(0)
+        .canvas(() => canvas.createCanvas(1, 1))
+        .random(() => Math.random())
+        .font('Noto Color Emoji')
+        .fontSize((d) => (d.size ? 100 * Math.pow(d.size / words[0].count, 0.25) : 0))
+        .padding(15)
+        .spiral('rectangular')
+        .on('end', draw)
+        .start();
+
+    async function draw(cloudWords: { [key: string]: any }[], bounds: { [key: string]: number }[]) {
+        const { x: width, y: height } = bounds[1];
+
+        cv.width = width;
+        cv.height = height;
+        const ctx = cv.getContext('2d');
+
+        ctx.fillStyle = '#343434';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.textDrawingMode = 'glyph';
+
+        for (let word of cloudWords) {
+            ctx.font = `${word.size}px ${word.font}`;
+            ctx.fillText(word.text, width / 2 + word.x, height / 2 + word.y);
+        }
+    }
+
+    return {
+        alt: normalizedWords
+            .slice(0, 40)
+            .map((word, idx) => `${idx + 1}. ${word.text} (${word.size})`)
+            .join(', '),
+        image: cv.toBuffer()
+    };
+};
+
 export const getLatestEmojiCloud = async (
     minutes: number
 ): Promise<
@@ -434,3 +488,53 @@ export const getUserWordCloud = async (
     return query.filter((x) => x._id.length > 1).filter((x) => !/\p{Emoji}/u.test(x._id));
 };
 
+export const getUserEmojiCloud = async (
+    repo: string,
+    days?: number
+): Promise<
+    {
+        _id: string;
+        count: number;
+    }[]
+> => {
+    let qb = Post.aggregate().match({
+        author: repo,
+        textLength: {
+            $gt: 0
+        },
+        deleted: false,
+        text: {
+            $regex: /\p{Extended_Pictographic}/,
+            $options: 'u'
+        },
+    })
+
+    if (days) {
+        qb = qb.match({
+            createdAt: {
+                $gte: dayjs().subtract(days, 'days').toDate()
+            }
+        });
+    }
+
+    qb = qb
+        .project({
+            _id: 0,
+            emojis: {
+                $regexFindAll: {
+                    input: '$text',
+                    regex: /\p{Extended_Pictographic}/u
+                }
+            }
+        })
+        .unwind('$emojis')
+        .project({
+            emojis: '$emojis.match'
+        })
+        .sortByCount('$emojis')
+        .limit(40);
+
+    const query = await qb.exec();
+
+    return query;
+};
