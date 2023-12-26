@@ -24,6 +24,7 @@ import {
   AppBskyEmbedImages,
   AppBskyEmbedRecordWithMedia,
   AppBskyEmbedRecord,
+  AppBskyEmbedExternal,
 } from "@atproto/api";
 
 const firehoseMetric = new client.Counter({
@@ -239,11 +240,27 @@ export class FirehoseWorker extends FirehoseSubscription {
           let hasImages = 0;
           let altText: string[] | null = null;
           let quoteUri: string | null = null;
-    
+
+          let embed: {
+            _id: string;
+            type: string;
+          }[] | null = null;
+
+          if (AppBskyEmbedExternal.isMain(create.record.embed)) {
+            embed = [{
+              _id: create.record.embed.external.uri,
+              type: ids.AppBskyEmbedExternal,
+            }]
+          }
+
           // post with images
           if (AppBskyEmbedImages.isMain(create.record.embed)) {
             hasImages = create.record.embed.images.length;
             altText = create.record.embed.images.map((x) => x.alt);
+            embed = create.record.embed.images.map((x) => ({
+              _id: x.image.ref.toString(),
+              type: ids.AppBskyEmbedImages,
+            }))
           }
     
           // text-only post quoting a post
@@ -253,12 +270,23 @@ export class FirehoseWorker extends FirehoseSubscription {
     
           // post with media quoting a post
           if (AppBskyEmbedRecordWithMedia.isMain(create.record.embed)) {
+            embed = [];
             if (AppBskyEmbedRecord.isMain(create.record.embed.record)) {
               quoteUri = create.record.embed.record.record.uri;
+              embed.push({
+                _id: create.record.embed.record.record.uri,
+                type: ids.AppBskyEmbedRecord,
+              })
             }
             if (AppBskyEmbedImages.isMain(create.record.embed.media)) {
               hasImages = create.record.embed.media.images.length;
               altText = create.record.embed.media.images.map((x) => x.alt);
+              for (let image of create.record.embed.media.images) {
+                embed.push({
+                  _id: image.image.ref.toString(),
+                  type: ids.AppBskyEmbedImages,
+                })
+              }
             }
           }
     
@@ -274,6 +302,9 @@ export class FirehoseWorker extends FirehoseSubscription {
             langs: create.record.langs ?? null,
             hasImages: hasImages,
             textLength: create.record?.text.length,
+            embed: embed ?? null,
+            facets: JSON.stringify(create.record.facets),
+            entities: JSON.stringify(create.record.entities),
           };
         }),
         delete: ops.posts.deletes,

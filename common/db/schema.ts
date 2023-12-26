@@ -29,6 +29,11 @@ const profileSchema = new Schema<IProfile>(
 );
 
 // Posts
+interface IEmbed {
+  _id: string;
+  type: string;
+}
+
 export interface IPost {
   _id: string;
   cid: string;
@@ -41,6 +46,9 @@ export interface IPost {
   hasImages: number;
   altText: string[];
   textLength: number | null;
+  embed: IEmbed[] | null;
+  facets: string | null;
+  entities: string | null;
   comments: number | null;
   reposts: number | null;
   likes: number | null;
@@ -62,6 +70,12 @@ const postSchema = new Schema<IPost>(
     hasImages: Number,
     altText: [String],
     textLength: Number,
+    embed: [new Schema<IEmbed>({
+      _id: String,
+      type: String,
+    })],
+    facets: String,
+    entities: String,
     comments: Number,
     reposts: Number,
     likes: Number,
