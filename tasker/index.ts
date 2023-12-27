@@ -69,10 +69,10 @@ function scheduleTasks(ctx: AppContext) {
         await storeTopPosters();
     });
 
-    cron.schedule('*/5 * * * *', async () => {
-        const lickablePeople = await updateLickablePeople(ctx);
-        await updateLickablePosts(ctx, lickablePeople);
-    });
+    // cron.schedule('*/5 * * * *', async () => {
+    //     const lickablePeople = await updateLickablePeople(ctx);
+    //     await updateLickablePosts(ctx, lickablePeople);
+    // });
 
     cron.schedule('5 */2 * * *', async () => {
         const after = dayjs().subtract(2, 'day').startOf('day').toDate();
