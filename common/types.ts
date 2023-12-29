@@ -10,6 +10,7 @@ export type SimpleProfileType = {
 export type InteractionsType = {
   _id: string;
   idx?: number;
+  blocked: boolean;
   characters: number;
   replies: number;
   likes: number;

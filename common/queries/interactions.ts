@@ -73,7 +73,7 @@ export const getInteractions = async (
     week: string,
     year: string
 ): Promise<InteractionsType[]> => {
-    const query: InteractionsType[] = await Interaction.aggregate([
+    let qb = Interaction.aggregate([
         {
             $match: which === 'author' ? { '_id.author': actor } : { '_id.subject': actor }
         },
@@ -212,8 +212,44 @@ export const getInteractions = async (
                 }
             }
         }
-    ]);
+    ])
 
+    qb = qb.lookup({
+        from: "blocks",
+        let: { user: '$_id' },
+        pipeline: [
+            {
+                $match: {
+                   $expr: {
+                      $and: [
+                         {
+                            $eq: [
+                               "$author",
+                               actor,
+                            ]
+                         },
+                         {
+                            $eq: [
+                               "$subject",
+                               "$$user"
+                            ]
+                         }
+                      ]
+                   }
+                }
+             }
+        ],
+        as: 'blocked'
+    })
+    .append({
+        $addFields: {
+            blocked: {
+                $cond: [{ $eq: ['$blocked', []] }, false, true]
+            }
+        }
+    })
+
+    const query = await qb.exec();
     return query;
 };
 
@@ -226,15 +262,15 @@ export const getInteractionsByDateRange = async (
         limit?: number;
     }
 ): Promise<InteractionsType[]> => {
-    let query = Interaction.aggregate();
+    let qb = Interaction.aggregate();
 
     if (which === 'author') {
-        query = query.match({ '_id.author': actor });
+        qb = qb.match({ '_id.author': actor });
     } else {
-        query = query.match({ '_id.subject': actor });
+        qb = qb.match({ '_id.subject': actor });
     }
 
-    query = query
+    qb = qb
         .match({ $expr: { $ne: ['$_id.author', '$_id.subject'] } })
         .unwind('$list')
         .match({
@@ -298,9 +334,9 @@ export const getInteractionsByDateRange = async (
         .unwind('$list')
         .replaceRoot('$list');
 
-    if (options.limit) query = query.limit(options.limit);
+    if (options.limit) qb = qb.limit(options.limit);
 
-    query = query
+    qb = qb
         .lookup({
             from: 'profiles',
             localField: '_id',
@@ -323,7 +359,43 @@ export const getInteractionsByDateRange = async (
             }
         });
 
-    return await query.exec();
+    qb = qb.lookup({
+        from: "blocks",
+        let: { user: '$_id' },
+        pipeline: [
+            {
+                $match: {
+                   $expr: {
+                      $and: [
+                         {
+                            $eq: [
+                               "$author",
+                               actor,
+                            ]
+                         },
+                         {
+                            $eq: [
+                               "$subject",
+                               "$$user"
+                            ]
+                         }
+                      ]
+                   }
+                }
+             }
+        ],
+        as: 'blocked'
+    })
+    .append({
+        $addFields: {
+            blocked: {
+                $cond: [{ $eq: ['$blocked', []] }, false, true]
+            }
+        }
+    })
+
+    const query = await qb.exec();
+    return query;
 };
 
 export const searchInteractions = async (input: {
@@ -379,6 +451,7 @@ export const searchInteractions = async (input: {
             } else {
                 summed[x._id] = {
                     _id: x._id,
+                    blocked: x.blocked,
                     profile: x.profile,
                     characters: x.characters,
                     replies: x.replies,

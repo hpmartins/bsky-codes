@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { CirclesOptionsType, InteractionsDataType, InteractionsDateType } from '$lib/types';
+    import type {
+        CirclesOptionsType,
+        InteractionsDataType,
+        InteractionsDateType,
+    } from '$lib/types';
     import { t } from '$lib/translations';
     import { onMount } from 'svelte';
     import { DO_NOT_INCLUDE_THESE } from '@common/defaults';
@@ -54,6 +58,11 @@
             interactionsList = interactionsList.filter(
                 (x) => !DO_NOT_INCLUDE_THESE.includes(x._id),
             );
+        }
+
+        // filter blocked
+        if (options.remove_blocked) {
+            interactionsList = interactionsList.filter((x) => !x.blocked);
         }
 
         // - radial distances for each number of orbits
@@ -147,6 +156,28 @@
 
         const promises = [];
 
+        const drawImage = async (
+            context: CanvasRenderingContext2D,
+            img: HTMLImageElement,
+            opt: { [key: string]: number },
+        ) => {
+            context.save();
+            // this draws a circle centered at the image position
+            context.beginPath();
+            context.arc(opt.centerX, opt.centerY, opt.radius, 0, 2 * Math.PI, false);
+            // then clips whatever is out
+            context.clip();
+            // this draws the img at some position with some radius
+            context.drawImage(
+                img,
+                opt.centerX - opt.radius,
+                opt.centerY - opt.radius,
+                opt.radius * 2,
+                opt.radius * 2,
+            );
+            context.restore();
+        };
+
         // this will create the image, load the avatar and return a promise
         const preload = (
             user: { [key: string]: string | undefined },
@@ -160,26 +191,13 @@
                 } else {
                     img.src = '/person-fill.svg';
                 }
-                img.onload = function () {
+                img.onload = async function () {
                     if (!context) return reject;
-                    context.save();
-                    // this draws a circle centered at the image position
-                    context.beginPath();
-                    context.arc(opt.centerX, opt.centerY, opt.radius, 0, 2 * Math.PI, false);
-                    // then clips whatever is out
-                    context.clip();
-                    // this draws the img at some position with some radius
-                    context.drawImage(
-                        img,
-                        opt.centerX - opt.radius,
-                        opt.centerY - opt.radius,
-                        opt.radius * 2,
-                        opt.radius * 2,
-                    );
-                    context.restore();
-                    resolve(img);
+                    drawImage(context, img, opt);
+                    resolve(img)
                 };
                 img.onerror = async function () {
+                    if (!context) return reject;
                     // if fetching the avatar fails, here we try to update
                     // the profile to fetch a new avatar url. if it also
                     // fails to find one then it uses a placeholder
@@ -196,6 +214,7 @@
                     } else {
                         img.src = '/person-fill.svg';
                     }
+                    drawImage(context, img, opt);
                     resolve(img);
                 };
             });

@@ -35,6 +35,7 @@ export const createCirclesImage = async (
         include_sent: true,
         include_rcvd: false,
         remove_bots: true,
+        remove_blocked: true,
         add_watermark: true,
         add_date: true,
         bg_color: '#1D428A',
@@ -58,6 +59,11 @@ export const createCirclesImage = async (
     // filter bots
     if (options.remove_bots) {
         interactionsList = interactionsList.filter((x) => !DO_NOT_INCLUDE_THESE.includes(x._id));
+    }
+
+    // filter blocked
+    if (options.remove_blocked) {
+        interactionsList = interactionsList.filter((x) => !x.blocked);
     }
 
     // - radial distances for each number of orbits

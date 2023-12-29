@@ -35,6 +35,7 @@
         include_sent: true,
         include_rcvd: true,
         remove_bots: true,
+        remove_blocked: true,
         add_watermark: true,
         add_date: true,
         bg_color: '#1D428A',
@@ -212,6 +213,16 @@
                                 />
                                 <span class="label-text"
                                     >{$t('features.interactions.bolas.remove_bots')}</span
+                                >
+                            </label>
+                            <label class="label cursor-pointer gap-x-3 justify-start">
+                                <input
+                                    class="checkbox checkbox-sm checkbox-secondary"
+                                    type="checkbox"
+                                    bind:checked={circlesOptions.remove_blocked}
+                                />
+                                <span class="label-text"
+                                    >{$t('features.interactions.bolas.remove_blocked')}</span
                                 >
                             </label>
                             <label class="label cursor-pointer gap-x-3 justify-start">

@@ -60,6 +60,7 @@
 
             "options": "Options",
             "remove_bots": "Remove main bots",
+            "remove_blocked": "Remove blocked users",
             "add_date": "Add date",
             "add_watermark": "Add watermark",
 

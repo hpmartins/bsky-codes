@@ -30,6 +30,7 @@ export type CirclesOptionsType = {
     include_sent: boolean;
     include_rcvd: boolean;
     remove_bots: boolean;
+    remove_blocked: boolean;
     add_watermark: boolean;
     add_date: boolean;
     bg_color: string;

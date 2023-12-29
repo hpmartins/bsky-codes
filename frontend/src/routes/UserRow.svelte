@@ -2,6 +2,7 @@
     import type { SimpleProfileType } from '@common/types';
     export let did: string;
     export let profile: SimpleProfileType;
+    export let blocked: boolean = false;
 
     const handle = profile.handle ?? '';
     const displayName = profile.displayName ?? profile.handle ?? '';
@@ -18,7 +19,7 @@
         </div>
     </div>
     <div>
-        <div class="font-bold">{displayName}</div>
+        <div class="font-bold {blocked ? 'line-through' : ''}">{displayName}</div>
         <a href="https://bsky.app/profile/{did}" class="text-sm opacity-50">@{handle}</a>
     </div>
 </div>

@@ -31,7 +31,7 @@
                 <tr class="text-center">
                     <td>{row.idx}</td>
                     <td class="text-left">
-                        <UserRow did={row._id} profile={row.profile} />
+                        <UserRow did={row._id} profile={row.profile} blocked={row.blocked} />
                     </td>
                     <td>{row.characters}</td>
                     <td>{row.replies}</td>
