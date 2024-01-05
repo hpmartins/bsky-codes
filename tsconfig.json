@@ -21,5 +21,6 @@
     { "path": "./replier" },
     { "path": "./syncer" },
     { "path": "./tasker" },
+    { "path": "./feeder" },
   ]
 }
