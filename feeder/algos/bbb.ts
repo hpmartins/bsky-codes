@@ -1,12 +1,17 @@
 import { InvalidRequestError } from '@atproto/xrpc-server';
 import { QueryParams } from '../../common/lexicon/types/app/bsky/feed/getFeedSkeleton';
-import { PostsPt } from '../../common/db';
+import { DynamicData, PostsPt } from '../../common/db';
 import dayjs from 'dayjs';
 
 // max 15 chars
 export const shortname = 'bbb';
 
+let TAG_LIST: string[] = [];
+
 export const handler = async (params: QueryParams) => {
+    const list = await DynamicData.findById("bbb-tags");
+    if (list) TAG_LIST = list.data;
+
     let qb = PostsPt.aggregate()
         .match({
             createdAt: {
@@ -51,7 +56,7 @@ export const handler = async (params: QueryParams) => {
         })
         .match({
             tags: {
-                $in: ['bbb', 'bbb24', 'bigbrother', 'bigbrotherbrasil', 'bigbrotherbrasil24']
+                $in: TAG_LIST
             }
         })
         .sort({

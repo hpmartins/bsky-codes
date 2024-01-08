@@ -458,6 +458,16 @@ export const SyncProfile = mongoose.models['SyncStateProfile'] || mongoose.model
 
 export const WolfgangLick = mongoose.models['WolfgangLick'] || mongoose.model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');
 
+interface IDynamicData {
+  _id: string;
+  data: string[];
+}
+const dynamicDataSchema = new Schema<IDynamicData>({
+  _id: String,
+  data: [String],
+})
+export const DynamicData = mongoose.models["DynamicData"] || mongoose.model<IDynamicData>("DynamicData", dynamicDataSchema, 'dynamic_data')
+
 interface IFilteredPosts {
     _id: string;
     cid: string;
