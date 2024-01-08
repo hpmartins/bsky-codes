@@ -42,7 +42,7 @@ export interface IPost {
   replyParent: string | null;
   replyRoot: string | null;
   quoteUri: string | null;
-  langs: string[];
+  langs: string[] | null;
   hasImages: number;
   altText: string[];
   textLength: number | null;
@@ -457,3 +457,22 @@ export const SyncState = mongoose.models['SyncState'] || mongoose.model<ISyncSta
 export const SyncProfile = mongoose.models['SyncStateProfile'] || mongoose.model<ISyncProfileState>('SyncStateProfile', syncProfileSchema);
 
 export const WolfgangLick = mongoose.models['WolfgangLick'] || mongoose.model<IWolfgangLick>('WolfgangLick', wolfgangLickSchema, 'wolfgang_licks');
+
+interface IFilteredPosts {
+    _id: string;
+    cid: string;
+    facets: object;
+    createdAt: Date;
+    updatedAt: Date;
+}
+const filteredPostsSchema = new Schema<IFilteredPosts>(
+    {
+        _id: String,
+        cid: String,
+        facets: Object,
+    },
+    { timestamps: true }
+);
+export const PostsPt =
+    mongoose.models['PostsPt'] ||
+    mongoose.model<IFilteredPosts>('PostsPt', filteredPostsSchema, 'posts_pt');

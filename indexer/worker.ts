@@ -6,6 +6,7 @@ import {
   Like,
   List,
   Post,
+  PostsPt,
   Profile,
   Repost,
 } from '../common/db';
@@ -81,6 +82,13 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
       await Post.updateOne({ _id: item._id }, item, {
         upsert: true
       });
+
+      if (item.langs && item.langs.includes('pt')) {
+        await PostsPt.updateOne({ _id: item._id }, {
+          cid: item.cid,
+          facets: item.facets ? JSON.parse(item.facets) : [],
+        }, { upsert: true})
+      }
     }
     // Increment comments counter on parent post (if exists)
     const postsWithParent = data.posts.create.flatMap((f) =>
@@ -149,6 +157,7 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
   if (data.posts.delete.length > 0) {
     for (const item of data.posts.delete) {
       await Post.updateOne({ _id: item.uri }, { deleted: true });
+      await PostsPt.deleteOne({ _id: item.uri })
     }
   }
 
