@@ -1,20 +1,17 @@
 import { InvalidRequestError } from '@atproto/xrpc-server';
 import { QueryParams } from '../../common/lexicon/types/app/bsky/feed/getFeedSkeleton';
-import { AppContext } from '../index';
-import { Post } from '../../common/db';
+import { PostsPt } from '../../common/db';
 import dayjs from 'dayjs';
 
 // max 15 chars
 export const shortname = 'lang-pt';
 
-export const handler = async (ctx: AppContext, params: QueryParams) => {
-    let qb = Post.aggregate()
+export const handler = async (params: QueryParams) => {
+    let qb = PostsPt.aggregate()
         .match({
-            langs: 'pt',
             createdAt: {
-                $gte: dayjs().subtract(24, 'h').toDate()
+                $gte: dayjs().subtract(12, 'h').toDate()
             },
-            deleted: false
         })
         .project({
           _id: 1,
@@ -28,13 +25,13 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
         .limit(params.limit);
 
     if (params.cursor) {
-        const [indexedAt, cid] = params.cursor.split('::');
-        if (!indexedAt || !cid) {
+        const [createdAt, cid] = params.cursor.split('::');
+        if (!createdAt || !cid) {
             throw new InvalidRequestError('malformed cursor');
         }
-        const timeStr = new Date(parseInt(indexedAt, 10)).toISOString();
+        const timeStr = new Date(parseInt(createdAt, 10)).toISOString();
         qb = qb.match({
-            indexedAt: { $lte: timeStr },
+            createdAt: { $lte: timeStr },
             cid: { $lt: cid }
         });
     }
