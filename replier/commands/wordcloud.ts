@@ -8,7 +8,7 @@ export async function processWordCloud(ctx: AppContext, repo: string, post: IPos
     const args = post.text.replace(precmd, '').trim();
     const match = args.match(/^(all|todos)/gi);
 
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+    const locale = (post.langs && post.langs.length > 0) ? post.langs[0] : 'en';
 
     const syncProfile = await SyncProfile.findById(repo);
     if (!syncProfile || !syncProfile.updated) {

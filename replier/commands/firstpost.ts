@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import { ids } from '../../common/lexicon/lexicons';
 
 export async function processFirstPost(ctx: AppContext, repo: string, post: IPost) {
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+    const locale = (post.langs && post.langs.length > 0) ? post.langs[0] : 'en';
 
     const record = await getFirstPost(repo);
     if (!record) return;

@@ -7,7 +7,7 @@ import { uid10, PEOPLE_LIST_KEY } from "../../common/defaults";
 import { searchInteractions } from "../../common/queries/interactions";
 
 export async function processBolas(ctx: AppContext, repo: string, post: IPost) {
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+    const locale = (post.langs && post.langs.length > 0) ? post.langs[0] : 'en';
 
     const profile = await getProfile(repo);
     if (!profile) return;

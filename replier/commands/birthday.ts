@@ -5,7 +5,7 @@ import { IPost } from '../../common/db';
 import dayjs from 'dayjs';
 
 export async function processBirthday(ctx: AppContext, repo: string, post: IPost) {
-    const locale = post.langs.length > 0 ? post.langs[0] : 'en';
+    const locale = (post.langs && post.langs.length > 0) ? post.langs[0] : 'en';
 
     const ts_data = await getCreationTimestamp(repo);
     if (!ts_data) return;
