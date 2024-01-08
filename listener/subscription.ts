@@ -38,7 +38,7 @@ export abstract class FirehoseSubscription {
   public service: string
 
   constructor(public ctx: AppContext) {
-    this.service = ctx.cfg.subscriptionEndpoint
+    this.service = ctx.cfg.subscriptionEndpoint + (ctx.cfg.devel ? '_devel' : '')
     this.sub = new Subscription({
       service: ctx.cfg.subscriptionEndpoint,
       method: ids.ComAtprotoSyncSubscribeRepos,

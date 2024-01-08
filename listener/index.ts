@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import express from 'express';
 import { Server as SocketServer } from 'socket.io';
 import { collectDefaultMetrics, register } from 'prom-client';
-import { maybeInt, maybeStr } from '../common';
+import { maybeBoolean, maybeInt, maybeStr } from '../common';
 import { connectDb } from '../common/db';
 import { FirehoseWorker } from './subscription';
 
@@ -15,13 +15,15 @@ export type AppContext = {
 };
 
 export type Config = {
+  devel: boolean;
   port: number;
   listenhost: string;
   subscriptionEndpoint: string;
   subscriptionReconnectDelay: number;
 };
 
-const cfg = {
+const cfg: Config = {
+  devel: maybeBoolean(process.env.DEVEL) ?? true,
   port: maybeInt(process.env.LISTENER_PORT) ?? 6002,
   listenhost: maybeStr(process.env.LISTENER_HOST) ?? 'localhost',
   subscriptionEndpoint: maybeStr(process.env.LISTENER_FIREHOSE_ENDPOINT) ?? 'wss://bsky.network',
