@@ -15,7 +15,7 @@ export const handler = async (params: QueryParams) => {
     let qb = PostsPt.aggregate()
         .match({
             createdAt: {
-                $gte: dayjs().subtract(36, 'h').toDate()
+                $gte: dayjs().subtract(1, 'week').toDate()
             }
         })
         .addFields({
