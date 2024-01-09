@@ -62,20 +62,21 @@ export const handler = async (params: QueryParams) => {
         .sort({
             createdAt: 'desc',
             cid: 'desc'
-        })
-        .limit(params.limit);
+        });
 
     if (params.cursor) {
         const [createdAt, cid] = params.cursor.split('::');
         if (!createdAt || !cid) {
             throw new InvalidRequestError('malformed cursor');
         }
-        const timeStr = new Date(parseInt(createdAt, 10)).toISOString();
+        const timeStr = new Date(parseInt(createdAt, 10));
         qb = qb.match({
             createdAt: { $lte: timeStr },
             cid: { $lt: cid }
         });
     }
+
+    qb = qb.limit(params.limit)
 
     const res = await qb.exec();
     const feed = res.map((row) => ({
