@@ -356,6 +356,7 @@ export async function updateProfile(
             displayName: profile.displayName,
             avatar: profile.avatar ?? null,
             description: profile.description ?? null,
+            labels: profile.labels,
             lastProfileUpdateAt: getDateTime(),
           },
           { upsert: true }
@@ -368,6 +369,7 @@ export async function updateProfile(
             displayName: profile.displayName,
             avatar: profile.avatar ?? null,
             description: profile.description ?? null,
+            labels: profile.labels,
             indexedAt: profile.indexedAt
               ? getDateTime(new Date(profile.indexedAt))
               : null,

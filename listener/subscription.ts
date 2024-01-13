@@ -201,6 +201,7 @@ export class FirehoseWorker extends FirehoseSubscription {
             _id: create.author,
             description: create.record.description,
             displayName: create.record.displayName,
+            labels: create.record.labels,
           };
         }),
         delete: ops.profiles.deletes,
@@ -209,6 +210,7 @@ export class FirehoseWorker extends FirehoseSubscription {
             _id: create.author,
             description: create.record.description,
             displayName: create.record.displayName,
+            labels: create.record.labels,
           };
         }),
       },

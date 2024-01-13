@@ -7,6 +7,7 @@ export interface IProfile {
   displayName: string;
   avatar: string;
   description: string;
+  labels?: object;
   indexedAt: string;
   lastProfileUpdateAt: string;
   deleted: boolean;
@@ -21,6 +22,7 @@ const profileSchema = new Schema<IProfile>(
     displayName: String,
     avatar: String,
     description: String,
+    labels: Object,
     indexedAt: Date,
     lastProfileUpdateAt: Date,
     deleted: { type: Boolean, default: false }
