@@ -26,7 +26,7 @@ const run = async () => {
   const manager = new Manager(`ws://${hostname}:${port}`);
   const socket = manager.socket('/');
 
-  const cache = new NodeCache({ stdTTL: (24 * HOUR) / 1000 });
+  const cache = new NodeCache({ stdTTL: (72 * HOUR) / 1000 });
 
   const log = (text: string) => {
     console.log(`[${new Date().toLocaleTimeString()}] [indexer] ${text}`);
