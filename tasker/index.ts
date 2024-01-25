@@ -89,21 +89,21 @@ function scheduleTasks(ctx: AppContext) {
         await storePostsByLang(after);
     });
 
-    cron.schedule(
-        '0 3-6/3 * * *', // every 2 hours from 2-6 am
-        async () => {
-            await postClouds(ctx, 180);
-        },
-        { timezone: 'America/Sao_Paulo' }
-    );
+    // cron.schedule(
+    //     '0 3-6/3 * * *', // every 2 hours from 2-6 am
+    //     async () => {
+    //         await postClouds(ctx, 180);
+    //     },
+    //     { timezone: 'America/Sao_Paulo' }
+    // );
 
-    cron.schedule(
-        '0 0,7-23 * * *', // every hour from 7-23 and 0
-        async () => {
-            await postClouds(ctx, 75);
-        },
-        { timezone: 'America/Sao_Paulo' }
-    );
+    // cron.schedule(
+    //     '0 0,7-23 * * *', // every hour from 7-23 and 0
+    //     async () => {
+    //         await postClouds(ctx, 75);
+    //     },
+    //     { timezone: 'America/Sao_Paulo' }
+    // );
 }
 
 async function updateIndexedAt(ctx: AppContext) {
