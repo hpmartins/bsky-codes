@@ -97,15 +97,15 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                 }
 
                 // !luna nuvem|wordcloud all|todos
-                if (command === 'nuvem' || command === 'wordcloud') {
-                    try {
-                        const reply = await processWordCloud(ctx, repo, post, match[0]);
-                        if (reply) {
-                            await ctx.cache.hSet('luna/wordcloud', post._id, reply.uri);
-                            ctx.log(`[luna/wordcloud] add:${repo}`);
-                        }
-                    } catch (e) {}
-                }
+                // if (command === 'nuvem' || command === 'wordcloud') {
+                //     try {
+                //         const reply = await processWordCloud(ctx, repo, post, match[0]);
+                //         if (reply) {
+                //             await ctx.cache.hSet('luna/wordcloud', post._id, reply.uri);
+                //             ctx.log(`[luna/wordcloud] add:${repo}`);
+                //         }
+                //     } catch (e) {}
+                // }
 
                 // !luna primeiro|firstpost
                 // - Quotes first post
