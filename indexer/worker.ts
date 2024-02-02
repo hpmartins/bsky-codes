@@ -16,11 +16,11 @@ import { FirehoseData } from '../common/types';
 export async function processFirehoseStream(ctx: AppContext, data: FirehoseData) {
   const { repo } = data;
 
-  if (!ctx.cache.get(repo)) {
-    ctx.cache.set(repo, Date.now());
-    await updateProfile(repo);
-    ctx.log(`updating profile ${repo}`);
-  }
+  // if (!ctx.cache.get(repo)) {
+  //   ctx.cache.set(repo, Date.now());
+  //   await updateProfile(repo);
+  //   ctx.log(`updating profile ${repo}`);
+  // }
 
   const date = new Date().toLocaleDateString('en-CA');
 
@@ -79,12 +79,12 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
   if (data.posts.create.length > 0) {
     // Create post
     for (const item of data.posts.create) {
-      await Post.updateOne({ _id: item._id }, item, {
+      await Post.findByIdAndUpdate(item._id, {...item}, {
         upsert: true
       });
 
       if (item.langs && item.langs.includes('pt')) {
-        await PostsPt.updateOne({ _id: item._id }, {
+        await PostsPt.findByIdAndUpdate(item._id, {
           cid: item.cid,
           facets: item.facets ? JSON.parse(item.facets) : [],
         }, { upsert: true})
