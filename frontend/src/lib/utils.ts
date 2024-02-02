@@ -11,7 +11,7 @@ export async function resolveHandle(handle: string) {
         }
         return did;
     } catch (e) {
-        return;
+        console.log(e)
     }
 }
 
