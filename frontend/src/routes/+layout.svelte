@@ -21,21 +21,21 @@
             href: '/blocks',
             icon: 'ban',
         },
-        {
-            key: 'languages',
-            href: '/languages',
-            icon: 'translate',
-        },
+        // {
+        //     key: 'languages',
+        //     href: '/languages',
+        //     icon: 'translate',
+        // },
         {
             key: 'top_blocked',
             href: '/top/blocked',
             icon: 'x-circle',
         },
-        {
-            key: 'top_posters',
-            href: '/top/posters',
-            icon: 'graph-up-arrow',
-        },
+        // {
+        //     key: 'top_posters',
+        //     href: '/top/posters',
+        //     icon: 'graph-up-arrow',
+        // },
     ];
 </script>
 

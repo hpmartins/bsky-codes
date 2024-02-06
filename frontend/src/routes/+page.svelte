@@ -34,18 +34,18 @@
             key: 'blocks',
             href: '/blocks',
         },
-        {
-            key: 'languages',
-            href: '/languages',
-        },
+        // {
+        //     key: 'languages',
+        //     href: '/languages',
+        // },
         {
             key: 'top_blocked',
             href: '/top/blocked',
         },
-        {
-            key: 'top_posters',
-            href: '/top/posters',
-        },
+        // {
+        //     key: 'top_posters',
+        //     href: '/top/posters',
+        // },
     ];
 </script>
 
