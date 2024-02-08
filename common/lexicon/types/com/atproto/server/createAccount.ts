@@ -6,7 +6,7 @@ import { ValidationResult, BlobRef } from '@atproto/lexicon'
 import { lexicons } from '../../../../lexicons'
 import { isObj, hasProp } from '../../../../util'
 import { CID } from 'multiformats/cid'
-import { HandlerAuth } from '@atproto/xrpc-server'
+import { HandlerAuth, HandlerPipeThrough } from '@atproto/xrpc-server'
 
 export interface QueryParams {}
 
@@ -15,6 +15,8 @@ export interface InputSchema {
   handle: string
   did?: string
   inviteCode?: string
+  verificationCode?: string
+  verificationPhone?: string
   password?: string
   recoveryKey?: string
   plcOp?: {}
@@ -54,7 +56,7 @@ export interface HandlerError {
     | 'IncompatibleDidDoc'
 }
 
-export type HandlerOutput = HandlerError | HandlerSuccess
+export type HandlerOutput = HandlerError | HandlerSuccess | HandlerPipeThrough
 export type HandlerReqCtx<HA extends HandlerAuth = never> = {
   auth: HA
   params: QueryParams

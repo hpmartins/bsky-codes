@@ -6,14 +6,14 @@ import { ValidationResult, BlobRef } from '@atproto/lexicon'
 import { lexicons } from '../../../../lexicons'
 import { isObj, hasProp } from '../../../../util'
 import { CID } from 'multiformats/cid'
-import { HandlerAuth } from '@atproto/xrpc-server'
+import { HandlerAuth, HandlerPipeThrough } from '@atproto/xrpc-server'
 
 export interface QueryParams {}
 
 export interface InputSchema {
   /** The handle or DID of the repo. */
   repo: string
-  /** Validate the records? */
+  /** Flag for validating the records. */
   validate: boolean
   writes: (Create | Update | Delete)[]
   swapCommit?: string
