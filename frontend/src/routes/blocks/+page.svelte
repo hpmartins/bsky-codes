@@ -45,7 +45,7 @@
 {:else if form && form.success}
     {#if form.did == 'did:plc:rjlu6npi554qkz2jcvdt7mc3'}
         <p>
-            seek mental health
+            you need help
         </p>
     {:else}
         {#if form.syncToUpdate}
