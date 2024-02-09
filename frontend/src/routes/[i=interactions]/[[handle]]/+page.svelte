@@ -120,11 +120,11 @@
 </form>
 
 {#if data.handle && data.success}
-    {#if data.syncToUpdate}
+    <!-- {#if data.syncToUpdate}
         <div class="text-center">
             {$t('features.common.syncUpdate')}
         </div>
-    {/if}
+    {/if} -->
 
     <p class="text-2xl">@{data.handle}</p>
 

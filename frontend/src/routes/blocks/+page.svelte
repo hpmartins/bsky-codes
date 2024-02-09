@@ -48,11 +48,11 @@
             you need help
         </p>
     {:else}
-        {#if form.syncToUpdate}
+        <!-- {#if form.syncToUpdate}
             <div class="text-center">
                 {$t('features.common.syncUpdate')}
             </div>
-        {/if}
+        {/if} -->
 
         <hr />
 

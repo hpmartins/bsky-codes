@@ -1,5 +1,5 @@
 import type { Actions, PageServerLoad } from './$types';
-import { Block, SyncProfile } from '../../../../common/db';
+import { Block, Profile, SyncProfile } from '../../../../common/db';
 import { getAllBlocks } from '../../../../common/queries';
 import type { BlockType } from '$lib/types';
 import { flog, getProfile, resolveHandle } from '$lib/utils';
@@ -8,39 +8,25 @@ export const actions = {
     default: async ({ request, locals }) => {
         const input = await request.formData();
         const handle = String(input.get('handle')).replace(/^@/, '');
-        const did = await resolveHandle(handle);
-        if (did === undefined) {
-            return { handle: handle, success: false };
-        }
+        const s = (handle.match(/\./g) || []).length;
+        const attempt = s ? handle : `${handle}.bsky.social`;
 
-        let syncToUpdate = false;
-        const syncProfile = await SyncProfile.findById(did);
-        if (!syncProfile) {
-            await SyncProfile.updateOne(
-                { _id: did },
-                {
-                    updated: false,
+        const dbProfile = await Profile.findOne({ handle: attempt })
+
+        if (dbProfile) {
+            const blocksSent = await getAllBlocks(dbProfile._id, 'author');
+            const blocksRcvd = await getAllBlocks(dbProfile._id, 'subject');
+            flog(`searched blocks @${dbProfile.handle} [${dbProfile._id}]`);
+            return {
+                did: dbProfile._id,
+                handle: dbProfile.handle,
+                success: true,
+                blocks: {
+                    sent: blocksSent as unknown as BlockType[],
+                    rcvd: blocksRcvd as unknown as BlockType[],
                 },
-                { upsert: true },
-            );
-            syncToUpdate = true;
+            };
         }
-
-        const profile = await getProfile(did);
-        const blocksSent = await getAllBlocks(did, 'author');
-        const blocksRcvd = await getAllBlocks(did, 'subject');
-
-        flog(`searched blocks @${profile.handle} [${did}]`);
-
-        return {
-            did: did,
-            handle: profile ? profile.handle : handle,
-            success: true,
-            blocks: {
-                sent: blocksSent as unknown as BlockType[],
-                rcvd: blocksRcvd as unknown as BlockType[],
-            },
-            syncToUpdate: syncToUpdate,
-        };
+        return { handle: handle, success: false };
     },
 } satisfies Actions;
