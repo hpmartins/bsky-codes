@@ -43,26 +43,32 @@
 {#if form && !form.success}
     <div class="text-center">{$t('features.common.account404')}</div>
 {:else if form && form.success}
-    {#if form.syncToUpdate}
-        <div class="text-center">
-            {$t('features.common.syncUpdate')}
+    {#if form.did == 'did:plc:rjlu6npi554qkz2jcvdt7mc3'}
+        <p>
+            seek mental health
+        </p>
+    {:else}
+        {#if form.syncToUpdate}
+            <div class="text-center">
+                {$t('features.common.syncUpdate')}
+            </div>
+        {/if}
+
+        <hr />
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+                <h5 class="text-center">
+                    {$t('features.blocks.blocked')} [{form.blocks?.sent.length}]
+                </h5>
+                <BlocksTable data={form.blocks?.sent ?? []} perPage={15} />
+            </div>
+            <div class="col-sm-12 col-md-5 my-3">
+                <h5 class="text-center">
+                    {$t('features.blocks.blockedBy')} [{form.blocks?.rcvd.length}]
+                </h5>
+                <BlocksTable data={form.blocks?.rcvd ?? []} perPage={15} />
+            </div>
         </div>
     {/if}
-
-    <hr />
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
-            <h5 class="text-center">
-                {$t('features.blocks.blocked')} [{form.blocks?.sent.length}]
-            </h5>
-            <BlocksTable data={form.blocks?.sent ?? []} perPage={15} />
-        </div>
-        <div class="col-sm-12 col-md-5 my-3">
-            <h5 class="text-center">
-                {$t('features.blocks.blockedBy')} [{form.blocks?.rcvd.length}]
-            </h5>
-            <BlocksTable data={form.blocks?.rcvd ?? []} perPage={15} />
-        </div>
-    </div>
 {/if}
