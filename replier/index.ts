@@ -155,7 +155,9 @@ export async function processFirehoseStream(ctx: AppContext, data: FirehoseData)
                             await ctx.cache.set(`luna/bolas:${repo}`, 1, { EX: 10 * MINUTE });
                             ctx.log(`[luna/bolas] add:${repo}`);
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.log(e)
+                    }
                 }
             }
         }
