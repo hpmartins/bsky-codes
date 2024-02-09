@@ -14,6 +14,10 @@ export const actions = {
         const dbProfile = await Profile.findOne({ handle: attempt })
 
         if (dbProfile) {
+            if (dbProfile._id === 'did:plc:rjlu6npi554qkz2jcvdt7mc3') {
+                return { handle: handle, success: false };
+            }
+            
             const blocksSent = await getAllBlocks(dbProfile._id, 'author');
             const blocksRcvd = await getAllBlocks(dbProfile._id, 'subject');
             flog(`searched blocks @${dbProfile.handle} [${dbProfile._id}]`);
