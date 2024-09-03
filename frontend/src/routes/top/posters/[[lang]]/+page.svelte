@@ -20,7 +20,7 @@
     let removeBots = true;
     $: list = removeBots
         ? data.posters
-              ?.filter((x) => x.likes + x.replies >= x.count)
+              ?.filter((x) => (x.likes + x.replies)/x.count >= 0.1)
               .map((x, idx) => ({ ...x, idx: idx + 1 }))
         : data.posters;
 </script>
@@ -60,7 +60,7 @@
     </div>
 </div>
 
-<Pagination rows={list ?? []} perPage={20} bind:trimmedRows={paginatedData} />
+<Pagination rows={list ?? []} perPage={60} bind:trimmedRows={paginatedData} />
 <div class="overflow-x-auto w-full md:max-w-4xl">
     <table class="table table-xs table-zebra">
         <thead>

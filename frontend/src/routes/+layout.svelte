@@ -31,11 +31,11 @@
             href: '/top/blocked',
             icon: 'x-circle',
         },
-        // {
-        //     key: 'top_posters',
-        //     href: '/top/posters',
-        //     icon: 'graph-up-arrow',
-        // },
+        {
+            key: 'top_posters',
+            href: '/top/posters',
+            icon: 'graph-up-arrow',
+        },
     ];
 </script>
 

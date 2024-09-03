@@ -92,7 +92,7 @@
         "posters": {
             "title": "Contas que mais postaram nas últimas 72 horas",
             "filter": "Filtrar por idioma",
-            "toggle": "remover possíveis bots"
+            "toggle": "remover possíveis bots [(curtidas+comentários)/posts < 10%]"
         }
     }
 }

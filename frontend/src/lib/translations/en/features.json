@@ -91,7 +91,7 @@
         "posters": {
             "title": "Top posters in the last 72 hours",
             "filter": "Filter by language",
-            "toggle": "remove possible bots"
+            "toggle": "remove possible bots [(likes+replies)/posts < 10%]"
         }
     }
 }

@@ -131,25 +131,32 @@ const getTopPostersByLang = async (lang: string) => {
 };
 
 export const load: PageServerLoad = async ({ params }) => {
-    const langs = await getLangs();
+    // const langs = await getLangs();
 
-    if (!params.lang || params.lang === 'all') {
-        const posters = await getTopPosters();
-        if (posters) {
-            return {
-                lang: 'all',
-                langs: langs,
-                posters: posters.map((x, idx) => ({ idx: idx + 1, ...x })),
-            };
-        }
-    } else if (params.lang) {
-        const posters = await getTopPostersByLang(params.lang);
-        if (posters) {
-            return {
-                lang: params.lang,
-                langs: langs,
-                posters: posters.map((x, idx) => ({ idx: idx + 1, ...x })),
-            };
-        }
+    // if (!params.lang || params.lang === 'all') {
+    //     const posters = await getTopPosters();
+    //     if (posters) {
+    //         return {
+    //             lang: 'all',
+    //             langs: langs,
+    //             posters: posters.map((x, idx) => ({ idx: idx + 1, ...x })),
+    //         };
+    //     }
+    // } else if (params.lang) {
+    //     const posters = await getTopPostersByLang(params.lang);
+    //     if (posters) {
+    //         return {
+    //             lang: params.lang,
+    //             langs: langs,
+    //             posters: posters.map((x, idx) => ({ idx: idx + 1, ...x })),
+    //         };
+    //     }
+    // }
+    const posters = await getTopPosters();
+    if (posters) {
+        return {
+            lang: 'all',
+            posters: posters.map((x, idx) => ({ idx: idx + 1, ...x })),
+        };
     }
 };
