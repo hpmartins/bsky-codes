@@ -142,6 +142,7 @@ export const getOpsByType = async (evt: Commit): Promise<OperationsByType> => {
       const create = { uri, cid: op.cid.toString(), author: evt.repo }
       if (collection === ids.AppBskyFeedPost && isPost(record)) {
         opsByType.posts.creates.push({ record, ...create })
+        firehoseMetric.labels({ action: "post", collection: record.langs ? record.langs[0] : 'undefined' }).inc()
       } else if (collection === ids.AppBskyFeedRepost && isRepost(record)) {
         opsByType.reposts.creates.push({ record, ...create })
       } else if (collection === ids.AppBskyFeedLike && isLike(record)) {
