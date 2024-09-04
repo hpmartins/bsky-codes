@@ -4,7 +4,7 @@ import 'dotenv/config';
 
 const app = express();
 
-const port = process.env.FRONTEND_PORT ?? 6000;
+const port = process.env.FRONTEND_PORT ?? 6060;
 
 app.use(handler);
 
