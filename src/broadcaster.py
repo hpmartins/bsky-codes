@@ -1,33 +1,31 @@
-import sys
-import signal
-import threading
-from utils import firehose
 import socketio
+from uvicorn.loops.asyncio import asyncio_setup
+import asyncio
+import uvicorn
 
-if __name__ == '__main__':
-    print(__package__)
+from utils import firehose
 
-def get_sio():
-    sio = socketio.AsyncServer()
-    stream_stop_event = threading.Event()
-    stream_thread = threading.Thread(
-        target=firehose.run,
-        args=(
-            "listener",
-            sio,
-            stream_stop_event,
-        ),
+sio = socketio.AsyncServer(async_mode="asgi")
+app = socketio.ASGIApp(sio, sio)
+
+
+async def start_uvicorn():
+    config = uvicorn.config.Config(app, host="0.0.0.0", port=6002)
+    server = uvicorn.server.Server(config)
+    await server.serve()
+
+
+async def main(loop):
+    await asyncio.wait(
+        [
+            asyncio.create_task(start_uvicorn()),
+            asyncio.create_task(firehose.run("firehose", sio)),
+        ],
+        return_when=asyncio.FIRST_COMPLETED,
     )
-    stream_thread.start()
-
-    def sigint_handler(*_):
-        print("Stopping data stream...")
-        stream_stop_event.set()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, sigint_handler)
-
-    return sio
 
 
-app = socketio.ASGIApp(get_sio())
+if __name__ == "__main__":
+    asyncio_setup()
+    loop = asyncio.get_event_loop()
+    asyncio.run(main(loop))
