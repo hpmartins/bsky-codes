@@ -1,26 +1,15 @@
 import asyncio
-import socketio
-
-# asyncio
-sio = socketio.AsyncClient()
-
-@sio.event
-async def connect():
-    print("connected to server")
+from utils.firehose import process_firehose
 
 
-@sio.event
-async def disconnect():
-    print("disconnected from server")
+async def process(ops):
+    pass
+    # print(list(ops.values()))
+    # await asyncio.sleep(0.1)
 
-@sio.event
-async def firehose(t):
-    if len(t) > 1:
-        print(t.keys())
 
 async def start_server():
-    await sio.connect("http://localhost:6002")
-    await sio.wait()
+    await process_firehose("replier", process)
 
 
 if __name__ == "__main__":

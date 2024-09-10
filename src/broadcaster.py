@@ -1,28 +1,67 @@
-import socketio
+import os
 from uvicorn.loops.asyncio import asyncio_setup
 import asyncio
-import uvicorn
+from dotenv import load_dotenv
+import pickle
 
-from utils import firehose
+import time
+from atproto import (
+    firehose_models,
+    AsyncFirehoseSubscribeReposClient,
+    models,
+)
+from typing import Any
 
-sio = socketio.AsyncServer(async_mode="asgi")
-app = socketio.ASGIApp(sio, sio)
+from utils.redis import REDIS
+
+load_dotenv()
+
+FIREHOSE_MAXLEN = int(os.getenv("FIREHOSE_MAXLEN"))
 
 
-async def start_uvicorn():
-    config = uvicorn.config.Config(app, host="0.0.0.0", port=6002)
-    server = uvicorn.server.Server(config)
-    await server.serve()
+def measure_events_per_second(func: callable) -> callable:
+    def wrapper(*args) -> Any:
+        wrapper.calls += 1
+        cur_time = time.time()
+
+        if cur_time - wrapper.start_time >= 1:
+            print(f"NETWORK LOAD: {wrapper.calls} events/second")
+            wrapper.start_time = cur_time
+            wrapper.calls = 0
+
+        return func(*args)
+
+    wrapper.calls = 0
+    wrapper.start_time = time.time()
+
+    return wrapper
 
 
-async def main(loop):
-    await asyncio.wait(
-        [
-            asyncio.create_task(start_uvicorn()),
-            asyncio.create_task(firehose.run("firehose", sio)),
-        ],
-        return_when=asyncio.FIRST_COMPLETED,
-    )
+async def main(loop) -> None:
+    await REDIS.hdel("firehose_cursor", "firehose")
+    cursor = await REDIS.hget("firehose_cursor", "firehose")
+    if cursor is not None:
+        cursor = int(cursor)
+
+    params = None
+    if cursor:
+        params = models.ComAtprotoSyncSubscribeRepos.Params(cursor=cursor)
+
+    client = AsyncFirehoseSubscribeReposClient(params)
+
+    @measure_events_per_second
+    async def on_message_handler(message: firehose_models.MessageFrame) -> None:
+        if message.body.get("blocks", None) is None:
+            return
+
+        seq = message.body.get("seq", None)
+        if isinstance(seq, int):
+            await REDIS.publish("firehose", pickle.dumps(message))
+            if seq % 500 == 0:
+                client.update_params(models.ComAtprotoSyncSubscribeRepos.Params(cursor=seq))
+                await REDIS.hset("firehose_cursor", "firehose", seq)
+
+    await client.start(on_message_handler)
 
 
 if __name__ == "__main__":
