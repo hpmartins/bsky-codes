@@ -1,7 +1,7 @@
 module.exports = {
   "apps": [{
-    "name": "broadcaster",
-    "script": "./src/broadcaster.py",
+    "name": "firehose_listener",
+    "script": "./src/firehose_listener.py",
     "args": [],
     "instances": "1",
     "wait_ready": true,
@@ -10,8 +10,8 @@ module.exports = {
     "interpreter": "/home/bsky/.cache/pypoetry/virtualenvs/bsky-codes-won75v8b-py3.11/bin/python",
   },
   {
-    "name": "replier",
-    "script": "./src/replier.py",
+    "name": "firehose_filter",
+    "script": "./src/firehose_filter.py",
     "args": [],
     "instances": "1",
     "wait_ready": true,
