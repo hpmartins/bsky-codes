@@ -20,34 +20,27 @@ from atproto import (
 from typing import Any
 
 from utils.logger import logger
+from utils.defaults import (
+    INTERESTED_RECORDS,
+    FIREHOSE_MAXLEN,
+)
 
 load_dotenv()
-
-_INTERESTED_RECORDS = {
-    models.ids.AppBskyFeedLike: models.AppBskyFeedLike,
-    models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
-    models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
-    models.ids.AppBskyGraphFollow: models.AppBskyGraphFollow,
-    models.ids.AppBskyGraphBlock: models.AppBskyGraphBlock,
-}
-
-FIREHOSE_MAXLEN = int(os.getenv("FIREHOSE_MAXLEN"))
 
 counter = Counter("firehose", "firehose", ["action", "collection"])
 
 
 def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defaultdict:
-    operation_by_type = defaultdict(lambda: {"created": [], "deleted": []})
+    operation_by_type = defaultdict(lambda: {"create": [], "delete": [], "update": []})
 
     car = CAR.from_bytes(commit.blocks)
     for op in commit.ops:
-        if op.action == "update":
-            # not supported yet
-            continue
-
         uri = AtUri.from_str(f"at://{commit.repo}/{op.path}")
 
-        if op.action == "create":
+        if uri.collection not in INTERESTED_RECORDS:
+            continue
+
+        if op.action in ["create", "update"]:
             if not op.cid:
                 continue
 
@@ -57,15 +50,15 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
             if not record_raw_data:
                 continue
 
-            if uri.collection in _INTERESTED_RECORDS:
+            if uri.collection in INTERESTED_RECORDS:
                 record = models.get_or_create(record_raw_data, strict=False)
                 if models.is_record_type(record, uri.collection):
-                    operation_by_type[uri.collection]["created"].append(
+                    operation_by_type[uri.collection][op.action].append(
                         {"record": record, **create_info}
                     )
 
         if op.action == "delete":
-            operation_by_type[uri.collection]["deleted"].append({"uri": str(uri)})
+            operation_by_type[uri.collection]["delete"].append({"uri": str(uri)})
 
     return operation_by_type
 
@@ -98,7 +91,8 @@ async def process_data(message: firehose_models.MessageFrame):
                 counter.labels(action, collection).inc()
 
         # if collection == models.ids.AppBskyFeedPost and len(data["created"]) > 0:
-            
+
+
 async def reader(channel: redis.client.PubSub):
     while True:
         message = await channel.get_message(ignore_subscribe_messages=True)
