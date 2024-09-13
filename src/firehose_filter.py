@@ -90,9 +90,6 @@ async def process_data(message: firehose_models.MessageFrame):
             for _ in items:
                 counter.labels(action, collection).inc()
 
-        # if collection == models.ids.AppBskyFeedPost and len(data["created"]) > 0:
-
-
 async def reader(channel: redis.client.PubSub):
     while True:
         message = await channel.get_message(ignore_subscribe_messages=True)
@@ -127,6 +124,7 @@ async def main(loop):
 
 
 if __name__ == "__main__":
+    logger.info("Starting firehose filter")
     asyncio_setup()
     loop = asyncio.get_event_loop()
     asyncio.run(main(loop))

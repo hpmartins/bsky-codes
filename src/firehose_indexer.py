@@ -57,6 +57,7 @@ async def main(loop):
 
 
 if __name__ == "__main__":
+    logger.info("Starting firehose indexer")
     asyncio_setup()
     loop = asyncio.get_event_loop()
     asyncio.run(main(loop))

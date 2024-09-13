@@ -13,6 +13,7 @@ from atproto import (
 from typing import Any
 
 from utils.redis import REDIS
+from utils.logger import logger
 
 load_dotenv()
 
@@ -65,6 +66,7 @@ async def main(loop) -> None:
 
 
 if __name__ == "__main__":
+    logger.info("Starting firehose listener")
     asyncio_setup()
     loop = asyncio.get_event_loop()
     asyncio.run(main(loop))
