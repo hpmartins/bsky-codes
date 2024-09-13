@@ -1,4 +1,3 @@
-import os
 import asyncio
 from utils.redis import REDIS_PICKLED as REDIS
 from dotenv import load_dotenv
@@ -75,9 +74,10 @@ async def process_data(message: firehose_models.MessageFrame):
     ops = _get_ops_by_type(commit)
     for collection, data in ops.items():
         try:
+            pickled_data = pickle.dumps(data)
             await REDIS.xadd(
                 f"firehose:{collection}",
-                {"data": pickle.dumps(data)},
+                {"data": pickled_data},
                 id=commit.seq,
                 maxlen=FIREHOSE_MAXLEN,
             )
