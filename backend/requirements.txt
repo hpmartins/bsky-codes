@@ -52,3 +52,4 @@ websocket-client==1.8.0
 websockets==13.0.1
 wsproto==1.2.0
 yarl==1.9.9
+watchdog==6.0.0

@@ -11,11 +11,14 @@ from atproto import (
     models,
 )
 from typing import Any
+import logging
 
 from utils.redis import REDIS
-from utils.logger import logger
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 FIREHOSE_MAXLEN = int(os.getenv("FIREHOSE_MAXLEN"))
 
@@ -26,7 +29,7 @@ def measure_events_per_second(func: callable) -> callable:
         cur_time = time.time()
 
         if cur_time - wrapper.start_time >= 1:
-            print(f"NETWORK LOAD: {wrapper.calls} events/second")
+            logger.info(f"NETWORK LOAD: {wrapper.calls} events/second")
             wrapper.start_time = cur_time
             wrapper.calls = 0
 
@@ -66,7 +69,7 @@ async def main(loop) -> None:
 
 
 if __name__ == "__main__":
-    logger.info("Starting firehose listener")
+    logger.info("Starting firehose broadcaster")
     asyncio_setup()
     loop = asyncio.get_event_loop()
     asyncio.run(main(loop))

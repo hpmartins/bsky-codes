@@ -17,14 +17,19 @@ from atproto import (
     parse_subscribe_repos_message,
 )
 from typing import Any
+import logging
 
-from utils.logger import logger
 from utils.defaults import (
     INTERESTED_RECORDS,
     FIREHOSE_MAXLEN,
 )
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 load_dotenv()
+
+FILTER_PORT = int(os.getenv("FILTER_PORT"))
 
 counter = Counter("firehose", "firehose", ["action", "collection"])
 
@@ -74,7 +79,7 @@ async def process_data(message: firehose_models.MessageFrame):
     ops = _get_ops_by_type(commit)
     for collection, data in ops.items():
         try:
-            pickled_data = pickle.dumps(data)
+            pickled_data = pickle.dumps(data, protocol=5)
             await REDIS.xadd(
                 f"firehose:{collection}",
                 {"data": pickled_data},
@@ -108,7 +113,7 @@ app = make_asgi_app()
 
 
 async def start_uvicorn():
-    config = uvicorn.config.Config(app, host="0.0.0.0", port=6002)
+    config = uvicorn.config.Config(app, host="0.0.0.0", port=FILTER_PORT)
     server = uvicorn.server.Server(config)
     await server.serve()
 

@@ -1,0 +1,57 @@
+name: bsky
+
+services:
+  broadcaster:
+    build: ./backend
+    volumes:
+      - ./backend:/app:cached
+    depends_on:
+      - redis
+    environment:
+      - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
+      - REDIS_URI=${REDIS_URI}
+    command: watchmedo auto-restart --pattern="firehose_broadcaster.py" --recursive -- python firehose_broadcaster.py
+
+  filter:
+    build: ./backend
+    volumes:
+      - ./backend:/app:cached
+    depends_on:
+      - redis
+      - broadcaster
+    # expose:
+    #   - "6001:6001"
+    environment:
+      - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
+      - REDIS_URI=${REDIS_URI}
+    command: watchmedo auto-restart --pattern="firehose_filter.py" --recursive -- python firehose_filter.py
+
+  redis:
+    image: redis:7-bookworm
+    container_name: redis
+    # ports:
+    #   - "6379:6379"
+    volumes:
+      - ${REDIS_DATA_FOLDER}:/data
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:12-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}  # Replace with your username
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Replace with your password
+      POSTGRES_DB: ${POSTGRES_DB}  # Replace with your database name
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - ${POSTGRES_DATA_FOLDER}:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"  # Map port 5050 on your host to port 80 in the container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    depends_on:
+      - postgres  # Ensure PostgreSQL starts before pgAdmin
