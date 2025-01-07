@@ -10,11 +10,15 @@ from atproto import (
     AtUri,
 )
 
+import logging
+
 from utils.firehose import process_firehose
 from utils.defaults import INTERESTED_RECORDS
-from utils.logger import logger
 from utils.database import db
 from pymongo import DeleteOne, UpdateOne
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -33,13 +37,15 @@ async def process_data(data: list[tuple[str, str, dict]]):
 
             for action_item in action_data:
                 uri = AtUri.from_str(action_item.get("uri"))
-                if action == "create" or action == "update":
+
+                if action == "create":
                     record = INTERESTED_RECORDS[uri.collection].Record(
                         **action_item["record"].model_dump()
                     )
-                    db_ops[uri.collection].append(
-                        UpdateOne({"_id": str(uri)}, {"$set": record.model_dump()}, upsert=True)
-                    )
+
+                    # db_ops[uri.collection].append(
+                    #     UpdateOne({"_id": str(uri)}, {"$set": record.model_dump()}, upsert=True)
+                    # )
 
                     if models.is_record_type(record, models.ids.AppBskyFeedPost):
                         if isinstance(record.langs, list):
@@ -47,9 +53,9 @@ async def process_data(data: list[tuple[str, str, dict]]):
                                 counter.labels(record.langs[0][:2]).inc()
                         else:
                             counter.labels('unknown').inc()
-
                 elif action == "delete":
-                    db_ops[uri.collection].append(DeleteOne({"_id": str(uri)}))
+                    pass
+                    # db_ops[uri.collection].append(DeleteOne({"_id": str(uri)}))
 
     for collection, ops in db_ops.items():
         try:
@@ -61,7 +67,7 @@ async def process_data(data: list[tuple[str, str, dict]]):
 
 
 async def start_uvicorn():
-    config = uvicorn.config.Config(app, host="0.0.0.0", port=6003)
+    config = uvicorn.config.Config(app, host="0.0.0.0", port=6000)
     server = uvicorn.server.Server(config)
     await server.serve()
 

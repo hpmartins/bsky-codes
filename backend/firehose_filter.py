@@ -1,3 +1,4 @@
+import os
 import asyncio
 from utils.redis import REDIS_PICKLED as REDIS
 from dotenv import load_dotenv
@@ -29,10 +30,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-FILTER_PORT = int(os.getenv("FILTER_PORT"))
-
 counter = Counter("firehose", "firehose", ["action", "collection"])
-
 
 def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defaultdict:
     operation_by_type = defaultdict(lambda: {"create": [], "delete": [], "update": []})
@@ -113,7 +111,7 @@ app = make_asgi_app()
 
 
 async def start_uvicorn():
-    config = uvicorn.config.Config(app, host="0.0.0.0", port=FILTER_PORT)
+    config = uvicorn.config.Config(app, host="0.0.0.0", port=6000)
     server = uvicorn.server.Server(config)
     await server.serve()
 
