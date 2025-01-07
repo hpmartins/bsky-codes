@@ -5,8 +5,6 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app:cached
-    depends_on:
-      - redis
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
@@ -17,10 +15,7 @@ services:
     volumes:
       - ./backend:/app:cached
     depends_on:
-      - redis
       - broadcaster
-    # expose:
-    #   - "6001:6001"
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
@@ -31,11 +26,7 @@ services:
     volumes:
       - ./backend:/app:cached
     depends_on:
-      - redis
-      - mongo
       - broadcaster
-    # expose:
-    #   - "6001:6001"
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
