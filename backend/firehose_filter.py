@@ -22,13 +22,14 @@ import logging
 
 from utils.defaults import (
     INTERESTED_RECORDS,
-    FIREHOSE_MAXLEN,
 )
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+FIREHOSE_MAXLEN = int(os.getenv("FIREHOSE_MAXLEN"))
 
 counter = Counter("firehose", "firehose", ["action", "collection"])
 
