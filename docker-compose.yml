@@ -35,7 +35,6 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    user: "1000"
     volumes:
       - prometheus-data:/prometheus
     command:
@@ -52,7 +51,6 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    user: "1000"
     ports:
       - "3000:3000"
     depends_on:
