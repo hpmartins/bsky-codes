@@ -5,7 +5,7 @@ services:
     build: ./backend
     working_dir: /app
     volumes:
-      - ./backend:/app:cached
+      - ./backend:/app
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
@@ -15,7 +15,7 @@ services:
     build: ./backend
     working_dir: /app
     volumes:
-      - ./backend:/app:cached
+      - ./backend:/app
     depends_on:
       - broadcaster
     environment:
@@ -27,7 +27,7 @@ services:
     build: ./backend
     working_dir: /app
     volumes:
-      - ./backend:/app:cached
+      - ./backend:/app
     depends_on:
       - broadcaster
     environment:
