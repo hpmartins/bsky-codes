@@ -3,6 +3,7 @@ name: bsky
 services:
   broadcaster:
     build: ./backend
+    working_dir: /app
     volumes:
       - ./backend:/app:cached
     environment:
@@ -12,6 +13,7 @@ services:
 
   filter:
     build: ./backend
+    working_dir: /app
     volumes:
       - ./backend:/app:cached
     depends_on:
@@ -23,6 +25,7 @@ services:
 
   indexer:
     build: ./backend
+    working_dir: /app
     volumes:
       - ./backend:/app:cached
     depends_on:
