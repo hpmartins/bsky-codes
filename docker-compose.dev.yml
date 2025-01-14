@@ -8,7 +8,7 @@ services:
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
-    command: python firehose_broadcaster.py
+    command: watchmedo auto-restart --pattern="firehose_broadcaster.py" --recursive -- python firehose_broadcaster.py
 
   filter:
     build: ./backend
@@ -19,7 +19,7 @@ services:
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
-    command: python firehose_filter.py
+    command: watchmedo auto-restart --pattern="firehose_filter.py" --recursive -- python firehose_filter.py
 
   indexer:
     build: ./backend
@@ -31,7 +31,7 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
-    command: python firehose_indexer.py
+    command: watchmedo auto-restart --pattern="firehose_indexer.py" --recursive -- python firehose_indexer.py
 
   prometheus:
     image: prom/prometheus:latest

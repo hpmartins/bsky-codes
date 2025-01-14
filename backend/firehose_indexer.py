@@ -29,12 +29,18 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+DEVEL = bool(int(os.getenv("DEVEL", 1)))
+
 UVICORN_HOST = "0.0.0.0"
 UVICORN_PORT = 6000
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 db_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
-db = db_client.bsky
+
+if DEVEL:
+    db = db_client["bsky_devel"]
+else:
+    db = db_client["bsky"]
 
 counter = Counter("post_langs", "post languages", ["lang"])
 app = make_asgi_app()
