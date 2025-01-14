@@ -37,8 +37,8 @@ services:
     image: prom/prometheus:latest
     user: "1000"
     volumes:
-      - ./local/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./local/prometheus:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
     ports:
       - "9090:9090"
 
@@ -50,7 +50,11 @@ services:
     depends_on:
       - prometheus
     volumes:
-      - ./local/grafana:/var/lib/grafana
+      - grafana-data:/var/lib/grafana
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"  # Allow anonymous access for simplicity (not recommended for production)
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+
+volumes:
+  prometheus-data:
+  grafana-data:
