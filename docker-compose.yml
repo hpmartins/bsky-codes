@@ -6,9 +6,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
+    depends_on:
+      - redis
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
+      - DEVEL=${DEVEL:-0}
     command: python firehose_broadcaster.py
 
   filter:
@@ -18,9 +21,11 @@ services:
       - ./backend:/app
     depends_on:
       - broadcaster
+      - redis
     environment:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
+      - DEVEL=${DEVEL:-0}
     command: python firehose_filter.py
 
   indexer:
@@ -30,11 +35,19 @@ services:
       - ./backend:/app
     depends_on:
       - broadcaster
+      - redis
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
+      - DEVEL=${DEVEL:-0}
     command: python firehose_indexer.py
+
+  redis:
+    image: redis:7-bookworm
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
@@ -67,7 +80,7 @@ services:
 volumes:
   prometheus-data:
   grafana-data:
-
+  redis-data:
 
 configs:
   prometheus_config:
