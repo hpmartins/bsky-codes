@@ -41,6 +41,7 @@ services:
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
       - DEVEL=${DEVEL:-0}
+      - ENABLE_INDEXER=${ENABLE_INDEXER:-1}
     command: python firehose_indexer.py
 
   redis:
