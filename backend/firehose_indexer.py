@@ -18,7 +18,7 @@ from utils.defaults import (
     INTERACTION_RECORDS,
 )
 
-from stuff.interactions import create_interaction
+from stuff.interactions import parse_interaction
 
 from pymongo import InsertOne, DeleteOne
 
@@ -47,8 +47,6 @@ async def process_data(
 ):
     database_operations = defaultdict(list)
 
-    # logger.info(f"Processing {len(data)} data entries")
-
     for row in data:
         _, _, actions = row
 
@@ -72,7 +70,7 @@ async def process_data(
                     record = record_type.Record(**action_item["record"].model_dump())
 
                     if uri.collection in INTERACTION_RECORDS:
-                        interaction = create_interaction(uri, record)
+                        interaction = parse_interaction(uri, record)
                         if interaction:
                             database_operations["interactions"].append(
                                 InsertOne(interaction)
@@ -92,15 +90,12 @@ async def process_data(
                     )
                     counter.labels(action, uri.collection).inc()
 
-    if ENABLE_INDEXER:
-        for collection, operations in database_operations.items():
-            if operations:
-                try:
-                    await db[collection].bulk_write(operations)
-                    # logger.info(f"Wrote {len(operations)} operations to {collection}")
-                except Exception as e:
-                    logger.error(f"Error on bulk_write to {collection}: {e}")
-
+    for collection, operations in database_operations.items():
+        if operations and ENABLE_INDEXER:
+            try:
+                await db[collection].bulk_write(operations)
+            except Exception as e:
+                logger.error(f"Error on bulk_write to {collection}: {e}")
 
 async def start_uvicorn():
     config = uvicorn.config.Config(app, host="0.0.0.0", port=6000)
