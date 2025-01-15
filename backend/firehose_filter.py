@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 FIREHOSE_MAXLEN = int(os.getenv("FIREHOSE_MAXLEN"))
 
 counter = Counter("firehose", "firehose", ["action", "collection"])
+counter_lang = Counter("post_langs", "post languages", ["lang"])
+
 
 def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defaultdict:
     operation_by_type = defaultdict(lambda: {"create": [], "delete": [], "update": []})
@@ -59,6 +61,14 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
                     operation_by_type[uri.collection][op.action].append(
                         {"record": record, **create_info}
                     )
+                    if models.is_record_type(record, models.ids.AppBskyFeedPost):
+                        lang = (
+                            record.langs[0][:2]
+                            if isinstance(record.langs, list) and record.langs
+                            else "unknown"
+                        )
+                        logger.info(lang)
+                        counter_lang.labels(lang).inc()
 
         if op.action == "delete":
             operation_by_type[uri.collection]["delete"].append({"uri": str(uri)})
@@ -93,6 +103,7 @@ async def process_data(message: firehose_models.MessageFrame):
         for action, items in data.items():
             for _ in items:
                 counter.labels(action, collection).inc()
+
 
 async def reader(channel: redis.client.PubSub):
     while True:

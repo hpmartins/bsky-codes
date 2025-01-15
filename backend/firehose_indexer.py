@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 import asyncio
 from uvicorn.loops.asyncio import asyncio_setup
 import uvicorn
@@ -8,7 +7,6 @@ import motor.motor_asyncio
 
 from collections import defaultdict
 from atproto import (
-    models,
     AtUri,
 )
 
@@ -27,12 +25,8 @@ from pymongo import InsertOne, DeleteOne
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
 DEVEL = bool(int(os.getenv("DEVEL", 1)))
-
-UVICORN_HOST = "0.0.0.0"
-UVICORN_PORT = 6000
+ENABLE_INDEXER = bool(int(os.getenv("ENABLE_INDEXER", 1)))
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 db_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
@@ -42,7 +36,7 @@ if DEVEL:
 else:
     db = db_client["bsky"]
 
-counter = Counter("post_langs", "post languages", ["lang"])
+counter = Counter("indexer", "indexer", ["action", "collection"])
 app = make_asgi_app()
 
 
@@ -53,7 +47,7 @@ async def process_data(
 ):
     database_operations = defaultdict(list)
 
-    logger.info(f"Processing {len(data)} data entries")
+    # logger.info(f"Processing {len(data)} data entries")
 
     for row in data:
         _, _, actions = row
@@ -83,16 +77,7 @@ async def process_data(
                             database_operations["interactions"].append(
                                 InsertOne(interaction)
                             )
-
-                    # Prometheus: post languages
-                    if models.is_record_type(record, models.ids.AppBskyFeedPost):
-                        lang = (
-                            record.langs[0][:2]
-                            if isinstance(record.langs, list) and record.langs
-                            else "unknown"
-                        )
-                        counter.labels(lang).inc()
-
+                            counter.labels(action, uri.collection).inc()
                 elif action == "delete":
                     database_operations["interactions"].append(
                         DeleteOne(
@@ -105,18 +90,20 @@ async def process_data(
                             }
                         )
                     )
+                    counter.labels(action, uri.collection).inc()
 
-    for collection, operations in database_operations.items():
-        if operations:
-            try:
-                await db[collection].bulk_write(operations)
-                logger.info(f"Wrote {len(operations)} operations to {collection}")
-            except Exception as e:
-                logger.error(f"Error on bulk_write to {collection}: {e}")
+    if ENABLE_INDEXER:
+        for collection, operations in database_operations.items():
+            if operations:
+                try:
+                    await db[collection].bulk_write(operations)
+                    # logger.info(f"Wrote {len(operations)} operations to {collection}")
+                except Exception as e:
+                    logger.error(f"Error on bulk_write to {collection}: {e}")
 
 
 async def start_uvicorn():
-    config = uvicorn.config.Config(app, host=UVICORN_HOST, port=UVICORN_PORT)
+    config = uvicorn.config.Config(app, host="0.0.0.0", port=6000)
     server = uvicorn.server.Server(config)
     await server.serve()
 
