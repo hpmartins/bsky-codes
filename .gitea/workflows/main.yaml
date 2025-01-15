@@ -1,0 +1,32 @@
+name: Deploy
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # or the tag of your runner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Add SSH Private Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SERVER_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+        env:
+          DEPLOY_SERVER_SSH_KEY: ${{ secrets.DEPLOY_SERVER_SSH_KEY }}
+          
+      - name: Deploy to Server
+        run: |
+          # Example using SSH and an environment variable 
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_IP }} << EOF
+            cd /opt/bsky-codes/
+            git pull origin main
+            docker compose down
+            docker compose up -d
+          EOF
