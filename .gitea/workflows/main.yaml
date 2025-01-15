@@ -27,6 +27,6 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_IP }} << EOF
             cd /opt/bsky-codes/
             git pull origin main
-            docker-compose down
-            docker-compose up -d
+            docker compose down
+            docker compose up -d
           EOF
