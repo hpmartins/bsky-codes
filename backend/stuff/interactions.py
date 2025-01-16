@@ -5,11 +5,11 @@ from atproto import (
     AtUri,
 )
 
-
-def get_date(timestamp: str) -> datetime:
-    dobj = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-    return datetime(dobj.year, dobj.month, dobj.day)
-
+INTERACTION_RECORDS = {
+    models.ids.AppBskyFeedLike: models.AppBskyFeedLike,
+    models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
+    models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
+}
 
 def _create_interaction(
     created_at: str,
@@ -23,7 +23,7 @@ def _create_interaction(
         return None
 
     return {
-        "date": get_date(created_at),
+        "date": datetime.fromisoformat(created_at),
         "metadata": {
             "author": author,
             "collection": collection,

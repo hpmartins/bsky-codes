@@ -37,7 +37,7 @@ services:
       - broadcaster
       - redis
     environment:
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGO_URI=${MONGO_URI}
       - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
       - REDIS_URI=${REDIS_URI}
       - DEVEL=${DEVEL:-0}
