@@ -67,7 +67,6 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
                             if isinstance(record.langs, list) and record.langs
                             else "unknown"
                         )
-                        logger.info(lang)
                         counter_lang.labels(lang).inc()
 
         if op.action == "delete":

@@ -126,7 +126,6 @@ async def process_data(
 
     for collection, operations in database_operations.items():
         if operations and ENABLE_INDEXER:
-            logger.info(f"{len(operations)} operations")
             try:
                 await db[collection].bulk_write(operations)
             except Exception as e:
