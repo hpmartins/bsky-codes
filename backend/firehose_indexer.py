@@ -10,8 +10,6 @@ from collections import defaultdict
 from atproto import (
     models,
     AtUri,
-    AsyncDidInMemoryCache,
-    AsyncIdResolver,
 )
 
 import logging
@@ -47,7 +45,6 @@ app = make_asgi_app()
 async def process_data(
     data: list[tuple[str, str, dict]],
     db: motor.motor_asyncio.AsyncIOMotorDatabase,
-    resolver: AsyncIdResolver,
     counter: Counter,
 ):
     database_operations = defaultdict(list)
@@ -66,14 +63,6 @@ async def process_data(
                     continue
                 uri = AtUri.from_str(uri_str)
 
-                database_operations[models.ids.AppBskyActorProfile].append(
-                    UpdateOne(
-                        {"_id": uri.host},
-                        {"$set": {"updated_at": datetime.now()}},
-                        upsert=True,
-                    )
-                )
-
                 if action == "create" or action == "update":
                     record_type = INTERESTED_RECORDS.get(uri.collection)
                     if not record_type:
@@ -84,15 +73,12 @@ async def process_data(
 
                     # Profiles
                     if uri.collection == models.ids.AppBskyActorProfile:
-                        did_doc = await resolver.did.resolve(uri.host)
-                        handle = did_doc.also_known_as[0].split("//")[1]
                         database_operations[uri.collection].append(
                             UpdateOne(
                                 {"_id": uri.host},
                                 {
                                     "$set": {
                                         **record.model_dump(),
-                                        "handle": handle,
                                         "updated_at": datetime.now(),
                                     }
                                 },
@@ -140,6 +126,7 @@ async def process_data(
 
     for collection, operations in database_operations.items():
         if operations and ENABLE_INDEXER:
+            logger.info(f"{len(operations)} operations")
             try:
                 await db[collection].bulk_write(operations)
             except Exception as e:
@@ -153,9 +140,6 @@ async def start_uvicorn():
 
 
 async def start_indexer(db: motor.motor_asyncio.AsyncIOMotorDatabase, counter: Counter):
-    id_cache = AsyncDidInMemoryCache()
-    id_resolver = AsyncIdResolver(cache=id_cache)
-
     await process_firehose(
         "indexer",
         [
@@ -164,8 +148,8 @@ async def start_indexer(db: motor.motor_asyncio.AsyncIOMotorDatabase, counter: C
             models.ids.AppBskyFeedPost,
             models.ids.AppBskyActorProfile,
         ],
-        lambda x: process_data(x, db, id_resolver, counter),
-        count=1000,
+        lambda x: process_data(x, db, counter),
+        count=500,
     )
 
 
