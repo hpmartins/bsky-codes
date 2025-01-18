@@ -1,8 +1,8 @@
 module.exports = {
   apps: [
     {
-      name: "firehose_enjoyer",
-      script: "./backend/firehose_enjoyer.py",
+      name: "jetstream_enjoyer",
+      script: "./backend/jetstream_enjoyer.py",
       args: [],
       instances: "1",
       autorestart: true,

@@ -3,6 +3,7 @@ import os
 import sys
 from dotenv import load_dotenv
 from atproto import models
+from pydantic import BaseModel
 
 INTERESTED_RECORDS = {
     models.ids.AppBskyFeedLike: models.AppBskyFeedLike,
@@ -47,6 +48,27 @@ class Logger:
     def critical(self, msg, *args, **kwargs):
         self.logger.critical(msg, *args, **kwargs)
 
+# types
+class JetstreamCommit(BaseModel):
+    rev: str
+    operation: str
+    collection: str
+    rkey: str
+    record: dict | None = None
+    cid: str | None = None
+
+class JetstreamIdentity(BaseModel):
+    did: str
+    handle: str
+    seq: int
+    time: str
+
+class JetstreamAccount(BaseModel):
+    active: bool
+    did: str
+    seq: int
+    time: str
+
 
 # config
 class Config:
@@ -59,10 +81,11 @@ class Config:
     NATS_STREAM_MAX_SIZE: int = 5  # GB
     # mongo
     MONGO_URI: str = "mongodb://mongodb:27017"
-    # firehose_enjoyer
-    FIREHOSE_ENJOYER_PORT: int = 6001
-    FIREHOSE_ENJOYER_CHECKPOINT: int = 2000
-    FIREHOSE_ENJOYER_SUBJECT_PREFIX: str = "firehose"
+    # jetstream_enjoyer
+    JETSTREAM_URI: str = "ws://localhost:6008/subscribe"
+    JETSTREAM_ENJOYER_PORT: int = 6001
+    JETSTREAM_ENJOYER_CHECKPOINT: int = 1000
+    JETSTREAM_ENJOYER_SUBJECT_PREFIX: str = "firehose"
     # indexer
     INDEXER_PORT: int = 6002
     INDEXER_ENABLE: bool = False
