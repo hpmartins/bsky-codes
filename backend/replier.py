@@ -1,16 +1,26 @@
 import asyncio
-from utils.firehose import process_firehose
+from utils.consumer import run_consumer
+from utils.config import Config
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-async def process(ops):
+async def my_indexer_callback(data):
     pass
-    # print(list(ops.values()))
-    # await asyncio.sleep(0.1)
+    # Process the received data (which will be the unpickled object)
+    # logger.info(f"Indexer received: {data}")
+    # ... your indexing logic here ...
 
 
-async def start_server():
-    await process_firehose("replier", process)
+async def main():
+    subjects = [
+        "app.bsky.feed.like",
+        "app.bsky.feed.post",
+        "app.bsky.feed.repost",
+    ]
+    await run_consumer(subjects, my_indexer_callback, "replier")
 
 
 if __name__ == "__main__":
-    asyncio.run(start_server())
+    asyncio.run(main())

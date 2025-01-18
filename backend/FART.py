@@ -1,9 +1,11 @@
 # Feline Area Rapid Transit
+import uvicorn
 from fastapi import FastAPI
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Literal
 
 from utils.database import DB_CLIENT
+from utils.config import Config
 
 from atproto import (
     models,
@@ -11,6 +13,7 @@ from atproto import (
     AsyncIdResolver,
 )
 
+config = Config()
 app = FastAPI()
 cache = AsyncDidInMemoryCache()
 resolver = AsyncIdResolver(cache=cache)
@@ -122,11 +125,11 @@ def _post_process_interactions(data: list) -> list:
         posts = 0
         characters = 0
         for interaction in item["interactions"]:
-            if interaction["type"] == "app.bsky.feed.like":
+            if interaction["type"] == models.ids.AppBskyFeedLike:
                 likes += interaction["count"]
-            elif interaction["type"] == "app.bsky.feed.repost":
+            elif interaction["type"] == models.ids.AppBskyFeedRepost:
                 reposts += interaction["count"]
-            elif interaction["type"] == "app.bsky.feed.post":
+            elif interaction["type"] == models.ids.AppBskyFeedPost:
                 posts += interaction["count"]
                 characters += interaction["total_characters"]
 
@@ -134,3 +137,7 @@ def _post_process_interactions(data: list) -> list:
             {"_id": did, "l": likes, "r": reposts, "p": posts, "c": characters}
         )
     return processed_data
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

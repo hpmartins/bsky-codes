@@ -1,9 +1,0 @@
-services:
-  broadcaster:
-    command: watchmedo auto-restart --pattern="firehose_broadcaster.py" --recursive -- python firehose_broadcaster.py
-
-  filter:
-    command: watchmedo auto-restart --pattern="firehose_filter.py" --recursive -- python firehose_filter.py
-
-  indexer:
-    command: watchmedo auto-restart --pattern="firehose_indexer.py" --recursive -- python firehose_indexer.py

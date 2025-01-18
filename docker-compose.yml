@@ -1,55 +1,22 @@
 name: bsky
 
 services:
-  broadcaster:
-    build: ./backend
-    working_dir: /app
+  nats:
+    image: nats:2-alpine
+    ports:
+      - "8222:8222"
+      - "4222:4222"
     volumes:
-      - ./backend:/app
+      - nats-data:/data
+    command: "-js -sd /data --http_port 8222"
+
+  exporter:
+    image: natsio/prometheus-nats-exporter
+    restart: always
+    command: "-channelz -connz_detailed -healthz -gatewayz -accstatz -leafz -jsz all -routez -serverz -subz -varz http://nats:8222/"
     depends_on:
-      - redis
-    environment:
-      - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
-      - REDIS_URI=${REDIS_URI}
-      - DEVEL=${DEVEL:-0}
-    command: python firehose_broadcaster.py
-
-  filter:
-    build: ./backend
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - broadcaster
-      - redis
-    environment:
-      - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
-      - REDIS_URI=${REDIS_URI}
-      - DEVEL=${DEVEL:-0}
-    command: python firehose_filter.py
-
-  indexer:
-    build: ./backend
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - broadcaster
-      - redis
-    environment:
-      - MONGO_URI=${MONGO_URI}
-      - FIREHOSE_MAXLEN=${FIREHOSE_MAXLEN}
-      - REDIS_URI=${REDIS_URI}
-      - DEVEL=${DEVEL:-0}
-      - ENABLE_INDEXER=${ENABLE_INDEXER:-1}
-    command: python firehose_indexer.py
-
-  redis:
-    image: redis:7-bookworm
-    volumes:
-      - redis-data:/data
-    restart: unless-stopped
-
+      - nats
+    
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -62,42 +29,15 @@ services:
     configs:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
-        mode: 0444 # Optional: Set read-only permissions
     ports:
       - "9090:9090"
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
-    volumes:
-      - grafana-data:/var/lib/grafana
-    environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"  # Allow anonymous access for simplicity (not recommended for production)
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
 
 volumes:
   prometheus-data:
-  grafana-data:
-  redis-data:
+  nats-data:
 
 configs:
   prometheus_config:
-    content: |
-      global:
-        scrape_interval: 15s
-
-      scrape_configs:
-        - job_name: 'prometheus'
-          static_configs:
-            - targets: ['localhost:9090']
-
-        - job_name: 'firehose_filter'
-          static_configs:
-            - targets: ['filter:6000']
-
-        - job_name: 'firehose_indexer'
-          static_configs:
-            - targets: ['indexer:6000']
+    file: ./prometheus.yml

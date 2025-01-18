@@ -1,32 +1,32 @@
 module.exports = {
-  "apps": [{
-    "name": "firehose_listener",
-    "script": "./src/firehose_listener.py",
-    "args": [],
-    "instances": "1",
-    "wait_ready": true,
-    "autorestart": false,
-    "max_restarts": 5,
-    "interpreter": "./.venv/bin/python",
-  },
-  {
-    "name": "firehose_filter",
-    "script": "./src/firehose_filter.py",
-    "args": [],
-    "instances": "1",
-    "wait_ready": true,
-    "autorestart": false,
-    "max_restarts": 5,
-    "interpreter": "./.venv/bin/python",
-  },
-  {
-    "name": "firehose_indexer",
-    "script": "./src/firehose_indexer.py",
-    "args": [],
-    "instances": "1",
-    "wait_ready": true,
-    "autorestart": false,
-    "max_restarts": 5,
-    "interpreter": "./.venv/bin/python",
-  }]
-}
+  apps: [
+    {
+      name: "firehose_enjoyer",
+      script: "./backend/firehose_enjoyer.py",
+      args: [],
+      instances: "1",
+      autorestart: true,
+      interpreter: "./.venv/bin/python",
+      time: true,
+    },
+    // {
+    //   name: "replier",
+    //   script: "./backend/replier.py",
+    //   args: [],
+    //   instances: "1",
+    //   autorestart: true,
+    //   interpreter: "./.venv/bin/python",
+    // },
+    // {
+    //   name: "FART",
+    //   script: "./backend/FART.py",
+    //   watch: ["utils", "./backend/FART.py"],
+    //   args: [],
+    //   instances: "1",
+    //   wait_ready: true,
+    //   autorestart: true,
+    //   restart_delay: 500,
+    //   interpreter: "./.venv/bin/python",
+    // },
+  ],
+};
