@@ -3,9 +3,10 @@ import uvicorn
 from fastapi import FastAPI
 from datetime import datetime, timedelta
 from typing import Literal
+from contextlib import asynccontextmanager
 
-from utils.database import DB_CLIENT
-from utils.config import Config
+from utils.database import MongoDBManager
+from utils.core import Config
 
 from atproto import (
     models,
@@ -14,10 +15,18 @@ from atproto import (
 )
 
 config = Config()
-app = FastAPI()
 cache = AsyncDidInMemoryCache()
 resolver = AsyncIdResolver(cache=cache)
-db = DB_CLIENT["bsky"]
+db = MongoDBManager(mongo_uri=config.MONGO_URI)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    await db.connect()
+    yield
+    await db.disconnect()
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
