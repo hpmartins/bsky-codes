@@ -3,6 +3,7 @@ import datetime
 import signal
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.errors import OperationFailure
+from pymongo import IndexModel, ASCENDING
 from typing import Optional
 
 from collections import defaultdict
@@ -120,16 +121,15 @@ async def main():
     logger.info("Connecting to Mongo")
     await mongo_manager.connect()
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
-
-    try:
-        await db.validate_collection(INTERACTION_COLLECTION)
-    except OperationFailure:
-        await db.create_collection(INTERACTION_COLLECTION)
-    finally:
-        if "TTL" not in (await db[INTERACTION_COLLECTION].index_information()).keys():
-            await db[INTERACTION_COLLECTION].create_index(
-                "indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24 * 14
-            )
+    await db[INTERACTION_COLLECTION].create_indexes([
+        IndexModel("author"),
+        IndexModel("subject"),
+        IndexModel("date"),
+        IndexModel(["author", "date", "subject"]),
+        IndexModel(["subject", "date", "author"]),
+        IndexModel(["author", "collection", "rkey"], unique=True),
+        IndexModel("indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24 * 14)
+    ])
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()
