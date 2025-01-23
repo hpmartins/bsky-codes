@@ -43,8 +43,7 @@ services:
       - --mongodb.uri=${MONGO_URI}
       - --mongodb.collstats-colls=${INDEXER_DB}.interactions
       - --mongodb.indexstats-colls=${INDEXER_DB}.interactions
-      - --collector.collstats
-      - --collector.indexstats
+      - --collect-all
 
 volumes:
   prometheus-data:
