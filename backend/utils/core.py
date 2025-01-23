@@ -89,7 +89,6 @@ class JetstreamStuff:
         record: "UnknownRecordType"
         cid: str
 
-
 # config
 class Config:
     # dev
@@ -101,13 +100,15 @@ class Config:
     NATS_STREAM_MAX_SIZE: int = 5  # GB
     # mongo
     MONGO_URI: str = "mongodb://mongodb:27017"
+    # FART
+    FART_PORT: int = 6000
+    FART_DB: str = "bsky"
     # jetstream_enjoyer
     JETSTREAM_URI: str = "ws://localhost:6008/subscribe"
     JETSTREAM_ENJOYER_PORT: int = 6001
     JETSTREAM_ENJOYER_CHECKPOINT: int = 1000
     JETSTREAM_ENJOYER_SUBJECT_PREFIX: str = "firehose"
     # indexer
-    INDEXER_PORT: int = 6002
     INDEXER_ENABLE: bool = False
     INDEXER_BATCH_SIZE: int = 1000
     INDEXER_DB: str = "bsky"
