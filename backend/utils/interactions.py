@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 
 from atproto import (
     models,
@@ -10,6 +10,7 @@ INTERACTION_RECORDS = {
     models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
 }
+INTERACTION_COLLECTION = "interactions"
 
 def _create_interaction(
     created_at: str,
@@ -23,14 +24,13 @@ def _create_interaction(
         return None
 
     return {
-        "date": datetime.fromisoformat(created_at),
-        "metadata": {
-            "author": author,
-            "collection": collection,
-            "rkey": rkey,
-            "subject": subject,
-            **others,
-        },
+        "date": datetime.datetime.fromisoformat(created_at),
+        "author": author,
+        "collection": collection,
+        "rkey": rkey,
+        "subject": subject,
+        **others,
+        "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
     }
 
 

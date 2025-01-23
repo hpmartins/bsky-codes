@@ -5,17 +5,17 @@ from pymongo.errors import ConnectionFailure
 from .core import Logger
 
 class MongoDBManager:
-    def __init__(self, mongo_uri):
-        self.mongo_uri = mongo_uri
+    def __init__(self, uri: str):
+        self.uri = uri
         self.client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None
         self.logger = Logger("mongodb")
 
     async def connect(self):
         """Connects to the MongoDB server."""
         try:
-            self.client = motor.motor_asyncio.AsyncIOMotorClient(self.mongo_uri)
+            self.client = motor.motor_asyncio.AsyncIOMotorClient(self.uri)
             await self.client.admin.command("ping") # test connection
-            self.logger.info(f"Connected to MongoDB at {self.mongo_uri}")
+            self.logger.info(f"Connected to MongoDB at {self.uri}")
         except ConnectionFailure as e:
             self.logger.error(f"Failed to connect to MongoDB: {e}")
             raise

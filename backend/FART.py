@@ -17,7 +17,7 @@ from atproto import (
 config = Config()
 cache = AsyncDidInMemoryCache()
 resolver = AsyncIdResolver(cache=cache)
-db = MongoDBManager(mongo_uri=config.MONGO_URI)
+db = MongoDBManager(uri=config.MONGO_URI)
 
 
 @asynccontextmanager
@@ -76,16 +76,16 @@ async def _aggregate_interactions(
                             "$gte": start_date,
                         }
                     },
-                    {f"metadata.{author_field}": did},
-                    {f"metadata.{author_field}": {"$ne": f"$metadata.{subject_field}"}},
+                    {f"{author_field}": did},
+                    {f"{author_field}": {"$ne": f"${subject_field}"}},
                 ]
             }
         },
         {
             "$group": {
                 "_id": {
-                    f"{subject_field}": f"$metadata.{subject_field}",
-                    "collection": "$metadata.collection",
+                    f"{subject_field}": f"${subject_field}",
+                    "collection": "$collection",
                 },
                 "count": {"$sum": 1},
                 "total_characters": {
@@ -93,11 +93,11 @@ async def _aggregate_interactions(
                         "$cond": [
                             {
                                 "$eq": [
-                                    "$metadata.collection",
+                                    "$collection",
                                     models.ids.AppBskyFeedPost,
                                 ]
                             },
-                            "$metadata.characters",
+                            "$characters",
                             0,
                         ]
                     }
@@ -119,7 +119,7 @@ async def _aggregate_interactions(
     ]
 
     res = []
-    async for doc in db.interactions.aggregate(pipeline):
+    async for doc in db.client["bsky_devel"].interactions.aggregate(pipeline):
         res.append(doc)
 
     return _post_process_interactions(res)

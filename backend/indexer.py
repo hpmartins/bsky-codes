@@ -1,7 +1,9 @@
 import asyncio
-import uvicorn
-from prometheus_client import Counter, make_asgi_app
-from datetime import datetime
+import datetime
+import signal
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo.errors import OperationFailure
+from typing import Optional
 
 from collections import defaultdict
 from atproto import (
@@ -11,120 +13,39 @@ from atproto import (
 
 from utils.nats import NATSManager
 from utils.database import MongoDBManager
-from utils.core import Config, INTERESTED_RECORDS, Logger
+from utils.core import Config, INTERESTED_RECORDS, Logger, JetstreamStuff
 
 from utils.interactions import (
     INTERACTION_RECORDS,
+    INTERACTION_COLLECTION,
     parse_interaction,
 )
 
 from pymongo import InsertOne, DeleteOne, UpdateOne
 
 logger = Logger("indexer")
-_config = Config()
-_db = None
 
-_counter = Counter("indexer", "indexer", ["action", "collection"])
-app = make_asgi_app()
+# Signal handling
+is_shutdown = False
 
 
-async def process_data(data):
-    # database_operations = defaultdict(list)
-
-    logger.info(data)
-
-    # for row in data:
-    #     _, _, actions = row
-
-    #     for action, action_data in actions.items():
-    #         if not action_data:
-    #             continue
-
-    #         for action_item in action_data:
-    #             uri_str = action_item.get("uri")
-    #             if not uri_str:
-    #                 logger.warning("Missing URI in action item")
-    #                 continue
-    #             uri = AtUri.from_str(uri_str)
-
-    #             if action == "create" or action == "update":
-    #                 record_type = INTERESTED_RECORDS.get(uri.collection)
-    #                 if not record_type:
-    #                     logger.warning(f"Unknown collection type: {uri.collection}")
-    #                     continue
-
-    #                 record = record_type.Record(**action_item["record"].model_dump())
-
-    #                 # Profiles
-    #                 if uri.collection == models.ids.AppBskyActorProfile:
-    #                     database_operations[uri.collection].append(
-    #                         UpdateOne(
-    #                             {"_id": uri.host},
-    #                             {
-    #                                 "$set": {
-    #                                     **record.model_dump(),
-    #                                     "updated_at": datetime.now(),
-    #                                 }
-    #                             },
-    #                             upsert=True,
-    #                         )
-    #                     )
-    #                     _counter.labels(action, uri.collection).inc()
-
-    #                 # Interactions
-    #                 if action == "create" and uri.collection in INTERACTION_RECORDS:
-    #                     interaction = parse_interaction(uri, record)
-    #                     if interaction:
-    #                         database_operations["interactions"].append(
-    #                             InsertOne(interaction)
-    #                         )
-    #                         _counter.labels(action, uri.collection).inc()
-    #             elif action == "delete":
-    #                 if uri.collection == models.ids.AppBskyActorProfile:
-    #                     _counter.labels(action, uri.collection).inc()
-    #                     database_operations[uri.collection].append(
-    #                         UpdateOne(
-    #                             {"_id": uri.host},
-    #                             {
-    #                                 "$set": {
-    #                                     "deleted": True,
-    #                                 }
-    #                             },
-    #                             upsert=True,
-    #                         )
-    #                     )
-
-    #                 if uri.collection in INTERACTION_RECORDS:
-    #                     _counter.labels(action, uri.collection).inc()
-    #                     database_operations["interactions"].append(
-    #                         DeleteOne(
-    #                             {
-    #                                 "metadata": {
-    #                                     "author": uri.host,
-    #                                     "collection": uri.collection,
-    #                                     "rkey": uri.rkey,
-    #                                 }
-    #                             }
-    #                         )
-    #                     )
-
-    # for collection, operations in database_operations.items():
-    #     if operations and _config.FIREHOSE_INDEXER_ENABLE:
-    #         try:
-    #             await _db[collection].bulk_write(operations)
-    #         except Exception as e:
-    #             logger.error(f"Error on bulk_write to {collection}: {e}")
+def signal_handler(signum, frame):
+    global is_shutdown
+    is_shutdown = True
+    logger.info("SHUTDOWN")
 
 
-async def start_uvicorn():
-    uvicorn_config = uvicorn.config.Config(app, host="0.0.0.0", port=_config.INDEXER_PORT)
-    server = uvicorn.server.Server(uvicorn_config)
-    await server.serve()
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
-async def start_indexer():
+async def main():
+    _config = Config()
+    nats_manager = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
+    mongo_manager = MongoDBManager(uri=_config.MONGO_URI)
+
     subjects = [
-        f"{_config.NATS_STREAM}.{subject}"
+        f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.{subject}"
         for subject in [
             models.ids.AppBskyFeedLike,
             models.ids.AppBskyFeedPost,
@@ -133,21 +54,100 @@ async def start_indexer():
         ]
     ]
 
-    nm = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
-    await nm.connect()
+    async def process_data(data: bytes):
+        event = JetstreamStuff.Event.model_validate_json(data)
 
-    await nm.pull_subscribe(subjects, process_data, "test")
+        if not _config.INDEXER_ENABLE:
+            return
 
+        if event.commit:
+            uri = AtUri.from_str("at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey))
 
-async def main():
-    logger.info("Starting firehose indexer")
-    await asyncio.wait(
-        [
-            asyncio.create_task(start_uvicorn()),
-            asyncio.create_task(start_indexer()),
-        ],
-        return_when=asyncio.FIRST_COMPLETED,
-    )
+            if isinstance(event.commit, JetstreamStuff.CommitCreate) or isinstance(
+                event.commit, JetstreamStuff.CommitUpdate
+            ):
+                record_type = INTERESTED_RECORDS.get(event.commit.collection)
+                if not record_type:
+                    logger.warning(f"Unknown collection type: {event.commit.collection}")
+                    return
+
+                record = record_type.Record.model_validate(event.commit.record)
+
+                if models.is_record_type(record, models.ids.AppBskyActorProfile):
+                    await db[event.commit.collection].update_one(
+                        {"_id": event.did},
+                        {
+                            "$set": {
+                                **record.model_dump(),
+                                "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                            },
+                            "$setOnInsert": {
+                                "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                            },
+                        },
+                        upsert=True,
+                    )
+
+                if (
+                    isinstance(event.commit, JetstreamStuff.CommitCreate)
+                    and event.commit.collection in INTERACTION_RECORDS.keys()
+                ):
+                    interaction = parse_interaction(uri, record)
+                    if interaction:
+                        await db[INTERACTION_COLLECTION].insert_one(interaction)
+
+            if isinstance(event.commit, JetstreamStuff.CommitDelete):
+                if event.commit.collection == models.ids.AppBskyActorProfile:
+                    await db[event.commit.collection].update_one(
+                        {"_id": event.did},
+                        {
+                            "$set": {
+                                "deleted": True,
+                            }
+                        },
+                        upsert=True,
+                    )
+
+                if event.commit.collection in INTERACTION_RECORDS.keys():
+                    await db[INTERACTION_COLLECTION].delete_one(
+                        {
+                            "author": event.did,
+                            "collection": event.commit.collection,
+                            "rkey": event.commit.rkey,
+                        }
+                    )
+
+    logger.info("Connecting to Mongo")
+    await mongo_manager.connect()
+    db = mongo_manager.client.get_database(_config.INDEXER_DB)
+
+    try:
+        await db.validate_collection(INTERACTION_COLLECTION)
+    except OperationFailure:
+        await db.create_collection(INTERACTION_COLLECTION)
+    finally:
+        if "TTL" not in (await db[INTERACTION_COLLECTION].index_information()).keys():
+            await db[INTERACTION_COLLECTION].create_index(
+                "indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24 * 14
+            )
+
+    logger.info("Connecting to NATS")
+    await nats_manager.connect()
+
+    logger.info("Starting service")
+    for subject in subjects:
+        asyncio.create_task(nats_manager.pull_subscribe(subject, process_data, "test"))
+
+    logger.info("Finished")
+    try:
+        while not is_shutdown:
+            await asyncio.sleep(1)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        logger.info("Shutting down...")
+    finally:
+        await nats_manager.disconnect()
+        await mongo_manager.disconnect()
+        logger.info("Shutdown complete.")
 
 
 if __name__ == "__main__":

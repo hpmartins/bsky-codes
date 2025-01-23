@@ -10,16 +10,16 @@ logger = Logger("nats")
 
 
 class NATSManager:
-    def __init__(self):
+    def __init__(self, uri: str, stream: str):
+        self.uri = uri
+        self.stream = stream
         self.nc = None
         self.js = None
         self.subscriptions: dict[str, Subscription] = {}
         self.stop_events: dict[str, asyncio.Event] = {}
 
-    async def connect(self, uri: str, stream: str):
+    async def connect(self):
         """Connects to the NATS server and initializes JetStream."""
-        self.uri = uri
-        self.stream = stream
         try:
             self.nc = await nats.connect(self.uri)
             self.js = self.nc.jetstream()
@@ -111,6 +111,7 @@ class NATSManager:
                                 await msg.ack()
                             except Exception as e:
                                 logger.error(f"Error in callback for subject {subject}: {e}")
+                                raise e
                     except asyncio.TimeoutError:
                         continue
                     except Exception as e:

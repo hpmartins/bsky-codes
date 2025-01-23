@@ -36,7 +36,9 @@ counters = dict(
 )
 
 logger = Logger("enjoyer")
-nm = NATSManager()
+nm = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
+
+cchar_mapping = dict.fromkeys(range(32))
 
 # Signal handling
 is_shutdown = False
@@ -141,7 +143,7 @@ async def subscribe_to_jetstream(collections: List[str]):
             idx = 0
             async for message in websocket:
                 idx = idx + 1
-                await on_message_handler(message, idx)
+                await on_message_handler(message.translate(cchar_mapping), idx)
         except websockets.exceptions.ConnectionClosed:
             continue
 
@@ -149,7 +151,7 @@ async def subscribe_to_jetstream(collections: List[str]):
 async def start_service():
     logger.info("Connecting to NATS and checking stuff")
 
-    await nm.connect(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
+    await nm.connect()
     await nm.create_stream(
         prefixes=[_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX],
         max_age=_config.NATS_STREAM_MAX_AGE,
