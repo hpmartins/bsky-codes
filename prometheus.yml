@@ -1,19 +1,17 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+
 scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
   - job_name: 'firehose_enjoyer'
-    scrape_interval: 10s
-    scrape_timeout: 5s
     static_configs:
       - targets: ['host.docker.internal:6001']
   - job_name: 'firehose_indexer'
-    scrape_interval: 10s
-    scrape_timeout: 5s
     static_configs:
       - targets: ['host.docker.internal:6002']
   - job_name: 'nats-server'
-    scrape_interval: 10s
-    scrape_timeout: 5s
     static_configs:
       - targets: ['exporter:7777']
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb_exporter:9216']

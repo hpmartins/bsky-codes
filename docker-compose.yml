@@ -34,6 +34,18 @@ services:
     extra_hosts:
         - "host.docker.internal:host-gateway"
 
+  mongodb_exporter:
+    image: percona/mongodb_exporter:0.43.1
+    restart: always
+    ports:
+      - "9216:9216"
+    command:
+      - --mongodb.uri=${MONGO_URI}
+      - --mongodb.collstats-colls=${INDEXER_DB}.interactions
+      - --mongodb.indexstats-colls=${INDEXER_DB}.interactions
+      - --collector.collstats
+      - --collector.indexstats
+
 volumes:
   prometheus-data:
   nats-data:
