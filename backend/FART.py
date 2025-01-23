@@ -15,16 +15,19 @@ from atproto import (
 )
 
 config = Config()
-cache = AsyncDidInMemoryCache()
-resolver = AsyncIdResolver(cache=cache)
-db = MongoDBManager(uri=config.MONGO_URI)
-
 
 @asynccontextmanager
-async def lifespan(app):
-    await db.connect()
+async def lifespan(app: FastAPI):
+    cache = AsyncDidInMemoryCache()
+    app.resolver = AsyncIdResolver(cache=cache)
+
+    mongo_manager = MongoDBManager(uri=config.MONGO_URI)
+    await mongo_manager.connect()
+    app.db = mongo_manager.client.get_database(config.FART_DB)
+
     yield
-    await db.disconnect()
+
+    await mongo_manager.disconnect()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -37,7 +40,7 @@ async def root():
 @app.get("/interactions")
 async def interactions(did: str = None, handle: str = None):
     if handle is not None:
-        did = await resolver.handle.ensure_resolve(handle)
+        did = await app.resolver.handle.ensure_resolve(handle)
 
     if did is None:
         return {}
@@ -119,7 +122,7 @@ async def _aggregate_interactions(
     ]
 
     res = []
-    async for doc in db.client["bsky_devel"].interactions.aggregate(pipeline):
+    async for doc in app.db.interactions.aggregate(pipeline):
         res.append(doc)
 
     return _post_process_interactions(res)
@@ -149,4 +152,4 @@ def _post_process_interactions(data: list) -> list:
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=config.FART_PORT)
