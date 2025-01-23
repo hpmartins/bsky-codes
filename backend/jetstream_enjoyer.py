@@ -17,22 +17,26 @@ from utils.core import (
     Logger,
     Config,
     INTERESTED_RECORDS,
-    JetstreamCommit,
-    JetstreamAccount,
-    JetstreamIdentity,
+    get_date_from_jetstream_cursor,
+    JetstreamStuff,
 )
 
 from utils.nats import NATSManager
 
 app = make_asgi_app()
 _config = Config()
-firehose_network_counter = Counter("firehose_network", "firehose network")
-firehose_calls_counter = Counter("firehose_events", "firehose calls")
-firehose_lang_counter = Counter("post_langs", "post languages", ["lang"])
-firehose_counter = Counter("firehose", "firehose", ["action", "collection"])
-logger = Logger("enjoyer")
 
-RECONNECT_DELAY = 5
+counters = dict(
+    network=Counter("firehose_network", "data received"),
+    events=Counter("firehose_events", "events"),
+    post_langs=Counter("firehose_post_langs", "post languages", ["lang"]),
+    account=Counter("firehose_account_counter", "account updates", ["active"]),
+    identity=Counter("firehose_identity_counter", "identity updates"),
+    firehose=Counter("firehose", "firehose", ["action", "collection"]),
+)
+
+logger = Logger("enjoyer")
+nm = NATSManager()
 
 # Signal handling
 is_shutdown = False
@@ -52,54 +56,38 @@ def get_nats_subject(collection: str) -> str:
     return f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.{collection}"
 
 
-async def subscribe_to_jetstream(collections: List[str], nm: NATSManager):
+async def subscribe_to_jetstream(collections: List[str]):
     kv = await nm.get_or_create_kv_store(_config.NATS_STREAM)
 
     try:
         cursor = await kv.get("cursor")
         cursor = int(cursor.value) - 5 * 1000000  # go back 5s
     except nats.js.errors.KeyNotFoundError:
-        cursor = None
+        cursor = ''
 
     logger.info(f"Starting at cursor: {cursor}")
     params = urlencode(
         dict(
             wantedCollections=collections,
+            compress=True,
+            cursor=cursor,
         ),
         doseq=True,
     )
     uri_with_params = f"{_config.JETSTREAM_URI}?{params}"
-
-    async def _parse_commit(did: str, commit: JetstreamCommit):
-        payload = {
-            "operation": commit.operation,
-            "uri": "at://{}/{}/{}".format(did, commit.collection, commit.rkey),
-        }
-        if commit.operation == "create" or commit.operation == "update":
-            payload["record"] = commit.record
-
-        await nm.publish(get_nats_subject(commit.collection), json.dumps(payload).encode())
-
-        firehose_counter.labels(commit.operation, commit.collection).inc()
-        if commit.operation == "create" and commit.collection == models.ids.AppBskyFeedPost:
-            if "langs" in commit.record:
-                langs = commit.record["langs"]
-                lang = langs[0][:2].lower() if isinstance(langs, list) and len(langs) > 0 else "empty"
-            else:
-                lang = "none"
-
-            firehose_lang_counter.labels(lang).inc()
 
     def measure_events_per_second(func: callable) -> callable:
         def wrapper(*args) -> Any:
             wrapper.calls += 1
             wrapper.bytes_received += len(args[0])
             cur_time = time.time()
-            
+
             if cur_time - wrapper.start_time >= 1:
-                firehose_network_counter.inc(wrapper.bytes_received)
-                firehose_calls_counter.inc(wrapper.calls)
-                logger.info(f"NETWORK LOAD: {wrapper.calls} events/s; {wrapper.bytes_received/1024:1f} kb/s")
+                counters["network"].inc(wrapper.bytes_received)
+                counters["events"].inc(wrapper.calls)
+                logger.info(
+                    f"NETWORK LOAD: {wrapper.calls}/s; {wrapper.bytes_received/1024:.1f} kb/s; {60*60*wrapper.bytes_received/1024/1024/1024:.1f} GB/h"
+                )
                 wrapper.start_time = cur_time
                 wrapper.calls = 0
                 wrapper.bytes_received = 0
@@ -111,36 +99,41 @@ async def subscribe_to_jetstream(collections: List[str], nm: NATSManager):
         wrapper.start_time = time.time()
 
         return wrapper
-    
+
     @measure_events_per_second
-    async def on_message_handler(message: str, idx: int) -> None:
+    async def on_message_handler(message: bytes, idx: int) -> None:
         try:
-            event = json.loads(message)
+            event = JetstreamStuff.Event.model_validate_json(message)
         except (ValueError, KeyError):
             logger.error(f"error reading json: {message}")
             return
-        
-        did = event["did"]
-        time_us = event["time_us"]
-        kind = event["kind"]
-        
+
         if idx % _config.JETSTREAM_ENJOYER_CHECKPOINT == 0:
-            logger.info(f"saving new cursor: {time_us}")
-            await kv.put("cursor", str(time_us).encode())
-            
-        if kind == "account":
-            pass
+            timestamp = get_date_from_jetstream_cursor(event.time_us)
+            logger.info(f"saving new cursor: {event.time_us} {timestamp}")
+            await kv.put("cursor", str(event.time_us).encode())
 
-        if kind == "identity":
-            pass
-
-        if kind == "commit":
-            try:
-                await _parse_commit(did, JetstreamCommit(**event["commit"]))
-            except Exception as e:
-                logger.error(f"error parsing commit: {event}")
-                logger.error(e)
-                return
+        try:
+            if event.kind == "account":
+                await nm.publish(get_nats_subject("account"), event.account.model_dump_json().encode())
+                counters["account"].labels(event.account.active).inc()
+            elif event.kind == "identity":
+                await nm.publish(get_nats_subject("identity"), event.identity.model_dump_json().encode())
+                counters["identity"].inc()
+            elif event.kind == "commit":
+                await nm.publish(get_nats_subject(event.commit.collection), event.model_dump_json().encode())
+                counters["firehose"].labels(event.commit.operation, event.commit.collection).inc()
+                if event.commit.operation == "create" and models.is_record_type(event.commit.record, models.ids.AppBskyFeedPost):
+                    langs = event.commit.record.langs
+                    if isinstance(langs, list):
+                        lang = langs[0][:2].lower() if len(langs) > 0 else "empty"
+                    else:
+                        lang = "none"
+                    counters["post_langs"].labels(lang).inc()
+        except Exception as e:
+            logger.error(f"error parsing {event.kind}: {event}")
+            logger.error(e)
+            return
 
     async for websocket in websockets.connect(uri_with_params):
         print(f"Connected to {uri_with_params}")
@@ -156,25 +149,24 @@ async def subscribe_to_jetstream(collections: List[str], nm: NATSManager):
 async def start_service():
     logger.info("Connecting to NATS and checking stuff")
 
-    nm = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
-    await nm.connect()
+    await nm.connect(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
     await nm.create_stream(
         prefixes=[_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX],
         max_age=_config.NATS_STREAM_MAX_AGE,
         max_size=_config.NATS_STREAM_MAX_SIZE,
     )
 
-    logger.info("Starting jetstream enjoyer")
-    await subscribe_to_jetstream(list(INTERESTED_RECORDS.keys()), nm)
+    logger.info("Starting service")
+    await subscribe_to_jetstream(list(INTERESTED_RECORDS.keys()))
 
     try:
         while not is_shutdown:
             await asyncio.sleep(1)
     except (KeyboardInterrupt, asyncio.CancelledError):
-        logger.info("Shutting down indexer...")
+        logger.info("Shutting down...")
     finally:
         await nm.disconnect()
-        logger.info("Indexer shutdown complete.")
+        logger.info("Shutdown complete.")
 
 
 async def start_uvicorn() -> None:

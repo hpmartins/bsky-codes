@@ -3,14 +3,16 @@ import os
 import sys
 from dotenv import load_dotenv
 from atproto import models
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal, Union, Annotated, Optional
+from datetime import datetime
+
+from atproto_client.models.unknown_type import UnknownRecordType
 
 INTERESTED_RECORDS = {
     models.ids.AppBskyFeedLike: models.AppBskyFeedLike,
     models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
-    # models.ids.AppBskyGraphFollow: models.AppBskyGraphFollow,
-    # models.ids.AppBskyGraphBlock: models.AppBskyGraphBlock,
     models.ids.AppBskyActorProfile: models.AppBskyActorProfile,
 }
 
@@ -48,26 +50,44 @@ class Logger:
     def critical(self, msg, *args, **kwargs):
         self.logger.critical(msg, *args, **kwargs)
 
+
 # types
-class JetstreamCommit(BaseModel):
-    rev: str
-    operation: str
-    collection: str
-    rkey: str
-    record: dict | None = None
-    cid: str | None = None
+class JetstreamStuff:
+    class Event(BaseModel):
+        did: str
+        time_us: int
+        kind: Literal["account", "identity", "commit"]
+        account: Optional[models.ComAtprotoSyncSubscribeRepos.Account] = None
+        identity: Optional[models.ComAtprotoSyncSubscribeRepos.Identity] = None
+        commit: Optional[Annotated["JetstreamStuff.CommitTypes", Field(discriminator="operation")]] = None
 
-class JetstreamIdentity(BaseModel):
-    did: str
-    handle: str
-    seq: int
-    time: str
+    CommitTypes = Union[
+        "JetstreamStuff.CommitCreate",
+        "JetstreamStuff.CommitDelete",
+        "JetstreamStuff.CommitUpdate",
+    ]
 
-class JetstreamAccount(BaseModel):
-    active: bool
-    did: str
-    seq: int
-    time: str
+    class CommitCreate(BaseModel):
+        rev: str
+        collection: str
+        rkey: str
+        operation: Literal["create"] = "create"
+        record: "UnknownRecordType"
+        cid: str
+
+    class CommitDelete(BaseModel):
+        rev: str
+        collection: str
+        rkey: str
+        operation: Literal["delete"] = "delete"
+
+    class CommitUpdate(BaseModel):
+        rev: str
+        collection: str
+        rkey: str
+        operation: Literal["update"] = "update"
+        record: "UnknownRecordType"
+        cid: str
 
 
 # config
@@ -108,3 +128,8 @@ class Config:
 
     def __str__(self):
         return "\n".join(f"{k}: {v}" for k, v in self.__dict__.items())
+
+
+# functions
+def get_date_from_jetstream_cursor(cursor: int):
+    return datetime.fromtimestamp(cursor / 1000000)
