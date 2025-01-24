@@ -65,7 +65,7 @@ async def subscribe_to_jetstream(collections: List[str]):
         cursor = await kv.get("cursor")
         cursor = int(cursor.value) - 5 * 1000000  # go back 5s
     except nats.js.errors.KeyNotFoundError:
-        cursor = ''
+        cursor = ""
 
     logger.info(f"Starting at cursor: {cursor}")
     params = urlencode(
@@ -105,7 +105,7 @@ async def subscribe_to_jetstream(collections: List[str]):
     @measure_events_per_second
     async def on_message_handler(message: bytes, idx: int) -> None:
         try:
-            event = JetstreamStuff.Event.model_validate_json(message)
+            event = JetstreamStuff.Event.model_validate_json(str(message).translate(cchar_mapping), strict=False)
         except (ValueError, KeyError):
             logger.error(f"error reading json: {message}")
             return
@@ -125,7 +125,9 @@ async def subscribe_to_jetstream(collections: List[str]):
             elif event.kind == "commit":
                 await nm.publish(get_nats_subject(event.commit.collection), event.model_dump_json().encode())
                 counters["firehose"].labels(event.commit.operation, event.commit.collection).inc()
-                if event.commit.operation == "create" and models.is_record_type(event.commit.record, models.ids.AppBskyFeedPost):
+                if event.commit.operation == "create" and models.is_record_type(
+                    event.commit.record, models.ids.AppBskyFeedPost
+                ):
                     langs = event.commit.record.langs
                     if isinstance(langs, list):
                         lang = langs[0][:2].lower() if len(langs) > 0 else "empty"
@@ -143,7 +145,7 @@ async def subscribe_to_jetstream(collections: List[str]):
             idx = 0
             async for message in websocket:
                 idx = idx + 1
-                await on_message_handler(message.translate(cchar_mapping), idx)
+                await on_message_handler(message, idx)
         except websockets.exceptions.ConnectionClosed:
             continue
 

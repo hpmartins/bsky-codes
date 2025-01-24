@@ -5,8 +5,10 @@ from datetime import datetime, timedelta
 from typing import Literal
 from contextlib import asynccontextmanager
 
+
 from utils.database import MongoDBManager
 from utils.core import Config
+from utils.interactions import InteractionsResponse, INTERACTION_COLLECTION
 
 from atproto import (
     models,
@@ -14,7 +16,9 @@ from atproto import (
     AsyncIdResolver,
 )
 
+
 config = Config()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,6 +33,7 @@ async def lifespan(app: FastAPI):
 
     await mongo_manager.disconnect()
 
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -38,7 +43,7 @@ async def root():
 
 
 @app.get("/interactions")
-async def interactions(did: str = None, handle: str = None):
+async def interactions(did: str = None, handle: str = None) -> InteractionsResponse:
     if handle is not None:
         did = await app.resolver.handle.ensure_resolve(handle)
 
@@ -50,19 +55,18 @@ async def interactions(did: str = None, handle: str = None):
 
     data = await _get_interactions(did, start_date)
 
-    return dict(data=data)
+    return data
 
 
-async def _get_interactions(did: str, start_date: datetime):
+async def _get_interactions(did: str, start_date: datetime) -> InteractionsResponse:
     return {
+        "_id": did,
         "from": await _aggregate_interactions("from", did, start_date),
         "to": await _aggregate_interactions("to", did, start_date),
     }
 
 
-async def _aggregate_interactions(
-    direction: Literal["from", "to"], did: str, start_date: datetime
-) -> list:
+async def _aggregate_interactions(direction: Literal["from", "to"], did: str, start_date: datetime) -> list:
     if direction == "from":
         author_field = "author"
         subject_field = "subject"
@@ -122,7 +126,7 @@ async def _aggregate_interactions(
     ]
 
     res = []
-    async for doc in app.db.interactions.aggregate(pipeline):
+    async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
         res.append(doc)
 
     return _post_process_interactions(res)
@@ -131,7 +135,6 @@ async def _aggregate_interactions(
 def _post_process_interactions(data: list) -> list:
     processed_data = []
     for item in data:
-        did = item["_id"]
         likes = 0
         reposts = 0
         posts = 0
@@ -145,9 +148,7 @@ def _post_process_interactions(data: list) -> list:
                 posts += interaction["count"]
                 characters += interaction["total_characters"]
 
-        processed_data.append(
-            {"_id": did, "l": likes, "r": reposts, "p": posts, "c": characters}
-        )
+        processed_data.append({"_id": item["_id"], "l": likes, "r": reposts, "p": posts, "c": characters})
     return processed_data
 
 

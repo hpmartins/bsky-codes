@@ -3,6 +3,7 @@ import nats
 from nats.js.api import StreamConfig
 from nats.aio.subscription import Subscription
 from typing import List, Callable, Any
+from nats.js.api import StreamConfig
 
 from utils.core import Logger
 
@@ -104,21 +105,16 @@ class NATSManager:
             async def fetch_and_process(subject, psub, stop_event):
                 while not stop_event.is_set():
                     try:
-                        msgs = await asyncio.wait_for(psub.fetch(batch_size), timeout=1.0)
-                        for msg in msgs:
-                            try:
-                                await callback(msg.data)
-                                await msg.ack()
-                            except Exception as e:
-                                logger.error(f"Error in callback for subject {subject}: {e}")
-                                raise e
+                        msgs = await psub.fetch(batch_size, timeout=1.0, heartbeat=0.2)
+                        await callback(msgs)
+                    except nats.js.errors.FetchTimeoutError:
+                        continue
                     except asyncio.TimeoutError:
                         continue
+                    except nats.errors.ConnectionClosedError:
+                        break
                     except Exception as e:
                         logger.error(f"Error fetching messages from subject {subject}: {e}")
-                        if isinstance(e, nats.errors.ConnectionClosedError):
-                            logger.info("Connection closed, stopping fetch_and_process loop.")
-                            break
 
             asyncio.create_task(fetch_and_process(subject, psub, stop_event))
 

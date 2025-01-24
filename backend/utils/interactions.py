@@ -1,5 +1,8 @@
 import datetime
 
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
+
 from atproto import (
     models,
     AtUri,
@@ -11,6 +14,24 @@ INTERACTION_RECORDS = {
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
 }
 INTERACTION_COLLECTION = "interactions"
+
+
+class Interaction(TypedDict):
+    _id: str
+    l: int
+    r: int
+    p: int
+    c: int
+
+
+class InteractionsResponse(BaseModel):
+    _id: str
+    from_: list[Interaction] = Field(alias="from")
+    to: list[Interaction]
+
+    class Config:
+        populate_by_name = True
+
 
 def _create_interaction(
     created_at: str,
@@ -35,9 +56,9 @@ def _create_interaction(
 
 
 def parse_interaction(uri: AtUri, record) -> dict | None:
-    if models.is_record_type(
-        record, models.ids.AppBskyFeedLike
-    ) or models.is_record_type(record, models.ids.AppBskyFeedRepost):
+    if models.is_record_type(record, models.ids.AppBskyFeedLike) or models.is_record_type(
+        record, models.ids.AppBskyFeedRepost
+    ):
         return _create_interaction(
             record.created_at,
             uri.host,
@@ -69,12 +90,8 @@ def parse_interaction(uri: AtUri, record) -> dict | None:
                     dict(characters=len(record.text)),
                 )
 
-            if models.is_record_type(
-                record.embed, models.ids.AppBskyEmbedRecordWithMedia
-            ):
-                if models.is_record_type(
-                    record.embed.record, models.ids.AppBskyEmbedRecord
-                ):
+            if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecordWithMedia):
+                if models.is_record_type(record.embed.record, models.ids.AppBskyEmbedRecord):
                     return _create_interaction(
                         record.created_at,
                         uri.host,
