@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "jetstream_enjoyer",
+      name: "enjoyer",
       script: "./backend/jetstream_enjoyer.py",
       args: [],
       instances: "1",
@@ -9,14 +9,15 @@ module.exports = {
       interpreter: "./.venv/bin/python",
       time: true,
     },
-    // {
-    //   name: "replier",
-    //   script: "./backend/replier.py",
-    //   args: [],
-    //   instances: "1",
-    //   autorestart: true,
-    //   interpreter: "./.venv/bin/python",
-    // },
+    {
+      name: "indexer",
+      script: "./backend/indexer.py",
+      args: [],
+      instances: "1",
+      autorestart: true,
+      interpreter: "./.venv/bin/python",
+      time: true,
+    },
     // {
     //   name: "FART",
     //   script: "./backend/FART.py",
