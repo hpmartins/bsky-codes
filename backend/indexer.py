@@ -205,7 +205,9 @@ async def main():
             await db[col].bulk_write(ops)
 
     for subject in subjects:
-        await nats_manager.pull_subscribe(subject, process_messages, _config.INDEXER_CONSUMER, batch_size=500)
+        await nats_manager.pull_subscribe(
+            subject, process_messages, _config.INDEXER_CONSUMER, batch_size=_config.INDEXER_BATCH_SIZE
+        )
 
     try:
         while not is_shutdown:
