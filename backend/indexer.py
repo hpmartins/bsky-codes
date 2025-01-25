@@ -3,7 +3,8 @@ import datetime
 import signal
 from pymongo import IndexModel
 from nats.aio.msg import Msg
-
+from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy
+from nats.js.errors import NotFoundError
 from collections import defaultdict
 from atproto import (
     models,
@@ -37,17 +38,17 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-SUBJECT_LIST = [
-    models.ids.AppBskyFeedLike,
-    models.ids.AppBskyFeedPost,
-    models.ids.AppBskyFeedRepost,
-    models.ids.AppBskyActorProfile,
-    models.ids.AppBskyGraphFollow,
-    models.ids.AppBskyGraphBlock,
-]
+# SUBJECT_LIST = [
+#     models.ids.AppBskyFeedLike,
+#     models.ids.AppBskyFeedPost,
+#     models.ids.AppBskyFeedRepost,
+#     models.ids.AppBskyActorProfile,
+#     # models.ids.AppBskyGraphFollow,
+#     models.ids.AppBskyGraphBlock,
+# ]
 
 TEMPORARY_INDEXED_RECORDS = [
-    models.ids.AppBskyGraphFollow,
+    # models.ids.AppBskyGraphFollow,
     models.ids.AppBskyGraphBlock,
 ]
 
@@ -57,7 +58,7 @@ async def main():
     nats_manager = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
     mongo_manager = MongoDBManager(uri=_config.MONGO_URI)
 
-    subjects = [f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.{subject}" for subject in SUBJECT_LIST]
+    # subjects = [f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.{subject}" for subject in SUBJECT_LIST]
 
     def _process_data(data: bytes):
         event = JetstreamStuff.Event.model_validate_json(data)
@@ -203,11 +204,28 @@ async def main():
 
         for col, ops in all_ops.items():
             await db[col].bulk_write(ops)
-
-    for subject in subjects:
-        await nats_manager.pull_subscribe(
-            subject, process_messages, _config.INDEXER_CONSUMER, batch_size=_config.INDEXER_BATCH_SIZE
+    
+    try:
+        await nats_manager.js.consumer_info(_config.NATS_STREAM, _config.INDEXER_CONSUMER)
+    except NotFoundError:
+        await nats_manager.js.add_consumer(
+            stream=_config.NATS_STREAM,
+            config=ConsumerConfig(
+                name=_config.INDEXER_CONSUMER,
+                durable_name=_config.INDEXER_CONSUMER,
+                filter_subject=f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.>",
+                deliver_policy=DeliverPolicy.ALL,
+                ack_policy=AckPolicy.EXPLICIT,
+                ack_wait=60,
+            )
         )
+
+    await nats_manager.pull_subscribe(
+        stream=_config.NATS_STREAM,
+        consumer=_config.INDEXER_CONSUMER,
+        callback=process_messages,
+        batch_size=_config.INDEXER_BATCH_SIZE,
+    )
 
     try:
         while not is_shutdown:

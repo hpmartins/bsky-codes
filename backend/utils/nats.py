@@ -1,9 +1,8 @@
 import asyncio
 import nats
-from nats.js.api import StreamConfig
 from nats.aio.subscription import Subscription
 from typing import List, Callable, Any
-from nats.js.api import StreamConfig
+from nats.js.api import StreamConfig, ConsumerConfig
 
 from utils.core import Logger
 
@@ -35,12 +34,12 @@ class NATSManager:
 
             await asyncio.sleep(1)
 
-            for subject, sub in self.subscriptions.items():
+            for consumer, sub in self.subscriptions.items():
                 try:
                     await sub.unsubscribe()
-                    logger.info(f"Unsubscribed from JetStream subject: {subject}")
+                    logger.info(f"Unsubscribed from JetStream subject: {consumer}")
                 except Exception as e:
-                    logger.error(f"Error unsubscribing from JetStream subject {subject}: {e}")
+                    logger.error(f"Error unsubscribing from JetStream subject {consumer}: {e}")
             await self.nc.close()
             logger.info("NATS connection closed.")
 
@@ -81,26 +80,20 @@ class NATSManager:
                 logger.error(f"Error creating key-value store {bucket_name}: {e}")
                 raise
 
-    async def pull_subscribe(
-        self, subject: str, callback: Callable[[Any], None], service_name: str, batch_size: int = 100
-    ):
+    async def pull_subscribe(self, stream: str, consumer: str, callback: Callable[[Any], None], batch_size: int = 100):
         if self.js is None:
             raise nats.errors.NoServersError("Not connected to NATS server")
 
-        durable_name = f"{service_name}-{subject.replace('.', '_')}"
         try:
-            psub = await self.js.pull_subscribe(
-                subject,
-                durable=durable_name,
-            )
-            self.subscriptions[subject] = psub
+            psub = await self.js.pull_subscribe_bind(consumer=consumer, stream=stream)
+            self.subscriptions[consumer] = psub
 
             stop_event = asyncio.Event()
-            self.stop_events[subject] = stop_event
+            self.stop_events[consumer] = stop_event
 
-            logger.info(f"Subscribed to JetStream subject: {subject} with durable name: {durable_name}")
+            logger.info(f"Subscribed to JetStream with durable name: {consumer}")
 
-            async def fetch_and_process(subject, psub, stop_event):
+            async def fetch_and_process(psub, stop_event):
                 while not stop_event.is_set():
                     try:
                         msgs = await psub.fetch(batch_size, timeout=1.0, heartbeat=0.2)
@@ -112,12 +105,12 @@ class NATSManager:
                     except nats.errors.ConnectionClosedError:
                         break
                     except Exception as e:
-                        logger.error(f"Error fetching messages from subject {subject}: {e}")
+                        logger.error(f"Error fetching messages: {e}")
 
-            asyncio.create_task(fetch_and_process(subject, psub, stop_event))
+            asyncio.create_task(fetch_and_process(psub, stop_event))
 
         except Exception as e:
-            logger.error(f"Error subscribing to JetStream subject: {subject}: {e}")
+            logger.error(f"Error subscribing to JetStream: {e}")
 
     async def publish(self, subject: str, data: bytes):
         try:
