@@ -181,7 +181,7 @@ async def main():
                 IndexModel("author"),
                 IndexModel("subject"),
                 IndexModel("created_at"),
-                IndexModel("indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24)
+                IndexModel("indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24),
             ]
         )
 
@@ -205,7 +205,7 @@ async def main():
             await db[col].bulk_write(ops)
 
     for subject in subjects:
-        await nats_manager.pull_subscribe(subject, process_messages, "test", batch_size=500)
+        await nats_manager.pull_subscribe(subject, process_messages, _config.INDEXER_CONSUMER, batch_size=500)
 
     try:
         while not is_shutdown:

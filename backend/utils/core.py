@@ -112,6 +112,7 @@ class Config:
     JETSTREAM_ENJOYER_SUBJECT_PREFIX: str = "firehose"
     # indexer
     INDEXER_ENABLE: bool = False
+    INDEXER_CONSUMER: str = "indexer"
     INDEXER_BATCH_SIZE: int = 1000
     INDEXER_DB: str = "bsky"
 

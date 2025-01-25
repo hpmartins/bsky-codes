@@ -20,7 +20,6 @@ class NATSManager:
         self.stop_events: dict[str, asyncio.Event] = {}
 
     async def connect(self):
-        """Connects to the NATS server and initializes JetStream."""
         try:
             self.nc = await nats.connect(self.uri)
             self.js = self.nc.jetstream()
@@ -30,7 +29,6 @@ class NATSManager:
             raise
 
     async def disconnect(self):
-        """Disconnects from the NATS server and cleans up subscriptions."""
         if self.nc and self.nc.is_connected:
             for stop_event in self.stop_events.values():
                 stop_event.set()

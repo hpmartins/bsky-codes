@@ -7,7 +7,6 @@ from prometheus_client import Counter, make_asgi_app
 import uvicorn
 from urllib.parse import urlencode
 import websockets
-import json
 
 from atproto import (
     models,
