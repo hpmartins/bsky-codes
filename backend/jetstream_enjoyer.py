@@ -116,10 +116,10 @@ async def subscribe_to_jetstream(collections: List[str]):
 
         try:
             if event.kind == "account":
-                await nm.publish(get_nats_subject("account"), event.account.model_dump_json().encode())
+                await nm.publish(get_nats_subject("account"), event.model_dump_json().encode())
                 counters["account"].labels(event.account.active).inc()
             elif event.kind == "identity":
-                await nm.publish(get_nats_subject("identity"), event.identity.model_dump_json().encode())
+                await nm.publish(get_nats_subject("identity"), event.model_dump_json().encode())
                 counters["identity"].inc()
             elif event.kind == "commit":
                 await nm.publish(get_nats_subject(event.commit.collection), event.model_dump_json().encode())
