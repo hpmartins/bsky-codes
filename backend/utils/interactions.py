@@ -22,10 +22,10 @@ class Interaction(TypedDict):
     r: int
     p: int
     c: int
+    t: int
 
 
 class InteractionsResponse(BaseModel):
-    _id: str
     from_: list[Interaction] = Field(alias="from")
     to: list[Interaction]
 
