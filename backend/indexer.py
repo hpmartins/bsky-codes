@@ -139,7 +139,7 @@ async def main():
                         DeleteOne(
                             {
                                 "author": event.did,
-                                "collection": event.commit.collection,
+                                "metadata.collection": event.commit.collection,
                                 "rkey": event.commit.rkey,
                             }
                         )
