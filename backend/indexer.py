@@ -185,7 +185,7 @@ async def main():
             await msg.ack()
         logger.debug("done processing messages")
         for col, ops in all_ops.items():
-            await db[col].bulk_write(ops)
+            await db[col].bulk_write(ops, ordered=False)
         logger.debug("done writing in db")
 
     try:
