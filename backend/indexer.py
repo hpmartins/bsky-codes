@@ -25,9 +25,7 @@ from pymongo import InsertOne, DeleteOne, UpdateOne
 
 logger = Logger("indexer")
 
-# Signal handling
 is_shutdown = False
-
 
 def signal_handler(signum, frame):
     global is_shutdown
@@ -38,27 +36,14 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-# SUBJECT_LIST = [
-#     models.ids.AppBskyFeedLike,
-#     models.ids.AppBskyFeedPost,
-#     models.ids.AppBskyFeedRepost,
-#     models.ids.AppBskyActorProfile,
-#     # models.ids.AppBskyGraphFollow,
-#     models.ids.AppBskyGraphBlock,
-# ]
-
 TEMPORARY_INDEXED_RECORDS = [
-    # models.ids.AppBskyGraphFollow,
     models.ids.AppBskyGraphBlock,
 ]
-
 
 async def main():
     _config = Config()
     nats_manager = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
     mongo_manager = MongoDBManager(uri=_config.MONGO_URI)
-
-    # subjects = [f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.{subject}" for subject in SUBJECT_LIST]
 
     def _process_data(data: bytes):
         event = JetstreamStuff.Event.model_validate_json(data)
@@ -167,13 +152,9 @@ async def main():
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
     await db[INTERACTION_COLLECTION].create_indexes(
         [
-            IndexModel("author"),
-            IndexModel("subject"),
-            IndexModel("date"),
-            IndexModel(["author", "date", "subject"]),
-            IndexModel(["subject", "date", "author"]),
-            IndexModel(["author", "collection", "rkey"]),  # unique=True),
-            IndexModel("indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24 * 14),
+            IndexModel(["author", "timestamp", "subject"]),
+            IndexModel(["subject", "timestamp", "author"]),
+            IndexModel(["author", "metadata.collection", "rkey"]),
         ]
     )
     for collection in TEMPORARY_INDEXED_RECORDS:
@@ -182,7 +163,7 @@ async def main():
                 IndexModel("author"),
                 IndexModel("subject"),
                 IndexModel("created_at"),
-                IndexModel("indexed_at", name="TTL", expireAfterSeconds=60 * 60 * 24),
+                IndexModel(["author", "rkey"])
             ]
         )
 
@@ -195,16 +176,18 @@ async def main():
         if not msgs:
             return
 
+        logger.debug("received messages")
         all_ops = defaultdict(list)
         for msg in msgs:
             db_ops = _process_data(msg.data)
             for col, ops in db_ops.items():
                 all_ops[col].extend(ops)
             await msg.ack()
-
+        logger.debug("done processing messages")
         for col, ops in all_ops.items():
             await db[col].bulk_write(ops)
-    
+        logger.debug("done writing in db")
+
     try:
         await nats_manager.js.consumer_info(_config.NATS_STREAM, _config.INDEXER_CONSUMER)
     except NotFoundError:
@@ -217,7 +200,7 @@ async def main():
                 deliver_policy=DeliverPolicy.ALL,
                 ack_policy=AckPolicy.EXPLICIT,
                 ack_wait=60,
-            )
+            ),
         )
 
     await nats_manager.pull_subscribe(

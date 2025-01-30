@@ -45,13 +45,14 @@ def _create_interaction(
         return None
 
     return {
-        "date": datetime.datetime.fromisoformat(created_at),
+        "timestamp": datetime.datetime.fromisoformat(created_at),
+        "metadata": {
+            "collection": collection,
+        },
         "author": author,
-        "collection": collection,
-        "rkey": rkey,
         "subject": subject,
+        "rkey": rkey,
         **others,
-        "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
     }
 
 

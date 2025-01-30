@@ -424,7 +424,7 @@ async def _aggregate_interactions(direction: Literal["from", "to"], did: str, st
             "$match": {
                 "$and": [
                     {
-                        "date": {
+                        "timestamp": {
                             "$gte": start_date,
                         }
                     },
@@ -437,7 +437,7 @@ async def _aggregate_interactions(direction: Literal["from", "to"], did: str, st
             "$group": {
                 "_id": {
                     f"{subject_field}": f"${subject_field}",
-                    "collection": "$collection",
+                    "collection": "$metadata.collection",
                 },
                 "count": {"$sum": 1},
                 "total_characters": {
@@ -445,7 +445,7 @@ async def _aggregate_interactions(direction: Literal["from", "to"], did: str, st
                         "$cond": [
                             {
                                 "$eq": [
-                                    "$collection",
+                                    "$metadata.collection",
                                     models.ids.AppBskyFeedPost,
                                 ]
                             },
