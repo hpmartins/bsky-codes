@@ -62,7 +62,7 @@ async def subscribe_to_jetstream(collections: List[str]):
 
     try:
         cursor = await kv.get("cursor")
-        cursor = int(cursor.value) - 5 * 1000000  # go back 5s
+        cursor = int(cursor.value)
     except nats.js.errors.KeyNotFoundError:
         cursor = ""
 
@@ -139,13 +139,14 @@ async def subscribe_to_jetstream(collections: List[str]):
             return
 
     async for websocket in websockets.connect(uri_with_params):
-        print(f"Connected to {uri_with_params}")
+        logger.info(f"Connected to {uri_with_params}")
         try:
             idx = 0
             async for message in websocket:
                 idx = idx + 1
                 await on_message_handler(message, idx)
-        except websockets.exceptions.ConnectionClosed:
+        except websockets.exceptions.ConnectionClosed as e:
+            logger.error(e)
             continue
 
 

@@ -98,11 +98,14 @@ class NATSManager:
                     try:
                         msgs = await psub.fetch(batch_size, timeout=1.0, heartbeat=0.2)
                         await callback(msgs)
-                    except nats.js.errors.FetchTimeoutError:
+                    except nats.js.errors.FetchTimeoutError as e:
+                        logger.info(e)
                         continue
-                    except asyncio.TimeoutError:
+                    except asyncio.TimeoutError as e:
+                        logger.info(e)
                         continue
-                    except nats.errors.ConnectionClosedError:
+                    except nats.errors.ConnectionClosedError as e:
+                        logger.info(e)
                         break
                     except Exception as e:
                         logger.error(f"Error fetching messages: {e}")
