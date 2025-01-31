@@ -32,6 +32,12 @@ class InteractionsResponse(BaseModel):
     class Config:
         populate_by_name = True
 
+def get_date(created_at: str | None = None):
+    if created_at:
+        dt = datetime.datetime.fromisoformat(created_at)
+    else:
+        dt = datetime.datetime.now(tz=datetime.timezone.utc)
+    return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 def _create_interaction(
     created_at: str,
@@ -44,19 +50,26 @@ def _create_interaction(
     if author == subject:
         return None
 
-    return {
-        "timestamp": datetime.datetime.fromisoformat(created_at),
-        "metadata": {
+    doc_filter = {
+        "_id": {
+            "date": get_date(created_at),
+            "author": author,
             "collection": collection,
-        },
-        "author": author,
-        "subject": subject,
-        "rkey": rkey,
-        **others,
+        }
     }
+    doc_update = {
+        "$push": {
+            "items": {
+                "_id": rkey,
+                "subject": subject,
+                **others,
+            }
+        }
+    }
+    return doc_filter, doc_update
 
 
-def parse_interaction(uri: AtUri, record) -> dict | None:
+def parse_interaction(uri: AtUri, record):
     if models.is_record_type(record, models.ids.AppBskyFeedLike) or models.is_record_type(
         record, models.ids.AppBskyFeedRepost
     ):

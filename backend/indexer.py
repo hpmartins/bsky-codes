@@ -10,12 +10,14 @@ from atproto import (
     models,
     AtUri,
 )
+import argparse
 
 from utils.nats import NATSManager
 from utils.database import MongoDBManager
 from utils.core import Config, INTERESTED_RECORDS, Logger, JetstreamStuff
 
 from utils.interactions import (
+    get_date,
     INTERACTION_RECORDS,
     INTERACTION_COLLECTION,
     parse_interaction,
@@ -23,7 +25,10 @@ from utils.interactions import (
 
 from pymongo import InsertOne, DeleteOne, UpdateOne
 
-logger = Logger("indexer")
+parser = argparse.ArgumentParser()
+parser.add_argument("--log", default="INFO")
+args = parser.parse_args()
+logger = Logger("indexer", level=args.log.upper())
 
 is_shutdown = False
 
@@ -47,7 +52,7 @@ async def main():
     nats_manager = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
     mongo_manager = MongoDBManager(uri=_config.MONGO_URI)
 
-    def _process_data(data: bytes):
+    async def _process_data(data: bytes):
         event = JetstreamStuff.Event.model_validate_json(data)
         db_ops = defaultdict(list)
 
@@ -112,7 +117,10 @@ async def main():
                     if event.commit.collection in INTERACTION_RECORDS:
                         interaction = parse_interaction(uri, record)
                         if interaction:
-                            db_ops[INTERACTION_COLLECTION].append(InsertOne(interaction))
+                            doc_filter, doc_update = interaction
+                            db_ops[INTERACTION_COLLECTION].append(
+                                UpdateOne(doc_filter, doc_update, upsert=True)
+                            )
 
             if isinstance(event.commit, JetstreamStuff.CommitDelete):
                 if event.commit.collection == models.ids.AppBskyActorProfile:
@@ -140,12 +148,15 @@ async def main():
 
                 if event.commit.collection in INTERACTION_RECORDS:
                     db_ops[INTERACTION_COLLECTION].append(
-                        DeleteOne(
+                        UpdateOne(
                             {
-                                "author": event.did,
-                                "metadata.collection": event.commit.collection,
-                                "rkey": event.commit.rkey,
-                            }
+                                "_id": {
+                                    "date": get_date(),
+                                    "author": event.did,
+                                    "collection": event.commit.collection,
+                                }
+                            },
+                            {"$pull": {"items": {"_id": event.commit.rkey}}},
                         )
                     )
 
@@ -154,13 +165,6 @@ async def main():
     logger.info("Connecting to Mongo")
     await mongo_manager.connect()
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
-    await db[INTERACTION_COLLECTION].create_indexes(
-        [
-            IndexModel(["author", "timestamp", "subject"]),
-            IndexModel(["subject", "timestamp", "author"]),
-            IndexModel(["author", "metadata.collection", "rkey"]),
-        ]
-    )
     for collection in TEMPORARY_INDEXED_RECORDS:
         await db[collection].create_indexes(
             [
@@ -183,7 +187,7 @@ async def main():
         logger.debug("received messages")
         all_ops = defaultdict(list)
         for msg in msgs:
-            db_ops = _process_data(msg.data)
+            db_ops = await _process_data(msg.data)
             for col, ops in db_ops.items():
                 all_ops[col].extend(ops)
             await msg.ack()
@@ -204,6 +208,7 @@ async def main():
                 deliver_policy=DeliverPolicy.ALL,
                 ack_policy=AckPolicy.EXPLICIT,
                 ack_wait=60,
+                max_ack_pending=-1,
             ),
         )
 

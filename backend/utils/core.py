@@ -126,9 +126,9 @@ class Config:
             if field in os.environ:
                 env_value = os.getenv(field)
                 field_type = self.__annotations__[field]
-                if isinstance(field_type, bool):
+                if field_type is bool:
                     setattr(self, field, env_value.lower() not in ("0", "false", "f", ""))
-                elif isinstance(field_type, int):
+                elif field_type is int:
                     setattr(self, field, int(env_value))
                 else:
                     setattr(self, field, env_value)
