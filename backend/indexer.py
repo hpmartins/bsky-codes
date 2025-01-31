@@ -27,6 +27,7 @@ logger = Logger("indexer")
 
 is_shutdown = False
 
+
 def signal_handler(signum, frame):
     global is_shutdown
     is_shutdown = True
@@ -39,6 +40,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 TEMPORARY_INDEXED_RECORDS = [
     models.ids.AppBskyGraphBlock,
 ]
+
 
 async def main():
     _config = Config()
@@ -53,7 +55,9 @@ async def main():
             return {}
 
         if event.commit:
-            uri = AtUri.from_str("at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey))
+            uri = AtUri.from_str(
+                "at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey)
+            )
 
             if isinstance(event.commit, JetstreamStuff.CommitCreate) or isinstance(
                 event.commit, JetstreamStuff.CommitUpdate
@@ -163,7 +167,7 @@ async def main():
                 IndexModel("author"),
                 IndexModel("subject"),
                 IndexModel("created_at"),
-                IndexModel(["author", "rkey"])
+                IndexModel(["author", "rkey"]),
             ]
         )
 

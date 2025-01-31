@@ -87,7 +87,7 @@ async def subscribe_to_jetstream(collections: List[str]):
                 counters["network"].inc(wrapper.bytes_received)
                 counters["events"].inc(wrapper.calls)
                 logger.info(
-                    f"NETWORK LOAD: {wrapper.calls}/s; {wrapper.bytes_received/1024:.1f} kb/s; {60*60*wrapper.bytes_received/1024/1024/1024:.1f} GB/h"
+                    f"NETWORK LOAD: {wrapper.calls}/s; {wrapper.bytes_received / 1024:.1f} kb/s; {60 * 60 * wrapper.bytes_received / 1024 / 1024 / 1024:.1f} GB/h"
                 )
                 wrapper.start_time = cur_time
                 wrapper.calls = 0
@@ -104,7 +104,9 @@ async def subscribe_to_jetstream(collections: List[str]):
     @measure_events_per_second
     async def on_message_handler(message: bytes, idx: int) -> None:
         try:
-            event = JetstreamStuff.Event.model_validate_json(str(message).translate(cchar_mapping), strict=False)
+            event = JetstreamStuff.Event.model_validate_json(
+                str(message).translate(cchar_mapping), strict=False
+            )
         except (ValueError, KeyError):
             logger.error(f"error reading json: {message}")
             return
@@ -122,7 +124,9 @@ async def subscribe_to_jetstream(collections: List[str]):
                 await nm.publish(get_nats_subject("identity"), event.model_dump_json().encode())
                 counters["identity"].inc()
             elif event.kind == "commit":
-                await nm.publish(get_nats_subject(event.commit.collection), event.model_dump_json().encode())
+                await nm.publish(
+                    get_nats_subject(event.commit.collection), event.model_dump_json().encode()
+                )
                 counters["firehose"].labels(event.commit.operation, event.commit.collection).inc()
                 if event.commit.operation == "create" and models.is_record_type(
                     event.commit.record, models.ids.AppBskyFeedPost

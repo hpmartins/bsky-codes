@@ -17,8 +17,8 @@ import math
 # import canvas
 from PIL import Image, ImageDraw, ImageFont
 
-from utils.core import Config
-from utils.interactions import (
+from backend.utils.core import Config
+from backend.utils.interactions import (
     Interaction,
     InteractionsResponse,
     INTERACTION_COLLECTION,
@@ -45,7 +45,9 @@ class EnhancedFastAPI(FastAPI):
         cache = AsyncDidInMemoryCache()
         self.resolver = AsyncIdResolver(cache=cache)
         self.bsky_client = AsyncClient(base_url="https://public.api.bsky.app/")
-        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URI, compressors="zstd")
+        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(
+            config.MONGO_URI, compressors="zstd"
+        )
         self.db = self.mongo_client.get_database(config.FART_DB)
 
 
@@ -91,10 +93,12 @@ def hex_is_light(color):
     brightness = (c_r * 299 + c_g * 587 + c_b * 114) / 1000
     return brightness > 155
 
+
 def fib(n):
     golden_ratio = (1 + math.sqrt(5)) / 2
-    val = (golden_ratio**n - (1 - golden_ratio)**n) / math.sqrt(5)
+    val = (golden_ratio**n - (1 - golden_ratio) ** n) / math.sqrt(5)
     return int(round(val))
+
 
 async def fetch_image(session: aiohttp.ClientSession, profile: dict[str, str]) -> tuple:
     try:
@@ -102,7 +106,7 @@ async def fetch_image(session: aiohttp.ClientSession, profile: dict[str, str]) -
             data = await response.read()
             image = Image.open(BytesIO(data))
             return image
-    except:
+    except Exception:
         width = 60
         height = 60
         line_color = "black"
@@ -113,7 +117,9 @@ async def fetch_image(session: aiohttp.ClientSession, profile: dict[str, str]) -
         return image
 
 
-def _create_circles_image(main_profile_picture, all_profile_pictures, start_date: datetime.datetime):
+def _create_circles_image(
+    main_profile_picture, all_profile_pictures, start_date: datetime.datetime
+):
     _CIRCLES_OPTIONS = {
         "orbits": 2,
         "include_sent": True,
@@ -188,7 +194,9 @@ def _create_circles_image(main_profile_picture, all_profile_pictures, start_date
     if _CIRCLES_OPTIONS["add_date"]:
         now = datetime.datetime.now()
         text_full = f"{start_date.strftime('%Y-%m-%d')} - {now.strftime('%Y-%m-%d')}"
-        context.text((image_size / 35, image_size / 45), text_full, font=font, fill=text_color, anchor="la")
+        context.text(
+            (image_size / 35, image_size / 45), text_full, font=font, fill=text_color, anchor="la"
+        )
 
     # Site watermark on top right corner
     if _CIRCLES_OPTIONS["add_watermark"]:
@@ -232,7 +240,9 @@ def _create_circles_image(main_profile_picture, all_profile_pictures, start_date
     add_picture_to_image(
         main_profile_picture,
         dict(
-            x=image_size / 2, y=(1 + vertical_displace) * image_size / 2, r=image_size * _CIRCLES_RADIUSES[n_orbits][0]
+            x=image_size / 2,
+            y=(1 + vertical_displace) * image_size / 2,
+            r=image_size * _CIRCLES_RADIUSES[n_orbits][0],
         ),
     )
 
@@ -249,12 +259,14 @@ def _create_circles_image(main_profile_picture, all_profile_pictures, start_date
                 orbit_pictures[i],
                 dict(
                     x=math.cos(t) * image_size * orbit["distance"] + image_size / 2,
-                    y=math.sin(t) * image_size * orbit["distance"] + (1 + vertical_displace) * image_size / 2,
+                    y=math.sin(t) * image_size * orbit["distance"]
+                    + (1 + vertical_displace) * image_size / 2,
                     r=image_size * orbit["radius"],
                 ),
             )
 
     return cv.resize((image_size // 3, image_size // 3), Image.Resampling.LANCZOS)
+
 
 async def _get_profile(did: str) -> models.AppBskyActorDefs.ProfileViewDetailed:
     actor_profile = await app.db[models.ids.AppBskyActorProfile].find_one({"_id": did})
@@ -277,7 +289,7 @@ async def _get_profile(did: str) -> models.AppBskyActorDefs.ProfileViewDetailed:
     if have_to_update:
         try:
             new_profile = await app.bsky_client.app.bsky.actor.get_profile(params=dict(actor=did))
-        except Exception as e:
+        except Exception:
             logger.info(f"error getting profile: {did}")
             return
 
@@ -319,19 +331,21 @@ def _generate_image_interactions(
             combined_interactions[tmp["_id"]]["c"] += tmp["c"]
             combined_interactions[tmp["_id"]]["t"] += tmp["t"]
 
-    combined_interactions = [Interaction(_id=key, **value) for key, value in combined_interactions.items()]
+    combined_interactions = [
+        Interaction(_id=key, **value) for key, value in combined_interactions.items()
+    ]
     combined_interactions.sort(key=lambda x: x["t"], reverse=True)
     return combined_interactions[:topk]
 
 
 async def _get_did(actor: str) -> tuple[str | None, str | None]:
     try:
-        if actor.startswith('did:'):
+        if actor.startswith("did:"):
             doc = await app.resolver.did.ensure_resolve(actor)
-            handle = doc.also_known_as[0].replace('at://', '')
+            handle = doc.also_known_as[0].replace("at://", "")
             return handle, actor
         else:
-            actor = actor.replace('@', '')
+            actor = actor.replace("@", "")
             did = await app.resolver.handle.ensure_resolve(actor)
             return actor, did
     except exceptions.DidNotFoundError:
@@ -349,7 +363,7 @@ async def _circles(actor: str):
         start_date = datetime.datetime.now() - datetime.timedelta(days=7)
         interactions = await _get_interactions(did, start_date=start_date)
         image_interactions = _generate_image_interactions(interactions)
-    except:
+    except Exception:
         raise HTTPException(status_code=500, detail=f"error generating interactions {handle}@{did}")
 
     logger.info(f"[circles] generating image: {handle}@{did}")
@@ -411,7 +425,9 @@ async def _get_interactions(did: str, start_date: datetime.datetime = None) -> I
     )
 
 
-async def _aggregate_interactions(direction: Literal["from", "to"], did: str, start_date: datetime.datetime) -> list:
+async def _aggregate_interactions(
+    direction: Literal["from", "to"], did: str, start_date: datetime.datetime
+) -> list:
     if direction == "from":
         author_field = "author"
         subject_field = "subject"
@@ -496,7 +512,9 @@ def _post_process_interactions(data: list) -> list:
                 total += 2 * interaction["count"]
                 characters += interaction["total_characters"]
 
-        processed_data.append({"_id": item["_id"], "l": likes, "r": reposts, "p": posts, "c": characters, "t": total})
+        processed_data.append(
+            {"_id": item["_id"], "l": likes, "r": reposts, "p": posts, "c": characters, "t": total}
+        )
 
     processed_data.sort(key=lambda x: x["t"], reverse=True)
     return processed_data
@@ -504,4 +522,3 @@ def _post_process_interactions(data: list) -> list:
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=config.FART_PORT)
-

@@ -72,7 +72,7 @@ def get_nats_subject(collection: str) -> str:
 
 async def subscribe_to_firehose(nm: NATSManager):
     kv = await nm.get_or_create_kv_store(_config.NATS_STREAM)
-    
+
     try:
         cursor = await kv.get("cursor")
         cursor = int(cursor.value)
@@ -117,7 +117,11 @@ async def subscribe_to_firehose(nm: NATSManager):
 
                     if action == "create" and collection == models.ids.AppBskyFeedPost:
                         langs = document["record"].langs
-                        lang = langs[0][:2].lower() if isinstance(langs, list) and len(langs) > 0 else "unknown"
+                        lang = (
+                            langs[0][:2].lower()
+                            if isinstance(langs, list) and len(langs) > 0
+                            else "unknown"
+                        )
                         firehose_lang_counter.labels(lang).inc()
 
     await client.start(on_message_handler)
@@ -147,7 +151,9 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
             record_type = INTERESTED_RECORDS.get(uri.collection)
 
             if record_type and models.is_record_type(record, record_type):
-                operation_by_type[uri.collection][op.action].append({"record": record, **create_info})
+                operation_by_type[uri.collection][op.action].append(
+                    {"record": record, **create_info}
+                )
 
         if op.action == "delete":
             operation_by_type[uri.collection]["delete"].append({"uri": str(uri)})
@@ -165,7 +171,6 @@ async def start_service():
         max_age=_config.NATS_STREAM_MAX_AGE,
         max_size=_config.NATS_STREAM_MAX_SIZE,
     )
-    
 
     logger.info("Starting firehose enjoyer")
     await subscribe_to_firehose(nm)

@@ -61,7 +61,9 @@ class JetstreamStuff:
         kind: Literal["account", "identity", "commit"]
         account: Optional[models.ComAtprotoSyncSubscribeRepos.Account] = None
         identity: Optional[models.ComAtprotoSyncSubscribeRepos.Identity] = None
-        commit: Optional[Annotated["JetstreamStuff.CommitTypes", Field(discriminator="operation")]] = None
+        commit: Optional[
+            Annotated["JetstreamStuff.CommitTypes", Field(discriminator="operation")]
+        ] = None
 
     CommitTypes = Union[
         "JetstreamStuff.CommitCreate",
@@ -90,6 +92,7 @@ class JetstreamStuff:
         operation: Literal["update"] = "update"
         record: "UnknownRecordType"
         cid: str
+
 
 # config
 class Config:
@@ -123,9 +126,9 @@ class Config:
             if field in os.environ:
                 env_value = os.getenv(field)
                 field_type = self.__annotations__[field]
-                if field_type == bool:
+                if isinstance(field_type, bool):
                     setattr(self, field, env_value.lower() not in ("0", "false", "f", ""))
-                elif field_type == int:
+                elif isinstance(field_type, int):
                     setattr(self, field, int(env_value))
                 else:
                     setattr(self, field, env_value)

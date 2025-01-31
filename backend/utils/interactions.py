@@ -69,7 +69,6 @@ def parse_interaction(uri: AtUri, record) -> dict | None:
         )
 
     if models.is_record_type(record, models.ids.AppBskyFeedPost):
-
         if record.reply is not None and record.reply.parent is not None:
             return _create_interaction(
                 record.created_at,

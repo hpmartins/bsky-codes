@@ -1,6 +1,5 @@
 import asyncio
 from utils.consumer import run_consumer
-from utils.config import Config
 import logging
 
 logger = logging.getLogger(__name__)

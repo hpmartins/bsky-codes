@@ -2,7 +2,7 @@ import asyncio
 import nats
 from nats.aio.subscription import Subscription
 from typing import List, Callable, Any
-from nats.js.api import StreamConfig, ConsumerConfig
+from nats.js.api import StreamConfig
 
 from utils.core import Logger
 
@@ -57,7 +57,7 @@ class NATSManager:
         try:
             await self.js.update_stream(config=config)
             logger.info(f"Stream {self.stream} updated successfully.")
-        except Exception as e:
+        except Exception:
             try:
                 await self.js.add_stream(config=config)
                 logger.info(f"Stream {self.stream} added successfully.")
@@ -80,7 +80,9 @@ class NATSManager:
                 logger.error(f"Error creating key-value store {bucket_name}: {e}")
                 raise
 
-    async def pull_subscribe(self, stream: str, consumer: str, callback: Callable[[Any], None], batch_size: int = 100):
+    async def pull_subscribe(
+        self, stream: str, consumer: str, callback: Callable[[Any], None], batch_size: int = 100
+    ):
         if self.js is None:
             raise nats.errors.NoServersError("Not connected to NATS server")
 
@@ -118,6 +120,8 @@ class NATSManager:
     async def publish(self, subject: str, data: bytes):
         try:
             ack = await self.js.publish(subject, data)
-            logger.debug(f"Published message to {subject} - Stream: {ack.stream}, Sequence: {ack.seq}")
+            logger.debug(
+                f"Published message to {subject} - Stream: {ack.stream}, Sequence: {ack.seq}"
+            )
         except Exception as e:
             logger.error(f"Error publishing to NATS subject {subject}: {e}")
