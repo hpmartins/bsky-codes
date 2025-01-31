@@ -324,7 +324,7 @@ def _generate_image_interactions(
     return combined_interactions[:topk]
 
 
-async def _get_did(actor: str):
+async def _get_did(actor: str) -> tuple[str | None, str | None]:
     try:
         if actor.startswith('did:'):
             doc = await app.resolver.did.ensure_resolve(actor)
@@ -335,7 +335,7 @@ async def _get_did(actor: str):
             did = await app.resolver.handle.ensure_resolve(actor)
             return actor, did
     except exceptions.DidNotFoundError:
-        return
+        return None, None
 
 
 @app.get("/circles")
@@ -399,7 +399,7 @@ async def _interactions(actor: str = None) -> InteractionsResponse:
 
 
 async def _get_interactions(did: str, start_date: datetime.datetime = None) -> InteractionsResponse:
-    end_date = datetime.datetime.now()
+    end_date = datetime.datetime.now(tz=datetime.timezone.utc)
     if start_date is None:
         start_date = end_date - datetime.timedelta(days=7)
 
@@ -429,7 +429,6 @@ async def _aggregate_interactions(direction: Literal["from", "to"], did: str, st
                         }
                     },
                     {f"{author_field}": did},
-                    {f"{author_field}": {"$ne": f"${subject_field}"}},
                 ]
             }
         },
@@ -505,3 +504,4 @@ def _post_process_interactions(data: list) -> list:
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=config.FART_PORT)
+
