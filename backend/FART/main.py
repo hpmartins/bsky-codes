@@ -428,31 +428,27 @@ async def _get_interactions(did: str, start_date: datetime.datetime = None) -> I
 async def _aggregate_interactions(
     direction: Literal["from", "to"], did: str, start_date: datetime.datetime
 ) -> list:
-    if direction == "from":
-        author_field = "author"
-        subject_field = "subject"
-    else:
-        author_field = "subject"
-        subject_field = "author"
-
+    author_field = "author" if direction == "from" else "subject"
+    subject_field = "subject" if direction == "from" else "author"
     pipeline = [
         {
             "$match": {
-                "$and": [
-                    {
-                        "timestamp": {
-                            "$gte": start_date,
-                        }
-                    },
-                    {f"{author_field}": did},
-                ]
+                "date": {
+                    "$gte": start_date,
+                },
+                author_field: did,
+            }
+        },
+        {
+            "$addFields": {
+                "collection": {"$arrayElemAt": [{"$split": ["$_id", "/"]}, 1]},
             }
         },
         {
             "$group": {
                 "_id": {
-                    f"{subject_field}": f"${subject_field}",
-                    "collection": "$metadata.collection",
+                    "did": f"${subject_field}",
+                    "collection": "$collection",
                 },
                 "count": {"$sum": 1},
                 "total_characters": {
@@ -460,7 +456,7 @@ async def _aggregate_interactions(
                         "$cond": [
                             {
                                 "$eq": [
-                                    "$metadata.collection",
+                                    "$collection",
                                     models.ids.AppBskyFeedPost,
                                 ]
                             },
@@ -473,7 +469,7 @@ async def _aggregate_interactions(
         },
         {
             "$group": {
-                "_id": f"$_id.{subject_field}",
+                "_id": "$_id.did",
                 "interactions": {
                     "$push": {
                         "type": "$_id.collection",
@@ -483,13 +479,108 @@ async def _aggregate_interactions(
                 },
             }
         },
+        {
+            "$addFields": {
+                "l": {
+                    "$sum": {
+                        "$map": {
+                            "input": {
+                                "$filter": {
+                                    "input": "$interactions",
+                                    "as": "interaction",
+                                    "cond": {
+                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedLike]
+                                    },
+                                }
+                            },
+                            "as": "interaction",
+                            "in": "$$interaction.count",
+                        }
+                    }
+                },
+                "r": {
+                    "$sum": {
+                        "$map": {
+                            "input": {
+                                "$filter": {
+                                    "input": "$interactions",
+                                    "as": "interaction",
+                                    "cond": {
+                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedRepost]
+                                    },
+                                }
+                            },
+                            "as": "interaction",
+                            "in": "$$interaction.count",
+                        }
+                    }
+                },
+                "p": {
+                    "$sum": {
+                        "$map": {
+                            "input": {
+                                "$filter": {
+                                    "input": "$interactions",
+                                    "as": "interaction",
+                                    "cond": {
+                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedPost]
+                                    },
+                                }
+                            },
+                            "as": "interaction",
+                            "in": "$$interaction.count",
+                        }
+                    }
+                },
+                "c": {
+                    "$sum": {
+                        "$map": {
+                            "input": {
+                                "$filter": {
+                                    "input": "$interactions",
+                                    "as": "interaction",
+                                    "cond": {
+                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedPost]
+                                    },
+                                }
+                            },
+                            "as": "interaction",
+                            "in": "$$interaction.total_characters",
+                        }
+                    }
+                },
+            }
+        },
+        {
+            "$addFields": {
+                "t": {
+                    "$add": [
+                        {"$multiply": ["$l", 1]},
+                        {"$multiply": ["$r", 2]},
+                        {"$multiply": ["$p", 3]},
+                    ]
+                }
+            }
+        },
+        {
+            "$project": {
+                "_id": 1,
+                "l": 1,
+                "r": 1,
+                "p": 1,
+                "c": 1,
+                "t": 1,
+            }
+        },
+        {"$sort": {"t": -1}},
+        {"$limit": 200},
     ]
 
     res = []
     async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
         res.append(doc)
 
-    return _post_process_interactions(res)
+    return res
 
 
 def _post_process_interactions(data: list) -> list:
