@@ -117,10 +117,7 @@ async def main():
                     if event.commit.collection in INTERACTION_RECORDS:
                         interaction = parse_interaction(uri, record)
                         if interaction:
-                            doc_filter, doc_update = interaction
-                            db_ops[INTERACTION_COLLECTION].append(
-                                UpdateOne(doc_filter, doc_update, upsert=True)
-                            )
+                            db_ops[INTERACTION_COLLECTION].append(InsertOne(interaction))
 
             if isinstance(event.commit, JetstreamStuff.CommitDelete):
                 if event.commit.collection == models.ids.AppBskyActorProfile:
@@ -148,15 +145,8 @@ async def main():
 
                 if event.commit.collection in INTERACTION_RECORDS:
                     db_ops[INTERACTION_COLLECTION].append(
-                        UpdateOne(
-                            {
-                                "_id": {
-                                    "date": get_date(),
-                                    "author": event.did,
-                                    "collection": event.commit.collection,
-                                }
-                            },
-                            {"$pull": {"items": {"_id": event.commit.rkey}}},
+                        DeleteOne(
+                            {"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"}
                         )
                     )
 
@@ -165,6 +155,14 @@ async def main():
     logger.info("Connecting to Mongo")
     await mongo_manager.connect()
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
+    await db[INTERACTION_COLLECTION].create_indexes(
+        [
+            IndexModel("date"),
+            IndexModel(["date", "author"]),
+            IndexModel(["date", "subject"]),
+        ]
+    )
+
     for collection in TEMPORARY_INDEXED_RECORDS:
         await db[collection].create_indexes(
             [
