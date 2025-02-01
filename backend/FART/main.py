@@ -14,7 +14,6 @@ import logging
 from collections import defaultdict
 import math
 
-# import canvas
 from PIL import Image, ImageDraw, ImageFont
 
 from backend.utils.core import Config
@@ -73,9 +72,6 @@ async def root():
     return {}
 
 
-DO_NOT_INCLUDE_THESE = []  # Assuming this is defined elsewhere or is an empty list
-
-
 def hex_is_light(color):
     """
     Determines if a given hex color is considered "light" based on its brightness.
@@ -115,6 +111,14 @@ async def fetch_image(session: aiohttp.ClientSession, profile: dict[str, str]) -
         draw.line((0, 0, width - 1, height - 1), fill=line_color, width=1)
         draw.line((width - 1, 0, 0, height - 1), fill=line_color, width=1)
         return image
+
+
+async def _fetch_profile_pictures(main_profile, profiles):
+    async with aiohttp.ClientSession() as session:
+        main_profile_picture = await fetch_image(session, main_profile)
+        tasks = [fetch_image(session, x) for x in profiles]
+        all_profile_pictures = await asyncio.gather(*tasks)
+    return main_profile_picture, all_profile_pictures
 
 
 def _create_circles_image(
@@ -311,6 +315,20 @@ async def _get_profile(did: str) -> models.AppBskyActorDefs.ProfileViewDetailed:
     )
 
 
+async def _get_did(actor: str) -> tuple[str | None, str | None]:
+    try:
+        if actor.startswith("did:"):
+            doc = await app.resolver.did.ensure_resolve(actor)
+            handle = doc.also_known_as[0].replace("at://", "")
+            return handle, actor
+        else:
+            actor = actor.replace("@", "")
+            did = await app.resolver.handle.ensure_resolve(actor)
+            return actor, did
+    except exceptions.DidNotFoundError:
+        return None, None
+
+
 def _generate_image_interactions(
     interactions: InteractionsResponse,
     source: str = "both",
@@ -336,80 +354,6 @@ def _generate_image_interactions(
     ]
     combined_interactions.sort(key=lambda x: x["t"], reverse=True)
     return combined_interactions[:topk]
-
-
-async def _get_did(actor: str) -> tuple[str | None, str | None]:
-    try:
-        if actor.startswith("did:"):
-            doc = await app.resolver.did.ensure_resolve(actor)
-            handle = doc.also_known_as[0].replace("at://", "")
-            return handle, actor
-        else:
-            actor = actor.replace("@", "")
-            did = await app.resolver.handle.ensure_resolve(actor)
-            return actor, did
-    except exceptions.DidNotFoundError:
-        return None, None
-
-
-@app.get("/circles")
-async def _circles(actor: str):
-    handle, did = await _get_did(actor)
-    if did is None:
-        raise HTTPException(status_code=404, detail=f"user not found: {actor}")
-
-    logger.info(f"[circles] getting interactions: {handle}@{did}")
-    try:
-        start_date = datetime.datetime.now() - datetime.timedelta(days=7)
-        interactions = await _get_interactions(did, start_date=start_date)
-        image_interactions = _generate_image_interactions(interactions)
-    except Exception:
-        raise HTTPException(status_code=500, detail=f"error generating interactions {handle}@{did}")
-
-    logger.info(f"[circles] generating image: {handle}@{did}")
-
-    # Getting stuff for the image
-    main_profile = await _get_profile(did)
-    if main_profile is None:
-        raise
-
-    profiles = []
-    for person in image_interactions:
-        profile = await _get_profile(person["_id"])
-        profiles.append(
-            {
-                "did": profile.did,
-                "handle": profile.handle,
-                "avatar": profile.avatar,
-            }
-        )
-
-    if len(profiles) <= 1:
-        return
-
-    async with aiohttp.ClientSession() as session:
-        main_profile_picture = await fetch_image(session, main_profile)
-        tasks = [fetch_image(session, x) for x in profiles]
-        all_profile_pictures = await asyncio.gather(*tasks)
-
-    output_image = _create_circles_image(main_profile_picture, all_profile_pictures, start_date)
-    # except:
-    # raise HTTPException(status_code=500, detail="error generating circles")
-    if output_image is None:
-        raise HTTPException(status_code=500, detail=f"error generating circles {handle}@{did}")
-
-    stream = BytesIO()
-    output_image.save(stream, format="png")
-    stream.seek(0)  # important here!
-    return responses.StreamingResponse(stream, media_type="image/png")
-
-
-@app.get("/interactions")
-async def _interactions(actor: str = None) -> InteractionsResponse:
-    handle, did = await _get_did(actor)
-    if did is None:
-        raise HTTPException(status_code=404, detail=f"user not found: {actor}")
-    return await _get_interactions(did)
 
 
 async def _get_interactions(did: str, start_date: datetime.datetime = None) -> InteractionsResponse:
@@ -489,7 +433,10 @@ async def _aggregate_interactions(
                                     "input": "$interactions",
                                     "as": "interaction",
                                     "cond": {
-                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedLike]
+                                        "$eq": [
+                                            "$$interaction.type",
+                                            models.ids.AppBskyFeedLike,
+                                        ]
                                     },
                                 }
                             },
@@ -506,7 +453,10 @@ async def _aggregate_interactions(
                                     "input": "$interactions",
                                     "as": "interaction",
                                     "cond": {
-                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedRepost]
+                                        "$eq": [
+                                            "$$interaction.type",
+                                            models.ids.AppBskyFeedRepost,
+                                        ]
                                     },
                                 }
                             },
@@ -523,7 +473,10 @@ async def _aggregate_interactions(
                                     "input": "$interactions",
                                     "as": "interaction",
                                     "cond": {
-                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedPost]
+                                        "$eq": [
+                                            "$$interaction.type",
+                                            models.ids.AppBskyFeedPost,
+                                        ]
                                     },
                                 }
                             },
@@ -540,7 +493,10 @@ async def _aggregate_interactions(
                                     "input": "$interactions",
                                     "as": "interaction",
                                     "cond": {
-                                        "$eq": ["$$interaction.type", models.ids.AppBskyFeedPost]
+                                        "$eq": [
+                                            "$$interaction.type",
+                                            models.ids.AppBskyFeedPost,
+                                        ]
                                     },
                                 }
                             },
@@ -609,6 +565,65 @@ def _post_process_interactions(data: list) -> list:
 
     processed_data.sort(key=lambda x: x["t"], reverse=True)
     return processed_data
+
+
+@app.get("/circles")
+async def _circles(actor: str):
+    handle, did = await _get_did(actor)
+    if did is None:
+        raise HTTPException(status_code=404, detail=f"user not found: {actor}")
+
+    logger.info(f"[circles] getting interactions: {handle}@{did}")
+    try:
+        start_date = datetime.datetime.now() - datetime.timedelta(days=7)
+        interactions = await _get_interactions(did, start_date=start_date)
+        image_interactions = _generate_image_interactions(interactions)
+    except Exception:
+        raise HTTPException(status_code=500, detail=f"error generating interactions {handle}@{did}")
+
+    logger.info(f"[circles] generating image: {handle}@{did}")
+
+    # Getting stuff for the image
+    main_profile = await _get_profile(did)
+    if main_profile is None:
+        raise
+
+    profiles = []
+    for person in image_interactions:
+        profile = await _get_profile(person["_id"])
+        profiles.append(
+            {
+                "did": profile.did,
+                "handle": profile.handle,
+                "avatar": profile.avatar,
+            }
+        )
+
+    if len(profiles) <= 1:
+        return
+
+    main_profile_picture, all_profile_pictures = await _fetch_profile_pictures(
+        main_profile, profiles
+    )
+    output_image = _create_circles_image(main_profile_picture, all_profile_pictures, start_date)
+    # except:
+    # raise HTTPException(status_code=500, detail="error generating circles")
+    if output_image is None:
+        raise HTTPException(status_code=500, detail=f"error generating circles {handle}@{did}")
+
+    stream = BytesIO()
+    output_image.save(stream, format="png")
+    stream.seek(0)  # important here!
+    return responses.StreamingResponse(stream, media_type="image/png")
+
+
+@app.get("/interactions")
+async def _interactions(actor: str = None) -> InteractionsResponse:
+    handle, did = await _get_did(actor)
+    if did is None:
+        raise HTTPException(status_code=404, detail=f"user not found: {actor}")
+    logger.info(f"[interactions] getting interactions: {handle}@{did}")
+    return await _get_interactions(did)
 
 
 if __name__ == "__main__":
