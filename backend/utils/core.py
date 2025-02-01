@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from atproto import models
 from pydantic import BaseModel, Field
 from typing import Literal, Union, Annotated, Optional
-from datetime import datetime
+import datetime
 
 from atproto_client.models.unknown_type import UnknownRecordType
 
@@ -139,4 +139,9 @@ class Config:
 
 # functions
 def get_date_from_jetstream_cursor(cursor: int):
-    return datetime.fromtimestamp(cursor / 1000000)
+    return datetime.datetime.fromtimestamp(cursor / 1000000)
+
+def check_jetstream_cursor(cursor: int):
+    cursor_date = get_date_from_jetstream_cursor(cursor)
+    now_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(minutes=5)
+    return cursor_date < now_date

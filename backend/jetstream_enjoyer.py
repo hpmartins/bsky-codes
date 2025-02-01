@@ -17,6 +17,7 @@ from utils.core import (
     Config,
     INTERESTED_RECORDS,
     get_date_from_jetstream_cursor,
+    check_jetstream_cursor,
     JetstreamStuff,
 )
 
@@ -63,6 +64,9 @@ async def subscribe_to_jetstream(collections: List[str]):
     try:
         cursor = await kv.get("cursor")
         cursor = int(cursor.value)
+        if check_jetstream_cursor(cursor):
+            logger.info("Cursor too old. Resetting cursor")
+            cursor = ""
     except nats.js.errors.KeyNotFoundError:
         cursor = ""
 
