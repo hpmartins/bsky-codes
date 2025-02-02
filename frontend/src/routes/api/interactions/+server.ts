@@ -1,14 +1,15 @@
 import type { RequestHandler } from './$types';
+import { FART_URL, FART_KEY } from '$env/static/private';
 
 export const GET: RequestHandler = async ({ fetch, url }) => {
   const actor = url.searchParams.get('actor');
-  const api_key = "";
+
 
   const response = await fetch(
-    `http://localhost:8000/interactions?actor=${encodeURIComponent(actor ?? '')}`,
+    `${FART_URL}/interactions?actor=${encodeURIComponent(actor ?? '')}`,
     {
       headers: {
-        Authorization: `Bearer ${api_key}`,
+        Authorization: `Bearer ${FART_KEY}`,
       },
     }
   );

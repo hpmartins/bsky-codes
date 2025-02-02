@@ -1,0 +1,98 @@
+{
+    "common": {
+        "handle": "digite uma conta do bluesky",
+        "of": "de",
+        "user": "conta",
+        "count": "quantidade",
+        "date": "data",
+        "total": "total",
+        "search": "procurar",
+        "language": "idioma",
+        "last_updated": "Atualizado pela última vez em {{date}}",
+
+        "prev": "anterior",
+        "next": "próximo",
+
+        "characters": "número de caracters",
+        "replies": "número de comentários",
+        "likes": "número de curtidas",
+        "reposts": "número de repostagens",
+
+        "syncUpdate": "O perfil foi marcado para atualização. Cheque novamente em alguns minutos.",
+        "account404": "A conta não foi encontrada."
+    },
+
+    "languages": {
+        "pagetitle": "Idiomas",
+        "title": "Idiomas",
+
+        "tableTitle": "Número de posts por idioma",
+        "tableSubtitle": "Últimos 7 dias",
+        "selectPlaceholder": "Escolha um idioma"
+    },
+
+    "blocks": {
+        "pagetitle": "Blocks",
+        "title": "Blocks",
+
+        "blocked": "Contas bloqueadas",
+        "blockedBy": "Contas que bloqueiam"
+    },
+
+    "interactions": {
+        "pagetitle": "Interações",
+        "title": "Interações",
+
+        "choose_week": "Escolha uma semana",
+        "choose_range": "... ou um período específico",
+
+        "dates": {
+            "all": "Tudo",
+            "month": "Últimos 30 dias",
+            "week": "Últimos 7 dias"
+        },
+
+        "bolas": {
+            "title": "Gerador de Bolas",
+
+            "include": "Incluir",
+            "sent": "interações enviadas",
+            "received": "interações recebidas",
+
+            "options": "Opções",
+            "remove_bots": "Remover principais bots",
+            "remove_blocked": "Remover blocks",
+            "add_date": "Adicionar data",
+            "add_watermark": "Adicionar site",
+
+            "orbits": "Órbitas",
+            "bg_color": "Cor de fundo",
+            "border_color": "Cor da borda",
+
+            "copy": "Copiar imagem",
+            "copyPeople": "Copiar arrobas"
+        },
+
+        "separate": "Separar",
+        "consolidate": "Juntar",
+
+        "table": {
+            "title": {
+                "both": "Interações enviadas + recebidas",
+                "sent": "Interações enviadas",
+                "rcvd": "Interações recebidas"
+            }
+        }
+    },
+
+    "top": {
+        "blocked": {
+            "title": "Contas mais bloqueadas nas últimas 72 horas"
+        },
+        "posters": {
+            "title": "Contas que mais postaram nas últimas 72 horas",
+            "filter": "Filtrar por idioma",
+            "toggle": "remover possíveis bots [(curtidas+comentários)/posts < 10%]"
+        }
+    }
+}

@@ -1,23 +1,20 @@
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async ({ fetch, url }) => {
+/** @type {import('./$types').PageServerLoad} */
+export async function load ({ fetch, url }) {
   const actor = url.searchParams.get('actor');
 
   if (actor) {
     try {
       const response = await fetch(`/api/interactions?actor=${encodeURIComponent(actor)}`);
-
-
       if (response.ok) {
-        const data = await response.json();
+        const interactions = await response.json();
         return {
-          data,
+          interactions: interactions,
           actor: actor,
         };
       } else {
         console.error('Failed to fetch data:', response.status);
         return {
-          data: null,
+          interactions: null,
           actor: actor,
           error: 'Failed to fetch data',
         };
@@ -25,7 +22,7 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
     } catch (error) {
       console.error('Error fetching data:', error);
       return {
-        data: null,
+        interactions: null,
         actor: actor,
         error: 'An error occurred while fetching data',
       };
@@ -33,7 +30,7 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
   }
 
   return {
-    data: null,
+    interactions: null,
     actor: null,
   };
 };

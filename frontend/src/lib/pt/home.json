@@ -1,0 +1,34 @@
+{
+    "title": "Miau, sou Wolfgang!",
+    "headline": "Informações sobre contas do <a class='link' href='{{link}}'>Bluesky</a>.",
+
+    "stats": {
+        "profiles": "Perfis",
+        "posts": "Posts",
+        "blocks": "Blocks",
+        "interactions": "Interações"
+    },
+
+    "cards": {
+        "interactions": {
+            "title": "Interações/Bolas",
+            "text": "Procure as interações entre contas e gere uma imagem com os avatares dos principais perfis que interagiram"
+        },
+        "languages": {
+            "title": "Idiomas",
+            "text": "Estatísticas sobre idiomas dos posts."
+        },
+        "blocks": {
+            "title": "Blocks",
+            "text": "Os blocks do Bluesky são públicos. Veja aqui quem cada conta bloqueia e vice-versa."
+        },
+        "top_blocked": {
+            "title": "Top blocks",
+            "text": "Lista das contas mais bloqueadas nas últimas 72 horas."
+        },
+        "top_posters": {
+            "title": "Top postadores",
+            "text": "Lista das contas que mais postaram nos últimos três dias, no geral ou por idioma do post."
+        }
+    }
+}
