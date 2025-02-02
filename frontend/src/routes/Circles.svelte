@@ -1,15 +1,27 @@
-<script>
+<script lang="ts">
+    import type {
+        InteractionsType,
+        CirclesOptionsType,
+        InteractionsDataType,
+        SimpleProfileType,
+    } from '$lib/types';
     import { t } from '$lib/translations';
-    import { onMount } from 'svelte';
     import { copy } from 'svelte-copy';
 
-    let canvas;
-    let circlesImage;
-    let peopleList = $state('');
+    interface Props {
+        profile: SimpleProfileType; // user profile (handle, displayName, avatar)
+        data: InteractionsDataType; // data.sent, data.rcvd, data.both (interactions)
+        options: CirclesOptionsType; // all options
+    }
 
-    let { profile, data, options } = $props();
+    let canvas: HTMLCanvasElement;
+    let context: CanvasRenderingContext2D | null;
+    let circlesImage: HTMLImageElement;
+    let peopleList: string = $state('');
 
-    function hex_is_light(color) {
+    let { profile, data, options }: Props = $props();
+
+    function hex_is_light(color: string) {
         const hex = color.replace('#', '');
         const c_r = parseInt(hex.substring(0, 0 + 2), 16);
         const c_g = parseInt(hex.substring(2, 2 + 2), 16);
@@ -17,18 +29,18 @@
         const brightness = (c_r * 299 + c_g * 587 + c_b * 114) / 1000;
         return brightness > 155;
     }
-    const toRad = x => x * (Math.PI / 180);
+    const toRad = (x: number) => x * (Math.PI / 180);
 
     // this runs every time the Circles component is remounted,
     // which happens every time any of the inputs change
     $effect(() => {
-        const context = canvas.getContext('2d');
+        context = canvas.getContext('2d');
 
         if (!context) return;
         if (!data || !options) return;
 
         // decides which interactions to use based on the options
-        let interactionsList;
+        let interactionsList: InteractionsType[] | undefined;
         // if (options.include_sent && options.include_rcvd) {
         //     interactionsList = data.both;
         // } else if (options.include_sent) {
@@ -57,14 +69,14 @@
 
         // - radial distances for each number of orbits
         // - i chose this manually
-        const distances = {
+        const distances: { [key: number]: number[] } = {
             1: [0, 210, 0, 0],
             2: [0, 158, 246, 0],
             3: [0, 120, 196, 260],
         };
 
         // radiuses for every orbit for each number of orbits
-        const radiuses = {
+        const radiuses: { [key: number]: number[] } = {
             1: [125, 55, 0, 0],
             2: [95, 42, 32, 0],
             3: [75, 32, 28, 22],
@@ -147,9 +159,9 @@
         const promises = [];
 
         const drawImage = async (
-            context,
-            img,
-            opt,
+            context: CanvasRenderingContext2D,
+            img: HTMLImageElement,
+            opt: { [key: string]: number },
         ) => {
             context.save();
             // this draws a circle centered at the image position
@@ -170,8 +182,8 @@
 
         // this will create the image, load the avatar and return a promise
         const preload = (
-            user,
-            opt,
+            user: { [key: string]: string | undefined },
+            opt: { [key: string]: number },
         ) =>
             new Promise((resolve, reject) => {
                 const img = new Image();
@@ -265,11 +277,14 @@
     }
 </script>
 
-<button class="btn btn-sm btn-primary mb-2" on:click|preventDefault={handleCopyImage}>
-    {$t('features.interactions.bolas.copy')}
+<button
+  class="btn btn-sm btn-primary mb-2"
+  on:click|preventDefault={handleCopyImage}
+>
+  {$t("features.interactions.bolas.copy")}
 </button>
 <button class="btn btn-sm btn-primary mb-2" use:copy={peopleList}>
-    {$t('features.interactions.bolas.copyPeople')}
+  {$t("features.interactions.bolas.copyPeople")}
 </button>
 <canvas hidden bind:this={canvas} width={600} height={600}></canvas>
 <img bind:this={circlesImage} alt="" />

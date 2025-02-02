@@ -1,7 +1,8 @@
-<script>
-    export let did;
-    export let profile;
-    export let blocked = false;
+<script lang="ts">
+    import type { SimpleProfileType } from '$lib/types';
+    export let did: string;
+    export let profile: SimpleProfileType;
+    export let blocked: boolean = false;
 
     const handle = profile.handle ?? '';
     const displayName = profile.displayName ?? profile.handle ?? '';

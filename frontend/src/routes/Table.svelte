@@ -1,12 +1,17 @@
-<script>
+<script lang="ts">
+    import type { InteractionsType } from '$lib/types'
     import { t } from '$lib/translations';
     import Pagination from './Pagination.svelte';
     import UserRow from './UserRow.svelte';
 
-    export let data;
-    export let perPage = 15;
+    interface Props {
+        data: InteractionsType[] | undefined;
+        perPage: number;
+    }
 
-    let paginatedData = [];
+    let { data, perPage = 15 }: Props = $props();
+    let paginatedData: Array<any> = $state([]);
+
 </script>
 
 <Pagination rows={data ?? []} {perPage} bind:trimmedRows={paginatedData} />
