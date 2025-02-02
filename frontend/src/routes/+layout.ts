@@ -1,7 +1,7 @@
 import { loadTranslations } from '$lib/translations';
+import type { LayoutLoad } from './$types';
 
-/** @type {import('@sveltejs/kit').Load} */
-export const load = async ({ url }) => {
+export const load: LayoutLoad = async ({ url }) => {
   const { pathname } = url;
 
   const initLocale = 'en';
