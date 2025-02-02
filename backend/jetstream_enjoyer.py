@@ -45,8 +45,8 @@ is_shutdown = False
 
 def signal_handler(signum, frame):
     global is_shutdown
-    is_shutdown = True
     logger.info("SHUTDOWN")
+    is_shutdown = True
 
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -60,22 +60,13 @@ def get_nats_subject(collection: str) -> str:
 async def subscribe_to_jetstream(collections: List[str]):
     kv = await nm.get_or_create_kv_store(_config.NATS_STREAM)
 
-    try:
-        cursor = await kv.get("cursor")
-        cursor = int(cursor.value)
-    except nats.js.errors.KeyNotFoundError:
-        cursor = ""
-
-    logger.info(f"Starting at cursor: {cursor}")
-    params = urlencode(
-        dict(
-            wantedCollections=collections,
-            compress=True,
-            cursor=cursor,
-        ),
-        doseq=True,
-    )
-    uri_with_params = f"{_config.JETSTREAM_URI}?{params}"
+    async def get_cursor():
+        try:
+            cursor = await kv.get("cursor")
+            cursor = int(cursor.value)
+        except nats.js.errors.KeyNotFoundError:
+            cursor = ""
+        return cursor
 
     def measure_events_per_second(func: callable) -> callable:
         def wrapper(*args) -> Any:
@@ -104,9 +95,7 @@ async def subscribe_to_jetstream(collections: List[str]):
     @measure_events_per_second
     async def on_message_handler(message: bytes, idx: int) -> None:
         try:
-            event = JetstreamStuff.Event.model_validate_json(
-                str(message).translate(cchar_mapping), strict=False
-            )
+            event = JetstreamStuff.Event.model_validate_json(str(message).translate(cchar_mapping), strict=False)
         except (ValueError, KeyError):
             logger.error(f"error reading json: {message}")
             return
@@ -124,9 +113,7 @@ async def subscribe_to_jetstream(collections: List[str]):
                 await nm.publish(get_nats_subject("identity"), event.model_dump_json().encode())
                 counters["identity"].inc()
             elif event.kind == "commit":
-                await nm.publish(
-                    get_nats_subject(event.commit.collection), event.model_dump_json().encode()
-                )
+                await nm.publish(get_nats_subject(event.commit.collection), event.model_dump_json().encode())
                 counters["firehose"].labels(event.commit.operation, event.commit.collection).inc()
                 if event.commit.operation == "create" and models.is_record_type(
                     event.commit.record, models.ids.AppBskyFeedPost
@@ -142,39 +129,56 @@ async def subscribe_to_jetstream(collections: List[str]):
             logger.error(e)
             return
 
-    async for websocket in websockets.connect(uri_with_params):
-        logger.info(f"Connected to {uri_with_params}")
+    while not is_shutdown:
         try:
-            idx = 0
-            async for message in websocket:
-                idx = idx + 1
-                await on_message_handler(message, idx)
+            cursor = await get_cursor()
+
+            logger.info(f"Starting at cursor: {cursor}")
+            params = urlencode(
+                dict(
+                    wantedCollections=collections,
+                    compress=True,
+                    cursor=cursor,
+                ),
+                doseq=True,
+            )
+            uri_with_params = f"{_config.JETSTREAM_URI}?{params}"
+
+            async with websockets.connect(uri_with_params) as websocket:
+                logger.info(f"Connected to {uri_with_params}")
+                idx = 0
+                async for message in websocket:
+                    idx = idx + 1
+                    await on_message_handler(message, idx)
+                    if is_shutdown:
+                        await websocket.close()
+                        break
+                if is_shutdown:
+                    break
+
         except websockets.exceptions.ConnectionClosed as e:
-            logger.error(e)
+            logger.error(f"Connection closed: {e}")
+            logger.info("Reconnecting...")
+            continue
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            logger.info("Reconnecting...")
             continue
 
 
 async def start_service():
     logger.info("Connecting to NATS and checking stuff")
-
     await nm.connect()
     await nm.create_stream(
         prefixes=[_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX],
         max_age=_config.NATS_STREAM_MAX_AGE,
         max_size=_config.NATS_STREAM_MAX_SIZE,
     )
-
     logger.info("Starting service")
     await subscribe_to_jetstream(list(INTERESTED_RECORDS.keys()))
-
-    try:
-        while not is_shutdown:
-            await asyncio.sleep(1)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        logger.info("Shutting down...")
-    finally:
-        await nm.disconnect()
-        logger.info("Shutdown complete.")
+    logger.info("Shutting down...")
+    await nm.disconnect()
+    logger.info("Shutdown complete.")
 
 
 async def start_uvicorn() -> None:
@@ -190,7 +194,7 @@ async def main() -> None:
             asyncio.create_task(start_uvicorn()),
             asyncio.create_task(start_service()),
         ],
-        return_when=asyncio.FIRST_COMPLETED,
+        return_when=asyncio.ALL_COMPLETED,
     )
 
 
