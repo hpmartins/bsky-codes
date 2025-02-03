@@ -169,7 +169,7 @@ async def main():
                 IndexModel("author"),
                 IndexModel("subject"),
                 IndexModel("created_at"),
-                IndexModel(["author", "rkey"]),
+                IndexModel(["author", "rkey"], unique=True),
             ]
         )
 
