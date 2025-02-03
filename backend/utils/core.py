@@ -139,7 +139,7 @@ class Config:
 
 # functions
 def get_date_from_jetstream_cursor(cursor: int):
-    return datetime.datetime.fromtimestamp(cursor / 1000000)
+    return datetime.datetime.fromtimestamp(cursor / 1000000, tz=datetime.timezone.utc)
 
 def check_jetstream_cursor(cursor: int):
     cursor_date = get_date_from_jetstream_cursor(cursor)
