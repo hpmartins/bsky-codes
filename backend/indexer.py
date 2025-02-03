@@ -108,7 +108,10 @@ async def main():
 
                 if event.commit.collection in INTERACTION_RECORDS:
                     db_ops[INTERACTION_COLLECTION].append(
-                        DeleteOne({"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"})
+                        UpdateOne(
+                            {"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"},
+                            {"$set": {"deleted": True}},
+                        )
                     )
 
         return db_ops
