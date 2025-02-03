@@ -5,7 +5,7 @@ from io import BytesIO
 import uvicorn
 from fastapi import FastAPI, responses, HTTPException
 import datetime
-from typing import Literal, List
+from typing import Literal
 from contextlib import asynccontextmanager
 import motor.motor_asyncio
 from pymongo import ReturnDocument
@@ -19,7 +19,6 @@ from PIL import Image, ImageDraw, ImageFont
 from backend.utils.core import Config
 from backend.utils.interactions import (
     Interaction,
-    InteractionsResponse,
     INTERACTION_COLLECTION,
 )
 
@@ -44,9 +43,7 @@ class EnhancedFastAPI(FastAPI):
         cache = AsyncDidInMemoryCache()
         self.resolver = AsyncIdResolver(cache=cache)
         self.bsky_client = AsyncClient(base_url="https://public.api.bsky.app/")
-        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(
-            config.MONGO_URI, compressors="zstd"
-        )
+        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URI, compressors="zstd")
         self.db = self.mongo_client.get_database(config.FART_DB)
 
 
@@ -121,9 +118,7 @@ async def _fetch_profile_pictures(main_profile, profiles):
     return main_profile_picture, all_profile_pictures
 
 
-def _create_circles_image(
-    main_profile_picture, all_profile_pictures, start_date: datetime.datetime
-):
+def _create_circles_image(main_profile_picture, all_profile_pictures, start_date: datetime.datetime):
     _CIRCLES_OPTIONS = {
         "orbits": 2,
         "include_sent": True,
@@ -168,7 +163,6 @@ def _create_circles_image(
                 "pictures": all_profile_pictures[start_index:end_index],
             }
         )
-        print(start_index, end_index)
         start_index = end_index
 
     # Creating image
@@ -198,9 +192,7 @@ def _create_circles_image(
     if _CIRCLES_OPTIONS["add_date"]:
         now = datetime.datetime.now()
         text_full = f"{start_date.strftime('%Y-%m-%d')} - {now.strftime('%Y-%m-%d')}"
-        context.text(
-            (image_size / 35, image_size / 45), text_full, font=font, fill=text_color, anchor="la"
-        )
+        context.text((image_size / 35, image_size / 45), text_full, font=font, fill=text_color, anchor="la")
 
     # Site watermark on top right corner
     if _CIRCLES_OPTIONS["add_watermark"]:
@@ -263,8 +255,7 @@ def _create_circles_image(
                 orbit_pictures[i],
                 dict(
                     x=math.cos(t) * image_size * orbit["distance"] + image_size / 2,
-                    y=math.sin(t) * image_size * orbit["distance"]
-                    + (1 + vertical_displace) * image_size / 2,
+                    y=math.sin(t) * image_size * orbit["distance"] + (1 + vertical_displace) * image_size / 2,
                     r=image_size * orbit["radius"],
                 ),
             )
@@ -330,18 +321,12 @@ async def _get_did(actor: str) -> tuple[str | None, str | None]:
 
 
 def _generate_image_interactions(
-    interactions: InteractionsResponse,
-    source: str = "both",
+    interactions: dict[str, list[Interaction]],
     topk: int = 50,
-) -> List[Interaction]:
+) -> list[Interaction]:
     combined_interactions = defaultdict(lambda: {"l": 0, "r": 0, "p": 0, "c": 0, "t": 0})
 
-    if source == "from":
-        return interactions.from_
-    elif source == "to":
-        return interactions.to
-
-    for source, data in interactions.model_dump().items():
+    for data in interactions.values():
         for tmp in data:
             combined_interactions[tmp["_id"]]["l"] += tmp["l"]
             combined_interactions[tmp["_id"]]["r"] += tmp["r"]
@@ -349,194 +334,57 @@ def _generate_image_interactions(
             combined_interactions[tmp["_id"]]["c"] += tmp["c"]
             combined_interactions[tmp["_id"]]["t"] += tmp["t"]
 
-    combined_interactions = [
-        Interaction(_id=key, **value) for key, value in combined_interactions.items()
-    ]
+    combined_interactions = [Interaction(_id=key, **value) for key, value in combined_interactions.items()]
     combined_interactions.sort(key=lambda x: x["t"], reverse=True)
     return combined_interactions[:topk]
 
 
-async def _get_interactions(did: str, start_date: datetime.datetime = None) -> InteractionsResponse:
+async def _get_interactions(
+    did: str, source: Literal["from", "to", "both"], start_date: datetime.datetime = None
+) -> dict[str, list[Interaction]]:
     end_date = datetime.datetime.now(tz=datetime.timezone.utc)
     if start_date is None:
         start_date = end_date - datetime.timedelta(days=7)
 
-    return InteractionsResponse.model_validate(
-        {
-            "from": await _aggregate_interactions("from", did, start_date),
-            "to": await _aggregate_interactions("to", did, start_date),
-        }
-    )
-
-
-async def _aggregate_interactions(
-    direction: Literal["from", "to"], did: str, start_date: datetime.datetime
-) -> list:
-    author_field = "author" if direction == "from" else "subject"
-    subject_field = "subject" if direction == "from" else "author"
-    pipeline = [
-        {
-            "$match": {
-                "date": {
-                    "$gte": start_date,
-                },
-                author_field: did,
-            }
-        },
-        {
-            "$addFields": {
-                "collection": {"$arrayElemAt": [{"$split": ["$_id", "/"]}, 1]},
-            }
-        },
-        {
-            "$group": {
-                "_id": {
-                    "did": f"${subject_field}",
-                    "collection": "$collection",
-                },
-                "count": {"$sum": 1},
-                "total_characters": {
-                    "$sum": {
-                        "$cond": [
-                            {
-                                "$eq": [
-                                    "$collection",
-                                    models.ids.AppBskyFeedPost,
-                                ]
-                            },
-                            "$characters",
-                            0,
-                        ]
-                    }
-                },
-            }
-        },
-        {
-            "$group": {
-                "_id": "$_id.did",
-                "interactions": {
-                    "$push": {
-                        "type": "$_id.collection",
-                        "count": "$count",
-                        "total_characters": "$total_characters",
-                    }
-                },
-            }
-        },
-        {
-            "$addFields": {
-                "l": {
-                    "$sum": {
-                        "$map": {
-                            "input": {
-                                "$filter": {
-                                    "input": "$interactions",
-                                    "as": "interaction",
-                                    "cond": {
-                                        "$eq": [
-                                            "$$interaction.type",
-                                            models.ids.AppBskyFeedLike,
-                                        ]
-                                    },
-                                }
-                            },
-                            "as": "interaction",
-                            "in": "$$interaction.count",
-                        }
-                    }
-                },
-                "r": {
-                    "$sum": {
-                        "$map": {
-                            "input": {
-                                "$filter": {
-                                    "input": "$interactions",
-                                    "as": "interaction",
-                                    "cond": {
-                                        "$eq": [
-                                            "$$interaction.type",
-                                            models.ids.AppBskyFeedRepost,
-                                        ]
-                                    },
-                                }
-                            },
-                            "as": "interaction",
-                            "in": "$$interaction.count",
-                        }
-                    }
-                },
-                "p": {
-                    "$sum": {
-                        "$map": {
-                            "input": {
-                                "$filter": {
-                                    "input": "$interactions",
-                                    "as": "interaction",
-                                    "cond": {
-                                        "$eq": [
-                                            "$$interaction.type",
-                                            models.ids.AppBskyFeedPost,
-                                        ]
-                                    },
-                                }
-                            },
-                            "as": "interaction",
-                            "in": "$$interaction.count",
-                        }
-                    }
-                },
-                "c": {
-                    "$sum": {
-                        "$map": {
-                            "input": {
-                                "$filter": {
-                                    "input": "$interactions",
-                                    "as": "interaction",
-                                    "cond": {
-                                        "$eq": [
-                                            "$$interaction.type",
-                                            models.ids.AppBskyFeedPost,
-                                        ]
-                                    },
-                                }
-                            },
-                            "as": "interaction",
-                            "in": "$$interaction.total_characters",
-                        }
-                    }
-                },
-            }
-        },
-        {
-            "$addFields": {
-                "t": {
-                    "$add": [
-                        {"$multiply": ["$l", 1]},
-                        {"$multiply": ["$r", 2]},
-                        {"$multiply": ["$p", 3]},
-                    ]
+    async def _aggregate_interactions(direction: Literal["from", "to"]) -> list[Interaction]:
+        author_field = "author" if direction == "from" else "subject"
+        subject_field = "subject" if direction == "from" else "author"
+        pipeline = [
+            {
+                "$match": {
+                    author_field: did,
+                    "date": {
+                        "$gte": start_date,
+                    },
+                    "deleted": { "$exists": False },
                 }
-            }
-        },
-        {
-            "$project": {
-                "_id": 1,
-                "l": 1,
-                "r": 1,
-                "p": 1,
-                "c": 1,
-                "t": 1,
-            }
-        },
-        {"$sort": {"t": -1}},
-        {"$limit": 200},
-    ]
+            },
+            {
+                "$group": {
+                    "_id": f"${subject_field}",
+                    "t": {"$sum": 1},
+                    "l": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedLike]}, 1, 0]}},
+                    "r": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedRepost]}, 1, 0]}},
+                    "p": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, 1, 0]}},
+                    "c": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, "$characters", 0]}},
+                }
+            },
+            {"$sort": {"t": -1}},
+            {"$limit": 100},
+        ]
 
-    res = []
-    async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
-        res.append(doc)
+        res = []
+        async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
+            res.append(Interaction(**doc))
+        return res
 
-    return res
+    if source == "both":
+        return {
+            "from": await _aggregate_interactions("from"),
+            "to": await _aggregate_interactions("to"),
+        }
+    else:
+        return {source: await _aggregate_interactions(source)}
 
 
 def _post_process_interactions(data: list) -> list:
@@ -559,16 +407,14 @@ def _post_process_interactions(data: list) -> list:
                 total += 2 * interaction["count"]
                 characters += interaction["total_characters"]
 
-        processed_data.append(
-            {"_id": item["_id"], "l": likes, "r": reposts, "p": posts, "c": characters, "t": total}
-        )
+        processed_data.append({"_id": item["_id"], "l": likes, "r": reposts, "p": posts, "c": characters, "t": total})
 
     processed_data.sort(key=lambda x: x["t"], reverse=True)
     return processed_data
 
 
 @app.get("/circles")
-async def _circles(actor: str):
+async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
     handle, did = await _get_did(actor)
     if did is None:
         raise HTTPException(status_code=404, detail=f"user not found: {actor}")
@@ -576,7 +422,7 @@ async def _circles(actor: str):
     logger.info(f"[circles] getting interactions: {handle}@{did}")
     try:
         start_date = datetime.datetime.now() - datetime.timedelta(days=7)
-        interactions = await _get_interactions(did, start_date=start_date)
+        interactions = await _get_interactions(did, source, start_date)
         image_interactions = _generate_image_interactions(interactions)
     except Exception:
         raise HTTPException(status_code=500, detail=f"error generating interactions {handle}@{did}")
@@ -602,9 +448,7 @@ async def _circles(actor: str):
     if len(profiles) <= 1:
         return
 
-    main_profile_picture, all_profile_pictures = await _fetch_profile_pictures(
-        main_profile, profiles
-    )
+    main_profile_picture, all_profile_pictures = await _fetch_profile_pictures(main_profile, profiles)
     output_image = _create_circles_image(main_profile_picture, all_profile_pictures, start_date)
     # except:
     # raise HTTPException(status_code=500, detail="error generating circles")
@@ -618,12 +462,12 @@ async def _circles(actor: str):
 
 
 @app.get("/interactions")
-async def _interactions(actor: str = None) -> InteractionsResponse:
+async def _interactions(actor: str, source: Literal["from", "to", "both"] = "from") -> dict[str, list[Interaction]]:
     handle, did = await _get_did(actor)
     if did is None:
         raise HTTPException(status_code=404, detail=f"user not found: {actor}")
     logger.info(f"[interactions] getting interactions: {handle}@{did}")
-    return await _get_interactions(did)
+    return await _get_interactions(did, source)
 
 
 if __name__ == "__main__":
