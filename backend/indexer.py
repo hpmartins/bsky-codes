@@ -126,6 +126,7 @@ async def main():
         await db[f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"].create_indexes(
             [
                 IndexModel("date"),
+                IndexModel("deleted"),
                 IndexModel(["author", "date", "deleted"]),
                 IndexModel(["subject", "date", "deleted"]),
             ]
