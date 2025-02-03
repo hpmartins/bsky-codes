@@ -158,8 +158,8 @@ async def main():
     await db[INTERACTION_COLLECTION].create_indexes(
         [
             IndexModel("date"),
-            IndexModel(["date", "author"]),
-            IndexModel(["date", "subject"]),
+            IndexModel(["author", "date"]),
+            IndexModel(["subject", "date"]),
         ]
     )
 
