@@ -13,7 +13,7 @@ INTERACTION_RECORDS = {
     models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
 }
-INTERACTION_COLLECTION = "interactions"
+INTERACTION_COLLECTION_PREFIX = "interactions"
 
 
 class Interaction(TypedDict):
@@ -55,7 +55,6 @@ def _create_interaction(
         "date": get_date(created_at),
         "author": author,
         "subject": subject,
-        "collection": collection,
         **others,
     }
 

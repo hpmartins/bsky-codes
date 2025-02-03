@@ -19,7 +19,7 @@ from utils.core import Config, INTERESTED_RECORDS, Logger, JetstreamStuff
 from utils.interactions import (
     get_date,
     INTERACTION_RECORDS,
-    INTERACTION_COLLECTION,
+    INTERACTION_COLLECTION_PREFIX,
     parse_interaction,
 )
 
@@ -94,7 +94,9 @@ async def main():
                     if event.commit.collection in INTERACTION_RECORDS:
                         interaction = parse_interaction(uri, record)
                         if interaction:
-                            db_ops[INTERACTION_COLLECTION].append(InsertOne(interaction))
+                            db_ops[f"{INTERACTION_COLLECTION_PREFIX}.{event.commit.collection}"].append(
+                                InsertOne(interaction)
+                            )
 
             if isinstance(event.commit, JetstreamStuff.CommitDelete):
                 if event.commit.collection == models.ids.AppBskyActorProfile:
@@ -107,7 +109,7 @@ async def main():
                     )
 
                 if event.commit.collection in INTERACTION_RECORDS:
-                    db_ops[INTERACTION_COLLECTION].append(
+                    db_ops[f"{INTERACTION_COLLECTION_PREFIX}.{event.commit.collection}"].append(
                         UpdateOne(
                             {"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"},
                             {"$set": {"deleted": True}},
@@ -119,13 +121,15 @@ async def main():
     logger.info("Connecting to Mongo")
     await mongo_manager.connect()
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
-    await db[INTERACTION_COLLECTION].create_indexes(
-        [
-            IndexModel("date"),
-            IndexModel(["author", "date"]),
-            IndexModel(["subject", "date"]),
-        ]
-    )
+
+    for record_type in INTERACTION_RECORDS:
+        await db[f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"].create_indexes(
+            [
+                IndexModel("date"),
+                IndexModel(["author", "date"]),
+                IndexModel(["subject", "date"]),
+            ]
+        )
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()
