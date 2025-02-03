@@ -29,7 +29,7 @@
     {@render children()}
   </div>
 
-  <footer class="footer footer-center p-4 mt-auto text-base-content">
+  <!-- <footer class="footer footer-center p-4 mt-auto text-base-content">
     <aside>
       <a href="https://ko-fi.com/X8X3QCC8X" target="_blank">
         <img
@@ -42,5 +42,5 @@
         {$t("layout.built")}
       </p>
     </aside>
-  </footer>
+  </footer> -->
 </div>
