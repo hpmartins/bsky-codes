@@ -55,6 +55,7 @@ def _create_interaction(
         "date": get_date(created_at),
         "author": author,
         "subject": subject,
+        "collection": collection,
         **others,
     }
 
