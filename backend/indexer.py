@@ -42,10 +42,6 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-TEMPORARY_INDEXED_RECORDS = [
-    models.ids.AppBskyGraphBlock,
-]
-
 
 async def main():
     _config = Config()
@@ -95,49 +91,18 @@ async def main():
                     )
 
                 if isinstance(event.commit, JetstreamStuff.CommitCreate):
-                    if event.commit.collection in TEMPORARY_INDEXED_RECORDS:
-                        db_ops[event.commit.collection].append(
-                            InsertOne(
-                                {
-                                    "author": event.did,
-                                    "rkey": event.commit.rkey,
-                                    "subject": record["subject"],
-                                    "created_at": (
-                                        datetime.datetime.fromisoformat(record["created_at"])
-                                        if record["created_at"]
-                                        else None
-                                    ),
-                                    "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                                }
-                            )
-                        )
-
                     if event.commit.collection in INTERACTION_RECORDS:
                         interaction = parse_interaction(uri, record)
                         if interaction:
                             db_ops[INTERACTION_COLLECTION].append(InsertOne(interaction))
 
-            if isinstance(event.commit, JetstreamStuff.CommitDelete) and _config.INDEXER_DELETE:
+            if isinstance(event.commit, JetstreamStuff.CommitDelete):
                 if event.commit.collection == models.ids.AppBskyActorProfile:
                     db_ops[event.commit.collection].append(
                         UpdateOne(
                             {"_id": event.did},
-                            {
-                                "$set": {
-                                    "deleted": True,
-                                }
-                            },
+                            {"$set": {"deleted": True}},
                             upsert=True,
-                        )
-                    )
-
-                if event.commit.collection in TEMPORARY_INDEXED_RECORDS:
-                    db_ops[event.commit.collection].append(
-                        DeleteOne(
-                            {
-                                "author": event.did,
-                                "rkey": event.commit.rkey,
-                            }
                         )
                     )
 
@@ -158,16 +123,6 @@ async def main():
             IndexModel(["subject", "date"]),
         ]
     )
-
-    for collection in TEMPORARY_INDEXED_RECORDS:
-        await db[collection].create_indexes(
-            [
-                IndexModel("author"),
-                IndexModel("subject"),
-                IndexModel("created_at"),
-                IndexModel(["author", "rkey"], unique=True),
-            ]
-        )
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()

@@ -14,8 +14,6 @@ INTERESTED_RECORDS = {
     models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
     models.ids.AppBskyActorProfile: models.AppBskyActorProfile,
-    # models.ids.AppBskyGraphFollow: models.AppBskyGraphFollow,
-    models.ids.AppBskyGraphBlock: models.AppBskyGraphBlock,
 }
 
 
