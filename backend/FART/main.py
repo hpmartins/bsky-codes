@@ -356,7 +356,7 @@ async def _get_interactions(
                     "date": {
                         "$gte": start_date,
                     },
-                    "deleted": { "$exists": False },
+                    "deleted": {"$exists": False},
                 }
             },
             {
@@ -459,6 +459,56 @@ async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
     output_image.save(stream, format="png")
     stream.seek(0)  # important here!
     return responses.StreamingResponse(stream, media_type="image/png")
+
+
+@app.get("/top/interactions/{name}")
+async def _get_top_interactions(name: Literal["author", "subject"]):
+    pipeline = [
+        {
+            "$match": {
+                "deleted": {"$exists": False},
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "did": f"${name}",
+                    "collection": "$collection",
+                },
+                "count": {"$sum": 1},
+                "characters": {
+                    "$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, "$characters", 0]}
+                },
+            }
+        },
+        {
+            "$setWindowFields": {
+                "partitionBy": "$_id.collection",
+                "sortBy": {"count": -1},
+                "output": {"rank": {"$rank": {}}},
+            }
+        },
+        {"$match": {"rank": {"$lte": 50}}},
+        {
+            "$group": {
+                "_id": "$_id.collection",
+                "list": {
+                    "$push": {
+                        "did": "$_id.did",
+                        "count": "$count",
+                        "characters": {
+                            "$cond": [{"$eq": ["$_id.collection", models.ids.AppBskyFeedPost]}, "$characters", "$$REMOVE"]
+                        },
+                    }
+                },
+            }
+        },
+    ]
+
+    res = []
+    async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
+        res.append(Interaction(**doc))
+    return dict(data=res)
 
 
 @app.get("/interactions")
