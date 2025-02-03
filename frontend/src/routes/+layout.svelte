@@ -1,6 +1,8 @@
-<script>
+<script lang="ts">
 	let { children } = $props();
 	import "../app.css";
+
+    import { t, locale } from '$lib/translations';
 </script>
 
 <svelte:head>
@@ -11,4 +13,29 @@
     <title>Wolfgang</title>
 </svelte:head>
 
-{@render children()}
+<div class="flex flex-col items-center pt-2 gap-y-2 min-h-screen text-center">
+
+    <h1 class="text-2xl">Wolfgang</h1>
+
+    <div class="logo w-25 h-40 rounded-xl overflow-hidden">
+      <img src="/logo.jpg" alt="Logo" class="w-full h-full object-cover" />
+    </div>
+
+    {@render children()}
+
+    <footer class="footer footer-center p-4 mt-auto text-base-content">
+        <aside>
+            <a href="https://ko-fi.com/X8X3QCC8X" target="_blank">
+                <img
+                    style="height:45px;"
+                    src="https://storage.ko-fi.com/cdn/kofi2.png?v=3"
+                    alt="Buy Me a Coffee at ko-fi.com"
+                />
+            </a>
+            <p>
+                {$t('layout.built')}
+            </p>
+        </aside>
+    </footer>
+</div>
+
