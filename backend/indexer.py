@@ -60,9 +60,7 @@ async def main():
             return {}
 
         if event.commit:
-            uri = AtUri.from_str(
-                "at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey)
-            )
+            uri = AtUri.from_str("at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey))
 
             if isinstance(event.commit, JetstreamStuff.CommitCreate) or isinstance(
                 event.commit, JetstreamStuff.CommitUpdate
@@ -119,7 +117,7 @@ async def main():
                         if interaction:
                             db_ops[INTERACTION_COLLECTION].append(InsertOne(interaction))
 
-            if isinstance(event.commit, JetstreamStuff.CommitDelete):
+            if isinstance(event.commit, JetstreamStuff.CommitDelete) and _config.INDEXER_DELETE:
                 if event.commit.collection == models.ids.AppBskyActorProfile:
                     db_ops[event.commit.collection].append(
                         UpdateOne(
@@ -145,9 +143,7 @@ async def main():
 
                 if event.commit.collection in INTERACTION_RECORDS:
                     db_ops[INTERACTION_COLLECTION].append(
-                        DeleteOne(
-                            {"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"}
-                        )
+                        DeleteOne({"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"})
                     )
 
         return db_ops
