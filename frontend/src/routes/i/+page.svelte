@@ -135,7 +135,7 @@
         <div>
           {#key data}{#key circlesOptions}
               <Circles
-                profile={data.profile}
+                profile={data.interactions}
                 data={data.interactions}
                 options={circlesOptions}
               />
