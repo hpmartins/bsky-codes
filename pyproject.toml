@@ -4,7 +4,7 @@ version = "2025.0.0"
 requires-python = ">=3.11"
 
 [tool.ruff] 
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 ignore = ["D203", "E741"]
