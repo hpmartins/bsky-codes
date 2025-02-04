@@ -51,8 +51,8 @@ class NATSManager:
             discard="old",
             max_age=60 * 60 * 24 * max_age,
             max_bytes=1024 * 1024 * 1024 * max_size,
-            storage="file",
-            compression="s2",
+            storage="memory",
+            # compression="s2",
         )
         try:
             await self.js.update_stream(config=config)
