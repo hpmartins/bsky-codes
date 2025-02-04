@@ -118,7 +118,9 @@ class Config:
     INDEXER_CONSUMER: str = "indexer"
     INDEXER_BATCH_SIZE: int = 1000
     INDEXER_DB: str = "bsky"
-    # chrono trigger
+    # chrono trigger and misc
+    INTERACTIONS_COLLECTION: str = "interactions"
+    DYNAMIC_COLLECTION: str = "dynamic_data"
     CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL: str = ''
 
     def __init__(self):

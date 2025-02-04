@@ -13,8 +13,6 @@ INTERACTION_RECORDS = {
     models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost,
 }
-INTERACTION_COLLECTION_PREFIX = "interactions"
-
 
 class Interaction(TypedDict):
     _id: str

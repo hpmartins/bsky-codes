@@ -19,7 +19,6 @@ from PIL import Image, ImageDraw, ImageFont
 from backend.utils.core import Config
 from backend.utils.interactions import (
     Interaction,
-    INTERACTION_COLLECTION_PREFIX,
     INTERACTION_RECORDS,
 )
 
@@ -355,7 +354,7 @@ async def _get_interactions(
 
         res = {}
         for record_type in INTERACTION_RECORDS:
-            collection = f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"
+            collection = f"{config.INTERACTIONS_COLLECTION}.{record_type}"
             record_initial = record_type.split(".")[-1][0]
 
             agg_group = {
@@ -460,48 +459,15 @@ async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
     return responses.StreamingResponse(stream, media_type="image/png")
 
 
-@app.get("/top/{record_type}/{name}")
-async def _get_top_interactions(
+@app.get("/dd/{data_type}/{record_type}/{name}")
+async def _fetch_dynamic_data(
+    data_type: str,
     record_type: Literal["app.bsky.feed.like", "app.bsky.feed.repost", "app.bsky.feed.post"],
     name: Literal["author", "subject"],
 ):
-    collection = f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"
-
-    agg_group = {
-        "$group": {
-            "_id": f"${name}",
-            "count": {"$sum": 1},
-        }
-    }
-    if record_type == models.ids.AppBskyFeedPost:
-        agg_group["$group"]["characters"] = {
-            "$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, "$characters", 0]}
-        }
-
-    pipeline = [
-        {
-            "$match": {
-                "deleted": {"$exists": False},
-            }
-        },
-        agg_group,
-        {"$sort": {"count": -1}},
-        {"$limit": 25},
-    ]
-
-    res = []
-    async for doc in app.db.get_collection(collection).aggregate(pipeline):
-        res.append(doc)
-    return res
-
-@app.get("/fetch/top/{record_type}/{name}")
-async def _fetch_top_interactions(
-    record_type: Literal["app.bsky.feed.like", "app.bsky.feed.repost", "app.bsky.feed.post"],
-    name: Literal["author", "subject"],
-):
-    doc = await app.db.get_collection("dynamic_data").find_one(
+    doc = await app.db.get_collection(config.DYNAMIC_COLLECTION).find_one(
         filter={
-            "type": "top",
+            "type": data_type,
             "record_type": record_type,
             "name": name,
         },

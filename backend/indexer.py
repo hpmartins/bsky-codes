@@ -18,7 +18,6 @@ from utils.core import Config, INTERESTED_RECORDS, Logger, JetstreamStuff
 
 from utils.interactions import (
     INTERACTION_RECORDS,
-    INTERACTION_COLLECTION_PREFIX,
     parse_interaction,
 )
 
@@ -93,7 +92,7 @@ async def main():
                     if event.commit.collection in INTERACTION_RECORDS:
                         interaction = parse_interaction(uri, record)
                         if interaction:
-                            db_ops[f"{INTERACTION_COLLECTION_PREFIX}.{event.commit.collection}"].append(
+                            db_ops[f"{_config.INTERACTIONS_COLLECTION}.{event.commit.collection}"].append(
                                 InsertOne(interaction)
                             )
 
@@ -108,7 +107,7 @@ async def main():
                     )
 
                 if event.commit.collection in INTERACTION_RECORDS:
-                    db_ops[f"{INTERACTION_COLLECTION_PREFIX}.{event.commit.collection}"].append(
+                    db_ops[f"{_config.INTERACTIONS_COLLECTION}.{event.commit.collection}"].append(
                         UpdateOne(
                             {"_id": f"{event.did}/{event.commit.collection}/{event.commit.rkey}"},
                             {"$set": {"deleted": True}},
@@ -122,7 +121,7 @@ async def main():
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
 
     for record_type in INTERACTION_RECORDS:
-        await db[f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"].create_indexes(
+        await db[f"{_config.INTERACTIONS_COLLECTION}.{record_type}"].create_indexes(
             [
                 IndexModel("date"),
                 IndexModel("deleted"),
