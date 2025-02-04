@@ -494,6 +494,25 @@ async def _get_top_interactions(
         res.append(doc)
     return res
 
+@app.get("/fetch/top/{record_type}/{name}")
+async def _fetch_top_interactions(
+    record_type: Literal["app.bsky.feed.like", "app.bsky.feed.repost", "app.bsky.feed.post"],
+    name: Literal["author", "subject"],
+):
+    doc = await app.db.get_collection("dynamic_data").find_one(
+        filter={
+            "type": "top",
+            "record_type": record_type,
+            "name": name,
+        },
+        sort={"_id": -1},
+        limit=1,
+    )
+
+    if doc:
+        doc["_id"] = doc["_id"].generation_time
+        return doc
+
 
 @app.get("/interactions")
 async def _interactions(actor: str, source: Literal["from", "to", "both"] = "from") -> dict[str, list[Interaction]]:
