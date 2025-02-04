@@ -1,5 +1,7 @@
 import type { PageServerLoad } from './$types';
 
+const DATA_TYPE = 'top'
+
 const RECORDS = [
     "app.bsky.feed.like",
     "app.bsky.feed.repost",
@@ -19,7 +21,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
         for (const name of NAMES) {
             console.log(record_type, name)
             try {
-                const response = await fetch(`/api/fetch?record_type=${record_type}&name=${name}`)
+                const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&record_type=${record_type}&name=${name}`)
                 if (response.ok) {
                     const data = await response.json()
                     results[record_type][name] = data
@@ -32,6 +34,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
     }
 
     return {
-        data: results
+        results: results
     }
 };
