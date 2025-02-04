@@ -19,7 +19,8 @@ from PIL import Image, ImageDraw, ImageFont
 from backend.utils.core import Config
 from backend.utils.interactions import (
     Interaction,
-    INTERACTION_COLLECTION,
+    INTERACTION_COLLECTION_PREFIX,
+    INTERACTION_RECORDS,
 )
 
 from atproto import (
@@ -340,7 +341,9 @@ def _generate_image_interactions(
 
 
 async def _get_interactions(
-    did: str, source: Literal["from", "to", "both"], start_date: datetime.datetime = None
+    did: str,
+    source: Literal["from", "to", "both"],
+    start_date: datetime.datetime = None,
 ) -> dict[str, list[Interaction]]:
     end_date = datetime.datetime.now(tz=datetime.timezone.utc)
     if start_date is None:
@@ -349,34 +352,56 @@ async def _get_interactions(
     async def _aggregate_interactions(direction: Literal["from", "to"]) -> list[Interaction]:
         author_field = "author" if direction == "from" else "subject"
         subject_field = "subject" if direction == "from" else "author"
-        pipeline = [
-            {
-                "$match": {
-                    author_field: did,
-                    "date": {
-                        "$gte": start_date,
-                    },
-                    "deleted": {"$exists": False},
-                }
-            },
-            {
+
+        res = {}
+        for record_type in INTERACTION_RECORDS:
+            collection = f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"
+            record_initial = record_type.split(".")[-1][0]
+
+            agg_group = {
                 "$group": {
                     "_id": f"${subject_field}",
-                    "t": {"$sum": 1},
-                    "l": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedLike]}, 1, 0]}},
-                    "r": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedRepost]}, 1, 0]}},
-                    "p": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, 1, 0]}},
-                    "c": {"$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, "$characters", 0]}},
+                    record_initial: {"$sum": 1},
                 }
-            },
-            {"$sort": {"t": -1}},
-            {"$limit": 100},
-        ]
+            }
+            if record_type == models.ids.AppBskyFeedPost:
+                agg_group["$group"]["c"] = {"$sum": {"$ifNull": ["$characters", "$$REMOVE"]}}
 
-        res = []
-        async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
-            res.append(Interaction(**doc))
-        return res
+            pipeline = [
+                {
+                    "$match": {
+                        author_field: did,
+                        "date": {
+                            "$gte": start_date,
+                        },
+                        "deleted": {"$exists": False},
+                    }
+                },
+                agg_group,
+                {"$sort": {record_initial: -1}},
+                {"$limit": 100},
+            ]
+
+            print(pipeline)
+
+            logger.info(f"starting for {did}: {record_type}")
+            async for doc in app.db.get_collection(collection).aggregate(pipeline):
+                res[doc["_id"]] = {record_initial: doc[record_initial], "c": doc.get("c", 0), **res.get(doc["_id"], {})}
+
+        agg_res: list[Interaction] = []
+        for _id, values in res.items():
+            agg_res.append(
+                Interaction(
+                    _id=_id,
+                    l=values.get("l", 0),
+                    r=values.get("r", 0),
+                    p=values.get("p", 0),
+                    c=values.get("c", 0),
+                    t=values.get("l", 0) + values.get("r", 0) + values.get("p", 0),
+                )
+            )
+        agg_res.sort(key=lambda x: x["t"], reverse=True)
+        return agg_res
 
     if source == "both":
         return {
@@ -385,32 +410,6 @@ async def _get_interactions(
         }
     else:
         return {source: await _aggregate_interactions(source)}
-
-
-def _post_process_interactions(data: list) -> list:
-    processed_data = []
-    for item in data:
-        likes = 0
-        reposts = 0
-        posts = 0
-        characters = 0
-        total = 0
-        for interaction in item["interactions"]:
-            if interaction["type"] == models.ids.AppBskyFeedLike:
-                likes += interaction["count"]
-                total += interaction["count"]
-            elif interaction["type"] == models.ids.AppBskyFeedRepost:
-                reposts += interaction["count"]
-                total += 2 * interaction["count"]
-            elif interaction["type"] == models.ids.AppBskyFeedPost:
-                posts += interaction["count"]
-                total += 2 * interaction["count"]
-                characters += interaction["total_characters"]
-
-        processed_data.append({"_id": item["_id"], "l": likes, "r": reposts, "p": posts, "c": characters, "t": total})
-
-    processed_data.sort(key=lambda x: x["t"], reverse=True)
-    return processed_data
 
 
 @app.get("/circles")
@@ -461,54 +460,39 @@ async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
     return responses.StreamingResponse(stream, media_type="image/png")
 
 
-@app.get("/top/interactions/{name}")
-async def _get_top_interactions(name: Literal["author", "subject"]):
+@app.get("/top/{record_type}/{name}")
+async def _get_top_interactions(
+    record_type: Literal["app.bsky.feed.like", "app.bsky.feed.repost", "app.bsky.feed.post"],
+    name: Literal["author", "subject"],
+):
+    collection = f"{INTERACTION_COLLECTION_PREFIX}.{record_type}"
+
+    agg_group = {
+        "$group": {
+            "_id": f"${name}",
+            "count": {"$sum": 1},
+        }
+    }
+    if record_type == models.ids.AppBskyFeedPost:
+        agg_group["$group"]["characters"] = {
+            "$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, "$characters", 0]}
+        }
+
     pipeline = [
         {
             "$match": {
                 "deleted": {"$exists": False},
             }
         },
-        {
-            "$group": {
-                "_id": {
-                    "did": f"${name}",
-                    "collection": "$collection",
-                },
-                "count": {"$sum": 1},
-                "characters": {
-                    "$sum": {"$cond": [{"$eq": ["$collection", models.ids.AppBskyFeedPost]}, "$characters", 0]}
-                },
-            }
-        },
-        {
-            "$setWindowFields": {
-                "partitionBy": "$_id.collection",
-                "sortBy": {"count": -1},
-                "output": {"rank": {"$rank": {}}},
-            }
-        },
-        {"$match": {"rank": {"$lte": 50}}},
-        {
-            "$group": {
-                "_id": "$_id.collection",
-                "list": {
-                    "$push": {
-                        "did": "$_id.did",
-                        "count": "$count",
-                        "characters": {
-                            "$cond": [{"$eq": ["$_id.collection", models.ids.AppBskyFeedPost]}, "$characters", "$$REMOVE"]
-                        },
-                    }
-                },
-            }
-        },
+        agg_group,
+        {"$sort": {"count": -1}},
+        {"$limit": 25},
     ]
 
     res = []
-    async for doc in app.db.get_collection(INTERACTION_COLLECTION).aggregate(pipeline):
-        res.append(Interaction(**doc))
-    return dict(data=res)
+    async for doc in app.db.get_collection(collection).aggregate(pipeline):
+        res.append(doc)
+    return res
 
 
 @app.get("/interactions")

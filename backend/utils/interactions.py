@@ -18,11 +18,11 @@ INTERACTION_COLLECTION_PREFIX = "interactions"
 
 class Interaction(TypedDict):
     _id: str
-    l: int
-    r: int
-    p: int
-    c: int
-    t: int
+    l: int = 0
+    r: int = 0
+    p: int = 0
+    c: int = 0
+    t: int = 0
 
 
 class InteractionsResponse(BaseModel):

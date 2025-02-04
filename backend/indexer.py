@@ -17,13 +17,12 @@ from utils.database import MongoDBManager
 from utils.core import Config, INTERESTED_RECORDS, Logger, JetstreamStuff
 
 from utils.interactions import (
-    get_date,
     INTERACTION_RECORDS,
     INTERACTION_COLLECTION_PREFIX,
     parse_interaction,
 )
 
-from pymongo import InsertOne, DeleteOne, UpdateOne
+from pymongo import InsertOne, UpdateOne
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--log", default="INFO")

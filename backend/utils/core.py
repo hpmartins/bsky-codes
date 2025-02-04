@@ -104,8 +104,9 @@ class Config:
     # mongo
     MONGO_URI: str = "mongodb://mongodb:27017"
     # FART
-    FART_PORT: int = 7000
+    FART_PORT: int = 8000
     FART_DB: str = "bsky"
+    FART_URI: str = "http://localhost:8000"
     # jetstream_enjoyer
     JETSTREAM_URI: str = "ws://localhost:6008/subscribe"
     JETSTREAM_ENJOYER_PORT: int = 7001
@@ -117,6 +118,8 @@ class Config:
     INDEXER_CONSUMER: str = "indexer"
     INDEXER_BATCH_SIZE: int = 1000
     INDEXER_DB: str = "bsky"
+    # chrono trigger
+    CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL: str = ''
 
     def __init__(self):
         load_dotenv()
