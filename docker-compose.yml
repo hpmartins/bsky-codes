@@ -4,19 +4,28 @@ services:
   nats:
     image: nats:2-alpine
     ports:
-      - "8222:8222"
-      - "4222:4222"
+      - '4222:4222'
     volumes:
       - nats-data:/data
     command: "-js -sd /data --http_port 8222"
 
-  exporter:
-    image: natsio/prometheus-nats-exporter
+  mongo:
+    image: mongo
     restart: always
-    command: "-channelz -connz_detailed -healthz -gatewayz -accstatz -leafz -jsz all -routez -serverz -subz -varz http://nats:8222/"
-    depends_on:
-      - nats
-    
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -26,28 +35,38 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - '9090:9090'
     configs:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
     extra_hosts:
-        - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
 
   mongodb_exporter:
     image: percona/mongodb_exporter:0.43.1
     restart: always
-    ports:
-      - "9216:9216"
     command:
-      - --mongodb.uri=${MONGO_URI}
-      - --mongodb.collstats-colls=${INDEXER_DB}.interactions
-      - --mongodb.indexstats-colls=${INDEXER_DB}.interactions
+      - --mongodb.uri=mongodb://mongo:27017/
       - --collect-all
+    depends_on:
+      - mongo
+
+  nats_exporter:
+    image: natsio/prometheus-nats-exporter
+    restart: always
+    ports:
+      - '7777:7777'
+    command: "-channelz -connz_detailed -healthz -gatewayz -accstatz -leafz -jsz all -routez -serverz -subz -varz http://nats:8222/"
+    depends_on:
+      - nats
 
 volumes:
-  prometheus-data:
   nats-data:
+  mongo-data:
+  grafana-data:
+  prometheus-data:
+
 
 configs:
   prometheus_config:

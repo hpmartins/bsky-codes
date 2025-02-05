@@ -77,7 +77,7 @@ async def subscribe_to_jetstream(collections: List[str]):
             if cur_time - wrapper.start_time >= 1:
                 counters["network"].inc(wrapper.bytes_received)
                 counters["events"].inc(wrapper.calls)
-                logger.info(
+                logger.debug(
                     f"NETWORK LOAD: {wrapper.calls}/s; {wrapper.bytes_received / 1024:.1f} kb/s; {60 * 60 * wrapper.bytes_received / 1024 / 1024 / 1024:.1f} GB/h"
                 )
                 wrapper.start_time = cur_time
@@ -102,7 +102,7 @@ async def subscribe_to_jetstream(collections: List[str]):
 
         if idx % _config.JETSTREAM_ENJOYER_CHECKPOINT == 0:
             timestamp = get_date_from_jetstream_cursor(event.time_us)
-            logger.info(f"saving new cursor: {event.time_us} {timestamp}")
+            logger.debug(f"saving new cursor: {event.time_us} {timestamp}")
             await kv.put("cursor", str(event.time_us).encode())
 
         try:
@@ -183,7 +183,7 @@ async def start_service():
 
 async def start_uvicorn() -> None:
     logger.info("Starting uvicorn")
-    uvicorn_config = uvicorn.config.Config(app, host="0.0.0.0", port=_config.JETSTREAM_ENJOYER_PORT)
+    uvicorn_config = uvicorn.config.Config(app, port=8001)
     server = uvicorn.server.Server(uvicorn_config)
     await server.serve()
 

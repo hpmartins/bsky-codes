@@ -1,13 +1,11 @@
 import asyncio
-import pickle
 import signal
 import time
 from typing import Any
 import nats
 from prometheus_client import Counter, make_asgi_app
 import uvicorn
-
-from collections import defaultdict
+from types import FrameType
 
 from atproto import (
     CAR,
@@ -21,6 +19,10 @@ from atproto import (
 from utils.core import (
     Logger,
     Config,
+    Commit,
+    EventAccount,
+    EventCommit,
+    EventIdentity,
     INTERESTED_RECORDS,
 )
 
@@ -28,42 +30,24 @@ from utils.nats import NATSManager
 
 app = make_asgi_app()
 _config = Config()
-firehose_counter = Counter("firehose", "firehose", ["action", "collection"])
-firehose_lang_counter = Counter("post_langs", "post languages", ["lang"])
+nm = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
+client = AsyncFirehoseSubscribeReposClient()
+
+counters = dict(
+    network=Counter("firehose_network", "data received"),
+    events=Counter("firehose_events", "events"),
+    post_langs=Counter("firehose_post_langs", "post languages", ["lang"]),
+    account=Counter("firehose_account_counter", "account updates", ["active", "status"]),
+    identity=Counter("firehose_identity_counter", "identity updates"),
+    firehose=Counter("firehose", "firehose", ["operation", "collection"]),
+)
+
 logger = Logger("enjoyer")
 
-RECONNECT_DELAY = 5
 
-# Signal handling
-is_shutdown = False
-
-
-def signal_handler(signum, frame):
-    global is_shutdown
-    is_shutdown = True
-    logger.info("SHUTDOWN")
-
-
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
-
-def measure_events_per_second(func: callable) -> callable:
-    def wrapper(*args) -> Any:
-        wrapper.calls += 1
-        cur_time = time.time()
-
-        if cur_time - wrapper.start_time >= 1:
-            logger.info(f"NETWORK LOAD: {wrapper.calls} events/second")
-            wrapper.start_time = cur_time
-            wrapper.calls = 0
-
-        return func(*args)
-
-    wrapper.calls = 0
-    wrapper.start_time = time.time()
-
-    return wrapper
+async def signal_handler(_: int, __: FrameType) -> None:
+    logger.info("Shutting down...")
+    await client.stop()
 
 
 def get_nats_subject(collection: str) -> str:
@@ -73,63 +57,93 @@ def get_nats_subject(collection: str) -> str:
 async def subscribe_to_firehose(nm: NATSManager):
     kv = await nm.get_or_create_kv_store(_config.NATS_STREAM)
 
-    try:
-        cursor = await kv.get("cursor")
-        cursor = int(cursor.value)
-    except nats.js.errors.KeyNotFoundError:
-        cursor = None
+    async def get_cursor():
+        try:
+            cursor = await kv.get("cursor")
+            cursor = int(cursor.value)
+        except nats.js.errors.KeyNotFoundError:
+            cursor = ""
+        return cursor
 
+    def measure_events_per_second(func: callable) -> callable:
+        def wrapper(*args) -> Any:
+            wrapper.calls += 1
+            cur_time = time.time()
+
+            if cur_time - wrapper.start_time >= 1:
+                counters["events"].inc(wrapper.calls)
+                logger.debug(f"NETWORK LOAD: {wrapper.calls}/s")
+                wrapper.start_time = cur_time
+                wrapper.calls = 0
+
+            return func(*args)
+
+        wrapper.calls = 0
+        wrapper.start_time = time.time()
+
+        return wrapper
+
+    @measure_events_per_second
+    async def on_message_handler(message: firehose_models.MessageFrame) -> None:
+        parsed_message = parse_subscribe_repos_message(message)
+
+        if isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Account):
+            await nm.publish(
+                get_nats_subject("account"), EventAccount(kind="account", identity=parsed_message.model_dump())
+            )
+            counters["account"].labels(parsed_message.active, parsed_message.status).inc()
+
+        if isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Identity):
+            await nm.publish(
+                get_nats_subject("identity"), EventIdentity(kind="identity", identity=parsed_message.model_dump())
+            )
+            counters["identity"].inc()
+
+        if not isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Commit):
+            return
+
+        if parsed_message.seq % _config.FIREHOSE_ENJOYER_CHECKPOINT == 0:
+            client.update_params(models.ComAtprotoSyncSubscribeRepos.Params(cursor=parsed_message.seq))
+            logger.debug(f"saving new cursor: {parsed_message.seq}")
+            await kv.put("cursor", str(parsed_message.seq).encode())
+
+        if not parsed_message.blocks:
+            return
+
+        commits = _process_commit(parsed_message)
+        for commit in commits:
+            subject = get_nats_subject(commit["collection"])
+
+            try:
+                await nm.publish(subject, EventCommit(kind="commit", commit=commit))
+            except Exception as e:
+                print(f"Error: {e}")
+                print(commit)
+                continue
+
+            counters["firehose"].labels(commit["operation"], commit["collection"]).inc()
+
+            if commit["operation"] == "create" and commit["collection"] == models.ids.AppBskyFeedPost:
+                langs = commit["record"].get("langs", None)
+                if langs:
+                    lang = langs[0][:2].lower() if len(langs) > 0 else "empty"
+                else:
+                    lang = "none"
+                counters["post_langs"].labels(lang).inc()
+
+    cursor = await get_cursor()
     logger.info(f"Starting at cursor: {cursor}")
 
     params = None
     if cursor:
         params = models.ComAtprotoSyncSubscribeRepos.Params(cursor=cursor)
-
-    client = AsyncFirehoseSubscribeReposClient(params)
-
-    @measure_events_per_second
-    async def on_message_handler(message: firehose_models.MessageFrame) -> None:
-        commit = parse_subscribe_repos_message(message)
-        if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
-            return
-
-        if commit.seq % _config.FIREHOSE_ENJOYER_CHECKPOINT == 0:
-            client.update_params(models.ComAtprotoSyncSubscribeRepos.Params(cursor=commit.seq))
-            logger.debug(f"saving new cursor: {commit.seq}")
-            await kv.put("cursor", str(commit.seq).encode())
-
-        if not commit.blocks:
-            return
-
-        ops = _get_ops_by_type(commit)
-
-        for collection, data in ops.items():
-            subject = get_nats_subject(collection)
-
-            for action, documents in data.items():
-                if len(documents) == 0:
-                    continue
-
-                for document in documents:
-                    await nm.publish(subject, pickle.dumps({"action": action, **document}))
-
-                    firehose_counter.labels(action, collection).inc()
-
-                    if action == "create" and collection == models.ids.AppBskyFeedPost:
-                        langs = document["record"].langs
-                        lang = (
-                            langs[0][:2].lower()
-                            if isinstance(langs, list) and len(langs) > 0
-                            else "unknown"
-                        )
-                        firehose_lang_counter.labels(lang).inc()
+    client.update_params(params)
 
     await client.start(on_message_handler)
 
 
-def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defaultdict:
-    operation_by_type = defaultdict(lambda: {"create": [], "delete": [], "update": []})
-
+def _process_commit(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> list[Commit]:
+    ops = []
     car = CAR.from_bytes(commit.blocks)
     for op in commit.ops:
         uri = AtUri.from_str(f"at://{commit.repo}/{op.path}")
@@ -141,30 +155,38 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
             if not op.cid:
                 continue
 
-            create_info = {"uri": str(uri), "cid": str(op.cid), "author": commit.repo}
-
             record_raw_data = car.blocks.get(op.cid)
             if not record_raw_data:
                 continue
 
-            record = models.get_or_create(record_raw_data, strict=False)
-            record_type = INTERESTED_RECORDS.get(uri.collection)
-
-            if record_type and models.is_record_type(record, record_type):
-                operation_by_type[uri.collection][op.action].append(
-                    {"record": record, **create_info}
-                )
+            # record = models.get_or_create(record_raw_data, strict=False)
+            # record_type = INTERESTED_RECORDS.get(uri.collection)
+            # if record_type and models.is_record_type(record, record_type):
+            ops.append(
+                {
+                    "operation": op.action,
+                    "repo": uri.host,
+                    "collection": uri.collection,
+                    "rkey": uri.rkey,
+                    "record": record_raw_data,
+                }
+            )
 
         if op.action == "delete":
-            operation_by_type[uri.collection]["delete"].append({"uri": str(uri)})
+            ops.append(
+                {
+                    "operation": op.action,
+                    "repo": uri.host,
+                    "collection": uri.collection,
+                    "rkey": uri.rkey,
+                }
+            )
 
-    return operation_by_type
+    return ops
 
 
 async def start_service():
     logger.info("Connecting to NATS and checking stuff")
-
-    nm = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
     await nm.connect()
     await nm.create_stream(
         prefixes=[_config.FIREHOSE_ENJOYER_SUBJECT_PREFIX],
@@ -174,15 +196,6 @@ async def start_service():
 
     logger.info("Starting firehose enjoyer")
     await subscribe_to_firehose(nm)
-
-    try:
-        while not is_shutdown:
-            await asyncio.sleep(1)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        logger.info("Shutting down indexer...")
-    finally:
-        await nm.disconnect()
-        logger.info("Indexer shutdown complete.")
 
 
 async def start_uvicorn() -> None:
@@ -200,8 +213,12 @@ async def main() -> None:
         ],
         return_when=asyncio.FIRST_COMPLETED,
     )
+    await nm.disconnect()
+    logger.info("Shutdown complete.")
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, lambda _, __: asyncio.create_task(signal_handler(_, __)))
+    signal.signal(signal.SIGTERM, lambda _, __: asyncio.create_task(signal_handler(_, __)))
     logger.info("INIT")
     asyncio.run(main())

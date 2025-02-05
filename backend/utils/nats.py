@@ -3,11 +3,23 @@ import nats
 from nats.aio.subscription import Subscription
 from typing import List, Callable, Any
 from nats.js.api import StreamConfig
+import json
 
 from utils.core import Logger
 
 logger = Logger("nats")
 
+class BytesJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, bytes):
+            try:
+                return obj.decode("utf-8")  # Attempt UTF-8 decoding first
+            except UnicodeDecodeError:
+                try:
+                    return obj.decode("latin-1")  # Fallback to latin-1 if UTF-8 fails
+                except Exception:
+                    return obj.hex()  # Finally return hex if all else fails
+        return json.JSONEncoder.default(self, obj)
 
 class NATSManager:
     def __init__(self, uri: str, stream: str):
@@ -51,8 +63,8 @@ class NATSManager:
             discard="old",
             max_age=60 * 60 * 24 * max_age,
             max_bytes=1024 * 1024 * 1024 * max_size,
-            storage="memory",
-            # compression="s2",
+            storage="file",
+            compression="s2",
         )
         try:
             await self.js.update_stream(config=config)
@@ -117,9 +129,9 @@ class NATSManager:
         except Exception as e:
             logger.error(f"Error subscribing to JetStream: {e}")
 
-    async def publish(self, subject: str, data: bytes):
+    async def publish(self, subject: str, data: str):
         try:
-            ack = await self.js.publish(subject, data)
+            ack = await self.js.publish(subject, json.dumps(data, cls=BytesJSONEncoder).encode())
             logger.debug(
                 f"Published message to {subject} - Stream: {ack.stream}, Sequence: {ack.seq}"
             )

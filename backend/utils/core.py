@@ -4,7 +4,7 @@ import sys
 from dotenv import load_dotenv
 from atproto import models
 from pydantic import BaseModel, Field
-from typing import Literal, Union, Annotated, Optional
+from typing import Literal, Union, Annotated, Optional, NotRequired, TypedDict
 import datetime
 
 from atproto_client.models.unknown_type import UnknownRecordType
@@ -51,45 +51,48 @@ class Logger:
         self.logger.critical(msg, *args, **kwargs)
 
 
-# types
-class JetstreamStuff:
-    class Event(BaseModel):
-        did: str
-        time_us: int
-        kind: Literal["account", "identity", "commit"]
-        account: Optional[models.ComAtprotoSyncSubscribeRepos.Account] = None
-        identity: Optional[models.ComAtprotoSyncSubscribeRepos.Identity] = None
-        commit: Optional[
-            Annotated["JetstreamStuff.CommitTypes", Field(discriminator="operation")]
-        ] = None
+class CommitCreate(TypedDict):
+    operation: Literal["create"]
+    repo: str
+    collection: str
+    rkey: str
+    record: dict
 
-    CommitTypes = Union[
-        "JetstreamStuff.CommitCreate",
-        "JetstreamStuff.CommitDelete",
-        "JetstreamStuff.CommitUpdate",
-    ]
 
-    class CommitCreate(BaseModel):
-        rev: str
-        collection: str
-        rkey: str
-        operation: Literal["create"] = "create"
-        record: "UnknownRecordType"
-        cid: str
+class CommitUpdate(TypedDict):
+    operation: Literal["update"]
+    repo: str
+    collection: str
+    rkey: str
+    record: dict
 
-    class CommitDelete(BaseModel):
-        rev: str
-        collection: str
-        rkey: str
-        operation: Literal["delete"] = "delete"
 
-    class CommitUpdate(BaseModel):
-        rev: str
-        collection: str
-        rkey: str
-        operation: Literal["update"] = "update"
-        record: "UnknownRecordType"
-        cid: str
+class CommitDelete(TypedDict):
+    operation: Literal["delete"]
+    repo: str
+    collection: str
+    rkey: str
+
+
+Commit = Union[CommitCreate, CommitUpdate, CommitDelete]
+
+
+class EventAccount(TypedDict):
+    kind: Literal["account"]
+    account: models.ComAtprotoSyncSubscribeRepos.Account
+
+
+class EventIdentity(TypedDict):
+    kind: Literal["identity"]
+    identity: models.ComAtprotoSyncSubscribeRepos.Identity
+
+
+class EventCommit(TypedDict):
+    kind: Literal["commit"]
+    commit: Commit
+
+
+Event = Union[EventAccount, EventIdentity, EventCommit]
 
 
 # config
@@ -108,10 +111,9 @@ class Config:
     FART_DB: str = "bsky"
     FART_URI: str = "http://localhost:8000"
     # jetstream_enjoyer
-    JETSTREAM_URI: str = "ws://localhost:6008/subscribe"
-    JETSTREAM_ENJOYER_PORT: int = 7001
-    JETSTREAM_ENJOYER_CHECKPOINT: int = 1000
-    JETSTREAM_ENJOYER_SUBJECT_PREFIX: str = "firehose"
+    FIREHOSE_ENJOYER_PORT: int = 8888
+    FIREHOSE_ENJOYER_CHECKPOINT: int = 1000
+    FIREHOSE_ENJOYER_SUBJECT_PREFIX: str = "firehose"
     # indexer
     INDEXER_ENABLE: bool = False
     INDEXER_DELETE: bool = False
@@ -121,7 +123,7 @@ class Config:
     # chrono trigger and misc
     INTERACTIONS_COLLECTION: str = "interactions"
     DYNAMIC_COLLECTION: str = "dynamic_data"
-    CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL: str = ''
+    CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL: str = ""
 
     def __init__(self):
         load_dotenv()
@@ -144,6 +146,7 @@ class Config:
 # functions
 def get_date_from_jetstream_cursor(cursor: int):
     return datetime.datetime.fromtimestamp(cursor / 1000000, tz=datetime.timezone.utc)
+
 
 def check_jetstream_cursor(cursor: int):
     cursor_date = get_date_from_jetstream_cursor(cursor)
