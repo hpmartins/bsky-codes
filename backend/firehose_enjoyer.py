@@ -6,6 +6,8 @@ import nats
 from prometheus_client import Counter, make_asgi_app
 import uvicorn
 from types import FrameType
+import argparse
+
 
 from atproto import (
     CAR,
@@ -42,7 +44,10 @@ counters = dict(
     firehose=Counter("firehose", "firehose", ["operation", "collection"]),
 )
 
-logger = Logger("enjoyer")
+parser = argparse.ArgumentParser()
+parser.add_argument("--log", default="INFO")
+args = parser.parse_args()
+logger = Logger("indexer", level=args.log.upper())
 
 
 async def signal_handler(_: int, __: FrameType) -> None:

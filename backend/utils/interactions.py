@@ -51,13 +51,22 @@ def _create_interaction(
     if author == subject:
         return None
 
-    return {
-        "_id": f"{author}/{collection}/{rkey}",
-        "date": get_date(created_at),
-        "author": author,
-        "subject": subject,
-        **others,
+    doc_filter = {
+        "_id.author": author,
+        "_id.date": get_date(created_at),
+        "_id.collection": collection,
     }
+
+    doc_update = {
+        "$push": {
+            "items": {
+                "_id": rkey,
+                "subject": subject,
+                **others,
+            }
+        }
+    }
+    return doc_filter, doc_update
 
 
 def parse_interaction(author: str, collection: str, rkey: str, record):

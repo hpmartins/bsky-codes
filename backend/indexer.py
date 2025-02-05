@@ -94,7 +94,8 @@ async def main():
                 if operation == "create" and collection in INTERACTION_RECORDS:
                     interaction = parse_interaction(repo, collection, rkey, record)
                     if interaction:
-                        db_ops[f"{_config.INTERACTIONS_COLLECTION}.{collection}"].append(InsertOne(interaction))
+                        doc_filter, doc_update = interaction
+                        db_ops[_config.INTERACTIONS_COLLECTION].append(UpdateOne(doc_filter, doc_update, upsert=True))
 
             if operation == "delete":
                 if collection == models.ids.AppBskyActorProfile:
@@ -106,9 +107,10 @@ async def main():
                         )
                     )
                 if collection in INTERACTION_RECORDS:
-                    db_ops[f"{_config.INTERACTIONS_COLLECTION}.{collection}"].append(
-                        DeleteOne(
-                            {"_id": f"{repo}/{collection}/{rkey}"},
+                    db_ops[_config.INTERACTIONS_COLLECTION].append(
+                        UpdateOne(
+                            {"_id.author": repo, "_id.collection": collection, "items._id": rkey},
+                            { "$pull": { "items": { "_id": rkey }}}
                         )
                     )
 
@@ -118,14 +120,23 @@ async def main():
     await mongo_manager.connect()
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
 
-    for record_type in INTERACTION_RECORDS:
-        await db[f"{_config.INTERACTIONS_COLLECTION}.{record_type}"].create_indexes(
-            [
-                IndexModel("date", expireAfterSeconds = 60 * 60 * 24 * 15),
-                IndexModel(["author", "date"]),
-                IndexModel(["subject", "date"]),
-            ]
-        )
+    await db[_config.INTERACTIONS_COLLECTION].create_indexes(
+        [
+            IndexModel("_id.date", expireAfterSeconds = 60 * 60 * 24 * 15),
+            IndexModel(["_id.author", "_id.collection", "items._id"], unique=True),
+            IndexModel(["_id.author", "_id.date"]),
+            IndexModel(["items.subject", "_id.date"]),
+        ]
+    )
+
+    # for record_type in INTERACTION_RECORDS:
+    #     await db[f"{_config.INTERACTIONS_COLLECTION}.{record_type}"].create_indexes(
+    #         [
+    #             IndexModel("date", expireAfterSeconds = 60 * 60 * 24 * 15),
+    #             IndexModel(["author", "date"]),
+    #             IndexModel(["subject", "date"]),
+    #         ]
+    #     )
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()
