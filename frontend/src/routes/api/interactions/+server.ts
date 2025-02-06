@@ -2,11 +2,14 @@ import type { RequestHandler } from './$types';
 import { FART_URL, FART_KEY } from '$env/static/private';
 
 export const GET: RequestHandler = async ({ fetch, url }) => {
-  const actor = url.searchParams.get('actor');
+  let actor = url.searchParams.get('actor');
+  let source = url.searchParams.get('source');
 
+  actor = encodeURIComponent(actor ?? '')
+  source = encodeURIComponent(source ?? 'from')
 
   const response = await fetch(
-    `${FART_URL}/interactions?actor=${encodeURIComponent(actor ?? '')}`,
+    `${FART_URL}/interactions?actor=${actor}&source=${source}`,
     {
       headers: {
         Authorization: `Bearer ${FART_KEY}`,

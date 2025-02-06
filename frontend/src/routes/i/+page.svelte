@@ -25,7 +25,7 @@
 </svelte:head>
 
 Very Soon™
-<!-- <form>
+<form>
   <div class="join">
     <input
       class="input input-primary join-item"
@@ -36,7 +36,7 @@ Very Soon™
     />
     <button class="btn btn-primary join-item" type="submit">Search</button>
   </div>
-</form> -->
+</form>
 {#if data.interactions}
   <h2>Results for @{data.actor}</h2>
 

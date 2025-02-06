@@ -179,11 +179,11 @@ async def main():
     """Main function to schedule and run the updates."""
 
     await update_top_interactions()
-    # async with AsyncScheduler() as scheduler:
-    #     await scheduler.add_schedule(
-    #         update_top_interactions, CronTrigger.from_crontab(config.CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL)
-    #     )
-    #     await scheduler.run_until_stopped()
+    async with AsyncScheduler() as scheduler:
+        await scheduler.add_schedule(
+            update_top_interactions, CronTrigger.from_crontab(config.CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL)
+        )
+        await scheduler.run_until_stopped()
 
 
 if __name__ == "__main__":
