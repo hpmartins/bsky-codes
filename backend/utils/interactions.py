@@ -17,11 +17,11 @@ INTERACTION_RECORDS = {
 
 class Interaction(TypedDict):
     _id: str
-    l: int = 0
-    r: int = 0
-    p: int = 0
-    c: int = 0
-    t: int = 0
+    l: int
+    r: int
+    p: int
+    c: int
+    t: int | float
 
 
 class InteractionsResponse(BaseModel):
