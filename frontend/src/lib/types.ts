@@ -1,7 +1,7 @@
 export type SimpleProfileType = {
-  did: string;
+  did?: string;
   avatar: string | undefined;
-  displayName: string | undefined;
+  display_name: string | undefined;
   handle: string;
 };
 
