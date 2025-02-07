@@ -20,8 +20,7 @@ class Interaction(TypedDict):
     l: int
     r: int
     p: int
-    c: int
-    t: int | float
+    t: int
 
 
 class InteractionsResponse(BaseModel):
@@ -46,27 +45,17 @@ def _create_interaction(
     collection: str,
     rkey: str,
     subject: str,
-    others: dict = {},
 ):
     if author == subject:
         return None
 
-    doc_filter = {
-        "_id.author": author,
-        "_id.date": get_date(created_at),
-        "_id.collection": collection,
+    return {
+        "author": author,
+        "subject": subject,
+        "collection": collection.split('.')[-1],
+        "rkey": rkey,
+        "date": datetime.datetime.fromisoformat(created_at),
     }
-
-    doc_update = {
-        "$push": {
-            "items": {
-                "_id": rkey,
-                "subject": subject,
-                **others,
-            }
-        }
-    }
-    return doc_filter, doc_update
 
 
 def parse_interaction(author: str, collection: str, rkey: str, record):
@@ -89,7 +78,6 @@ def parse_interaction(author: str, collection: str, rkey: str, record):
                 collection,
                 rkey,
                 AtUri.from_str(record.reply.parent.uri).host,
-                dict(characters=len(record.text)),
             )
 
         if record.embed is not None:
@@ -100,7 +88,6 @@ def parse_interaction(author: str, collection: str, rkey: str, record):
                     collection,
                     rkey,
                     AtUri.from_str(record.embed.record.uri).host,
-                    dict(characters=len(record.text)),
                 )
 
             if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecordWithMedia):
@@ -111,7 +98,6 @@ def parse_interaction(author: str, collection: str, rkey: str, record):
                         collection,
                         rkey,
                         AtUri.from_str(record.embed.record.record.uri).host,
-                        dict(characters=len(record.text)),
                     )
 
     return None

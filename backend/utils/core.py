@@ -127,17 +127,19 @@ class Config:
 
     def __init__(self):
         load_dotenv()
-
         for field in self.__annotations__:
             if field in os.environ:
                 env_value = os.getenv(field)
                 field_type = self.__annotations__[field]
-                if field_type is bool:
-                    setattr(self, field, env_value.lower() not in ("0", "false", "f", ""))
-                elif field_type is int:
-                    setattr(self, field, int(env_value))
-                else:
-                    setattr(self, field, env_value)
+                try:
+                    if field_type is bool:
+                        setattr(self, field, env_value.lower() not in ("0", "false", "f", ""))
+                    elif field_type is int:
+                        setattr(self, field, int(env_value))
+                    else:
+                        setattr(self, field, env_value)
+                except ValueError:
+                    print(f"Error: Invalid value for {field}: {env_value}.  Using default.")
 
     def __str__(self):
         return "\n".join(f"{k}: {v}" for k, v in self.__dict__.items())

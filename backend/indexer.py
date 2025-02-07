@@ -2,19 +2,17 @@ import asyncio
 import datetime
 import signal
 import json
-from pymongo import IndexModel
+import acsylla
 from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy
 from nats.js.errors import NotFoundError
 from collections import defaultdict
 from atproto import (
     models,
-    AtUri,
 )
 import argparse
 
 from utils.nats import NATSManager
-from utils.database import MongoDBManager
 from utils.core import (
     Config,
     Logger,
@@ -49,11 +47,11 @@ signal.signal(signal.SIGTERM, signal_handler)
 async def main():
     _config = Config()
     nats_manager = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
-    mongo_manager = MongoDBManager(uri=_config.MONGO_URI)
+    cass_manager = acsylla.create_cluster(["localhost"])
 
     async def _process_data(data: str):
         event: Event = json.loads(data)
-        db_ops = defaultdict(list)
+        db_ops = []
 
         if not _config.INDEXER_ENABLE:
             return {}
@@ -64,79 +62,105 @@ async def main():
             repo = commit["repo"]
             collection = commit["collection"]
             rkey = commit["rkey"]
-            # uri = AtUri.from_str("at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey))
 
             if operation == "create" or operation == "update":
                 record = models.get_or_create(commit["record"], strict=False)
 
-                if collection == models.ids.AppBskyActorProfile:
-                    db_ops[collection].append(
-                        UpdateOne(
-                            {"_id": repo},
-                            {
-                                "$set": {
-                                    **record.model_dump(exclude=["avatar", "banner", "py_type"]),
-                                    "created_at": (
-                                        datetime.datetime.fromisoformat(record["created_at"])
-                                        if record["created_at"]
-                                        else None
-                                    ),
-                                    "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                                },
-                                "$setOnInsert": {
-                                    "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                                },
-                            },
-                            upsert=True,
-                        )
-                    )
+                # if collection == models.ids.AppBskyActorProfile:
+                #     db_ops[collection].append(
+                #         UpdateOne(
+                #             {"_id": repo},
+                #             {
+                #                 "$set": {
+                #                     **record.model_dump(exclude=["avatar", "banner", "py_type"]),
+                #                     "created_at": (
+                #                         datetime.datetime.fromisoformat(record["created_at"])
+                #                         if record["created_at"]
+                #                         else None
+                #                     ),
+                #                     "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                #                 },
+                #                 "$setOnInsert": {
+                #                     "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                #                 },
+                #             },
+                #             upsert=True,
+                #         )
+                #     )
 
                 if operation == "create" and collection in INTERACTION_RECORDS:
                     interaction = parse_interaction(repo, collection, rkey, record)
                     if interaction:
-                        doc_filter, doc_update = interaction
-                        db_ops[_config.INTERACTIONS_COLLECTION].append(UpdateOne(doc_filter, doc_update, upsert=True))
+                        statement = acsylla.create_statement(
+                            "INSERT INTO bsky.interactions_by_author_collection (author, subject, collection, rkey, date) VALUES (?, ?, ?, ?, ?);",
+                            parameters=5,
+                        )
+                        statement.bind_dict(interaction)
+                        db_ops.append(statement)
+
+                        statement = acsylla.create_statement(
+                            "INSERT INTO bsky.interactions_by_subject_collection (author, subject, collection, rkey, date) VALUES (?, ?, ?, ?, ?);",
+                            parameters=5,
+                        )
+                        statement.bind_dict(interaction)
+                        db_ops.append(statement)
 
             if operation == "delete":
-                if collection == models.ids.AppBskyActorProfile:
-                    db_ops[collection].append(
-                        UpdateOne(
-                            {"_id": repo},
-                            {"$set": {"deleted": True}},
-                            upsert=True,
-                        )
-                    )
+                # if collection == models.ids.AppBskyActorProfile:
+                #     db_ops[collection].append(
+                #         UpdateOne(
+                #             {"_id": repo},
+                #             {"$set": {"deleted": True}},
+                #             upsert=True,
+                #         )
+                #     )
                 if collection in INTERACTION_RECORDS:
-                    db_ops[_config.INTERACTIONS_COLLECTION].append(
-                        UpdateOne(
-                            {"_id.author": repo, "_id.collection": collection, "items._id": rkey},
-                            { "$pull": { "items": { "_id": rkey }}}
-                        )
+                    statement = acsylla.create_statement(
+                        "DELETE FROM bsky.interactions_by_author_collection WHERE author=? AND collection=? AND rkey=?",
+                        parameters=3
                     )
+                    statement.bind_dict(dict(author=repo, collection=collection.split('.')[-1], rkey=rkey))
+                    db_ops.append(statement)
 
         return db_ops
 
-    logger.info("Connecting to Mongo")
-    await mongo_manager.connect()
-    db = mongo_manager.client.get_database(_config.INDEXER_DB)
+    logger.info("Connecting to Cassandra")
+    db = await cass_manager.create_session()
 
-    await db[_config.INTERACTIONS_COLLECTION].create_indexes(
-        [
-            IndexModel("_id.date", expireAfterSeconds = 60 * 60 * 24 * 15),
-            IndexModel(["_id.author", "_id.collection", "items._id"], unique=True),
-            IndexModel(["_id.author", "_id.date"]),
-            IndexModel(["items.subject", "_id.date"]),
-        ]
+    await db.query(
+        """
+        CREATE KEYSPACE IF NOT EXISTS bsky WITH REPLICATION = { 
+            'class': 'SimpleStrategy', 'replication_factor': 1
+        };
+        """
+    )
+    await db.use_keyspace("bsky")
+
+    await db.query(
+        """
+        CREATE TABLE IF NOT EXISTS interactions_by_author_collection (
+            author TEXT,
+            subject TEXT,
+            collection TEXT,
+            rkey TEXT,
+            date TIMESTAMP,
+            PRIMARY KEY ((author, collection), rkey, date)
+        );
+        """
     )
 
-    # for record_type in INTERACTION_RECORDS:
-    #     await db[f"{_config.INTERACTIONS_COLLECTION}.{record_type}"].create_indexes(
-    #         [
-    #             IndexModel("date", expireAfterSeconds = 60 * 60 * 24 * 15),
-    #             IndexModel(["author", "date"]),
-    #             IndexModel(["subject", "date"]),
-    #         ]
-    #     )
+    await db.query(
+        """
+        CREATE TABLE IF NOT EXISTS interactions_by_subject_collection (
+            author TEXT,
+            subject TEXT,
+            collection TEXT,
+            rkey TEXT,
+            date TIMESTAMP,
+            PRIMARY KEY ((subject, collection), rkey, date)
+        );
+        """
+    )
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()
@@ -148,17 +172,15 @@ async def main():
             return
 
         logger.debug("received messages")
-        all_ops = defaultdict(list)
+        all_ops = []
         for msg in msgs:
             db_ops = await _process_data(msg.data.decode())
-            for col, ops in db_ops.items():
-                all_ops[col].extend(ops)
+            all_ops.extend(db_ops)
         logger.debug("done processing messages")
 
-        tasks = []
-        for col, ops in all_ops.items():
-            tasks.append(db[col].bulk_write(ops, ordered=False))
+        tasks = [db.execute(op) for op in all_ops]
         await asyncio.gather(*tasks)
+
         logger.debug("done writing in db")
         await msg.ack()
 
@@ -192,7 +214,6 @@ async def main():
         logger.info("Shutting down...")
     finally:
         await nats_manager.disconnect()
-        # await mongo_manager.disconnect()
         logger.info("Shutdown complete.")
 
 

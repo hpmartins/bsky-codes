@@ -39,8 +39,8 @@ counters = dict(
     network=Counter("firehose_network", "data received"),
     events=Counter("firehose_events", "events"),
     post_langs=Counter("firehose_post_langs", "post languages", ["lang"]),
-    account=Counter("firehose_account_counter", "account updates", ["active", "status"]),
-    identity=Counter("firehose_identity_counter", "identity updates"),
+    account=Counter("firehose_account", "account updates", ["active", "status"]),
+    identity=Counter("firehose_identity", "identity updates"),
     firehose=Counter("firehose", "firehose", ["operation", "collection"]),
 )
 
@@ -164,9 +164,6 @@ def _process_commit(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> list[
             if not record_raw_data:
                 continue
 
-            # record = models.get_or_create(record_raw_data, strict=False)
-            # record_type = INTERESTED_RECORDS.get(uri.collection)
-            # if record_type and models.is_record_type(record, record_type):
             ops.append(
                 {
                     "operation": op.action,
