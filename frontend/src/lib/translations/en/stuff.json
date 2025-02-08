@@ -1,4 +1,28 @@
 {
+    "layout": {
+        "built": "built by henrique",
+        "support": "Support this site",
+        "contact": "contact",
+
+        "navbar": {
+            "interactions": "Interactions",
+            "blocks": "Blocks",
+            "languages": "Languages",
+            "top_blocked": "Top blocked",
+            "top_posters": "Top posters"
+        }
+    },
+    "homepage": {
+        "title": "Meow-elcome to Wolfgang!",
+        "headline": "Information about <a class='link' href='{{link}}'>Bluesky</a> accounts."
+    },
+    "top": {
+        "authorDesc": "top interactions by author",
+        "subjectDesc": "top interactions by subject",
+        "like": "likes",
+        "repost": "reposts",
+        "post": "replies/quotes"
+    },
     "common": {
         "handle": "type a bluesky handle",
         "of": "of",
@@ -8,90 +32,49 @@
         "total": "total",
         "search": "search",
         "language": "language",
-        "last_updated": "Last updated at {{date}}",
-
+        "last_updated": "Last updated: {{date}}",
         "prev": "prev",
         "next": "next",
-
         "characters": "number of characters",
         "replies": "number of replies",
         "likes": "number of likes",
         "reposts": "number of reposts",
-
-        "syncUpdate": "The profile has been marked for update. Check again in a few minutes.",
         "account404": "Could not find the account"
     },
-
-    "languages": {
-        "pagetitle": "Languages",
-        "title": "Languages",
-
-        "tableTitle": "Post count by language",
-        "tableSubtitle": "Last 7 days",
-        "selectPlaceholder": "All"
-    },
-
-    "blocks": {
-        "pagetitle": "Blocks",
-        "title": "Blocks",
-        "blocked": "Blocks",
-        "blockedBy": "Blocked by"
-    },
-
     "interactions": {
         "pagetitle": "Interactions",
         "title": "Interactions",
-
         "choose_week": "Choose a week",
         "choose_range": "... or a specific date range",
-
         "dates": {
             "all": "All time",
             "month": "Last 30 days",
             "week": "Last 7 days"
         },
-
         "bolas": {
             "title": "Image generator",
-
             "include": "Include",
             "sent": "Sent",
             "received": "Received",
-
             "options": "Options",
             "remove_bots": "Remove main bots",
             "remove_blocked": "Remove blocked users",
             "add_date": "Add date",
             "add_watermark": "Add watermark",
-
             "orbits": "Orbits",
             "bg_color": "Background color",
             "border_color": "Border color",
-
             "copy": "Copy image",
             "copyPeople": "Copy people list"
         },
-
         "separate": "Split",
         "consolidate": "Join",
-
         "table": {
             "title": {
                 "both": "Sent + Received",
                 "sent": "Sent",
                 "rcvd": "Received"
             }
-        }
-    },
-
-    "top": {
-        "blocked": {
-            "title": "Top blocked accounts in the last 72 hours"
-        },
-        "posters": {
-            "title": "Top posters in the last 72 hours",
-            "filter": "Filter by language",
-            "toggle": "remove possible bots [(likes+replies)/posts < 10%]"
         }
     }
 }

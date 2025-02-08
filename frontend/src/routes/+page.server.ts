@@ -3,9 +3,9 @@ import type { PageServerLoad } from './$types';
 const DATA_TYPE = 'top'
 
 const RECORDS = [
-    "app.bsky.feed.like",
-    "app.bsky.feed.repost",
-    "app.bsky.feed.post",
+    "like",
+    "repost",
+    "post",
 ]
 
 const NAMES = [
@@ -15,22 +15,41 @@ const NAMES = [
 
 export const load: PageServerLoad = async ({ fetch }) => {
 
-    const results: Record<string, any> = {}
+    const top_interactions: Record<string, Record<string, any>> = {}
     for (const name of NAMES) {
+        top_interactions[name] = {}
         console.log(name)
+        for (const record_type of RECORDS) {
+            try {
+                const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&record_type=${record_type}&name=${name}`)
+                if (response.ok) {
+                    const data = await response.json()
+                    top_interactions[name][record_type] = data
+                }
+            } catch (error) {
+                console.error('error fetching data')
+                top_interactions[name][record_type] = {}
+            }
+        }
+
+    }
+
+    const top_blocks: Record<string, any> = {}
+    for (const name of NAMES) {
         try {
-            const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&name=${name}`)
+            const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&record_type=block&name=${name}`)
             if (response.ok) {
                 const data = await response.json()
-                results[name] = data
+                top_blocks[name] = data
             }
         } catch (error) {
             console.error('error fetching data')
-            results[name] = {}
+            top_blocks[name] = {}
         }
     }
 
     return {
-        results: results
+        top_interactions: top_interactions,
+        top_blocks: top_blocks
     }
 };

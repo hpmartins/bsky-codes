@@ -20,9 +20,9 @@
         <thead>
             <tr class="text-center text-lg text-primary">
                 <th>#</th>
-                <th title={$t('features.common.user')}>{$t('features.common.user')}</th>
-                <th title={$t('features.common.characters')}><i class="bi bi-hash"></i></th>
-                <th title={$t('features.common.replies')}
+                <th title={$t('stuff.common.user')}>{$t('stuff.common.user')}</th>
+                <th title={$t('stuff.common.characters')}><i class="bi bi-hash"></i></th>
+                <th title={$t('stuff.common.replies')}
                     ><i class="bi bi-chat-square-text-fill"></i></th
                 >
                 <th title={$t('features.common.likes')}><i class="bi bi-repeat"></i></th>

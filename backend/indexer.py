@@ -90,6 +90,18 @@ async def main():
                         )
                     )
 
+                if collection == models.ids.AppBskyGraphBlock:
+                    db_ops[collection].append(
+                        InsertOne(
+                            {
+                                "_id": f"{repo}/{collection}/{rkey}",
+                                "author": repo,
+                                "subject": record.subject,
+                                "created_at": datetime.datetime.fromisoformat(record.created_at),
+                            }
+                        )
+                    )
+
                 if operation == "create" and collection in INTERACTION_RECORDS:
                     interaction = parse_interaction(repo, rkey, record)
                     if interaction:
@@ -105,6 +117,10 @@ async def main():
                             upsert=True,
                         )
                     )
+
+                if collection == models.ids.AppBskyGraphBlock:
+                    db_ops[collection].append(DeleteOne({"_id": f"{repo}/{collection}/{rkey}"}))
+
                 if collection in INTERACTION_RECORDS:
                     doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
                     db_ops[doc_collection].append(DeleteOne({"_id": f"{repo}/{rkey}"}))
@@ -124,6 +140,13 @@ async def main():
                 IndexModel("t", expireAfterSeconds=60 * 60 * 24 * 15),
             ]
         )
+
+    await db[models.ids.AppBskyGraphBlock].create_indexes(
+        [
+            IndexModel(["author", "created_at"]),
+            IndexModel(["subject", "created_at"]),
+        ]
+    )
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()

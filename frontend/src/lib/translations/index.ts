@@ -18,35 +18,13 @@ export const config: Config<
   loaders: [
     {
       locale: "en",
-      key: "layout",
-      loader: async () => (await import("./en/layout.json")).default,
-    },
-    {
-      locale: "en",
-      key: "home",
-      routes: ["/"],
-      loader: async () => (await import("./en/home.json")).default,
-    },
-    {
-      locale: "en",
-      key: "features",
-      loader: async () => (await import("./en/features.json")).default,
+      key: "stuff",
+      loader: async () => (await import("./en/stuff.json")).default,
     },
     {
       locale: "pt",
-      key: "layout",
-      loader: async () => (await import("./pt/layout.json")).default,
-    },
-    {
-      locale: "pt",
-      key: "home",
-      routes: ["/"],
-      loader: async () => (await import("./pt/home.json")).default,
-    },
-    {
-      locale: "pt",
-      key: "features",
-      loader: async () => (await import("./pt/features.json")).default,
+      key: "stuff",
+      loader: async () => (await import("./pt/stuff.json")).default,
     },
   ],
 };
