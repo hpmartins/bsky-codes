@@ -33,13 +33,14 @@ async def update_top_interactions():
 
     async def _get_top_interactions(
         record_type: Literal["like", "repost", "post"],
-        name: Literal["a", "s"],
+        name: Literal["author", "subject"],
     ):
         collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, record_type)
+        doc_name = name[0]
 
         agg_group = {
             "$group": {
-                "_id": f"${name}",
+                "_id": f"${doc_name}",
                 "count": {"$sum": 1},
             }
         }
@@ -64,7 +65,7 @@ async def update_top_interactions():
             res.append(doc)
         return res
 
-    async def update_data(record_type, name: Literal["a", "s"]):
+    async def update_data(record_type, name: Literal["author", "subject"]):
         log(f"update_top_interactions: start: {record_type}/{name}")
         try:
             items = await _get_top_interactions(record_type, name)
@@ -78,7 +79,7 @@ async def update_top_interactions():
 
     tasks = []
     for record_type in ["like", "repost", "post"]:
-        for name in ["a", "s"]:
+        for name in ["author", "subject"]:
             tasks.append(update_data(record_type, name))
     await asyncio.gather(*tasks)
 
