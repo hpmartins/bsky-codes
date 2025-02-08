@@ -37,13 +37,12 @@ def get_date(created_at: str | None = None):
         dt = datetime.datetime.fromisoformat(created_at)
     else:
         dt = datetime.datetime.now(tz=datetime.timezone.utc)
-    return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    return dt.replace(minute=0, second=0, microsecond=0)
 
 
 def _create_interaction(
     created_at: str,
     author: str,
-    collection: str,
     rkey: str,
     subject: str,
     others: dict = {},
@@ -51,32 +50,22 @@ def _create_interaction(
     if author == subject:
         return None
 
-    doc_filter = {
-        "_id.author": author,
-        "_id.date": get_date(created_at),
-        "_id.collection": collection,
+    return {
+        "_id": f"{author}/{rkey}",
+        "a": author,
+        "s": subject,
+        "t": get_date(created_at),
+        **others,
     }
 
-    doc_update = {
-        "$push": {
-            "items": {
-                "_id": rkey,
-                "subject": subject,
-                **others,
-            }
-        }
-    }
-    return doc_filter, doc_update
 
-
-def parse_interaction(author: str, collection: str, rkey: str, record):
+def parse_interaction(author: str, rkey: str, record):
     if models.is_record_type(record, models.ids.AppBskyFeedLike) or models.is_record_type(
         record, models.ids.AppBskyFeedRepost
     ):
         return _create_interaction(
             record.created_at,
             author,
-            collection,
             rkey,
             AtUri.from_str(record.subject.uri).host,
         )
@@ -86,10 +75,9 @@ def parse_interaction(author: str, collection: str, rkey: str, record):
             return _create_interaction(
                 record.created_at,
                 author,
-                collection,
                 rkey,
                 AtUri.from_str(record.reply.parent.uri).host,
-                dict(characters=len(record.text)),
+                dict(c=len(record.text)),
             )
 
         if record.embed is not None:
@@ -97,10 +85,9 @@ def parse_interaction(author: str, collection: str, rkey: str, record):
                 return _create_interaction(
                     record.created_at,
                     author,
-                    collection,
                     rkey,
                     AtUri.from_str(record.embed.record.uri).host,
-                    dict(characters=len(record.text)),
+                    dict(c=len(record.text)),
                 )
 
             if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecordWithMedia):
@@ -108,10 +95,9 @@ def parse_interaction(author: str, collection: str, rkey: str, record):
                     return _create_interaction(
                         record.created_at,
                         author,
-                        collection,
                         rkey,
                         AtUri.from_str(record.embed.record.record.uri).host,
-                        dict(characters=len(record.text)),
+                        dict(c=len(record.text)),
                     )
 
     return None

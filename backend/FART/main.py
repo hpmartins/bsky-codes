@@ -349,56 +349,57 @@ async def _get_interactions(
         start_date = end_date - datetime.timedelta(days=7)
 
     async def _aggregate_interactions(direction: Literal["from", "to"]) -> list[Interaction]:
-        author_field = "_id.author" if direction == "from" else "items.subject"
-        subject_field = "items.subject" if direction == "from" else "_id.author"
+        author_field = "a" if direction == "from" else "s"
+        subject_field = "s" if direction == "from" else "a"
 
-        pipeline = [
-            {
-                "$match": {
-                    author_field: did,
-                    "_id.date": {"$gte": start_date},
+        res = {}
+        for record_type in INTERACTION_RECORDS:
+            collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, record_type.split('.')[-1])
+            record_initial = record_type.split('.')[-1]
+
+            agg_group = {
+                "$group": {
+                    "_id": f"${subject_field}",
+                    record_initial: {"$sum": 1},
                 }
-            },
-            {"$unwind": "$items"},
-        ]
+            }
+            if record_type == models.ids.AppBskyFeedPost:
+                agg_group["$group"]["c"] = {"$sum": {"$ifNull": ["$c", "$$REMOVE"]}}
 
-        if direction == "to":
-            pipeline.append(
+            pipeline = [
                 {
                     "$match": {
                         author_field: did,
-                    }
-                }
-            )
-
-        pipeline.extend(
-            [
-                {
-                    "$group": {
-                        "_id": f"${subject_field}",
-                        "l": {"$sum": {"$cond": [{"$eq": ["$_id.collection", "app.bsky.feed.like"]}, 1, 0]}},
-                        "r": {"$sum": {"$cond": [{"$eq": ["$_id.collection", "app.bsky.feed.repost"]}, 1, 0]}},
-                        "p": {"$sum": {"$cond": [{"$eq": ["$_id.collection", "app.bsky.feed.post"]}, 1, 0]}},
-                        "c": {"$sum": {"$ifNull": ["$items.characters", 0]}},
+                        "t": {
+                            "$gte": start_date,
+                        },
                     }
                 },
-                {"$addFields": {"t": {"$sum": [
-                    {"$multiply": [1, "$l"]},
-                    {"$multiply": [2, "$r"]},
-                    {"$multiply": [2, "$p"]},
-                    {"$divide": ["$c", 100]},
-                ]}}},
-                {"$sort": {"t": -1}},
+                agg_group,
+                {"$sort": {record_initial: -1}},
                 {"$limit": 100},
             ]
-        )
 
-        logger.info(f"starting for {did}:")
-        res: list[Interaction] = []
-        async for doc in app.db.get_collection(config.INTERACTIONS_COLLECTION).aggregate(pipeline):
-            res.append(doc)
+            print(pipeline)
 
-        return res
+            logger.info(f"starting for {did}: {record_type}")
+            async for doc in app.db.get_collection(collection).aggregate(pipeline):
+                res[doc["_id"]] = {record_initial: doc[record_initial], "c": doc.get("c", 0), **res.get(doc["_id"], {})}
+
+        agg_res: list[Interaction] = []
+        for _id, values in res.items():
+            agg_res.append(
+                Interaction(
+                    _id=_id,
+                    l=values.get("l", 0),
+                    r=values.get("r", 0),
+                    p=values.get("p", 0),
+                    c=values.get("c", 0),
+                    t=values.get("l", 0) + values.get("r", 0) + values.get("p", 0),
+                )
+            )
+        agg_res.sort(key=lambda x: x["t"], reverse=True)
+        return agg_res
 
     if source == "both":
         return {

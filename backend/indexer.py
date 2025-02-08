@@ -64,7 +64,6 @@ async def main():
             repo = commit["repo"]
             collection = commit["collection"]
             rkey = commit["rkey"]
-            # uri = AtUri.from_str("at://{}/{}/{}".format(event.did, event.commit.collection, event.commit.rkey))
 
             if operation == "create" or operation == "update":
                 record = models.get_or_create(commit["record"], strict=False)
@@ -92,10 +91,10 @@ async def main():
                     )
 
                 if operation == "create" and collection in INTERACTION_RECORDS:
-                    interaction = parse_interaction(repo, collection, rkey, record)
+                    interaction = parse_interaction(repo, rkey, record)
                     if interaction:
-                        doc_filter, doc_update = interaction
-                        db_ops[_config.INTERACTIONS_COLLECTION].append(UpdateOne(doc_filter, doc_update, upsert=True))
+                        doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
+                        db_ops[doc_collection].append(InsertOne(interaction))
 
             if operation == "delete":
                 if collection == models.ids.AppBskyActorProfile:
@@ -107,12 +106,8 @@ async def main():
                         )
                     )
                 if collection in INTERACTION_RECORDS:
-                    db_ops[_config.INTERACTIONS_COLLECTION].append(
-                        UpdateOne(
-                            {"_id.author": repo, "_id.collection": collection, "items._id": rkey},
-                            { "$pull": { "items": { "_id": rkey }}}
-                        )
-                    )
+                    doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
+                    db_ops[doc_collection].append(DeleteOne({"_id": f"{repo}/{rkey}"}))
 
         return db_ops
 
@@ -120,23 +115,15 @@ async def main():
     await mongo_manager.connect()
     db = mongo_manager.client.get_database(_config.INDEXER_DB)
 
-    await db[_config.INTERACTIONS_COLLECTION].create_indexes(
-        [
-            IndexModel("_id.date", expireAfterSeconds = 60 * 60 * 24 * 15),
-            IndexModel(["_id.author", "_id.collection", "items._id"], unique=True),
-            IndexModel(["_id.author", "_id.date"]),
-            IndexModel(["items.subject", "_id.date"]),
-        ]
-    )
-
-    # for record_type in INTERACTION_RECORDS:
-    #     await db[f"{_config.INTERACTIONS_COLLECTION}.{record_type}"].create_indexes(
-    #         [
-    #             IndexModel("date", expireAfterSeconds = 60 * 60 * 24 * 15),
-    #             IndexModel(["author", "date"]),
-    #             IndexModel(["subject", "date"]),
-    #         ]
-    #     )
+    for record_type in INTERACTION_RECORDS:
+        doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, record_type.split(".")[-1])
+        await db[doc_collection].create_indexes(
+            [
+                IndexModel(["a", "t"]),
+                IndexModel(["s", "t"]),
+                IndexModel("t", expireAfterSeconds=60 * 60 * 24 * 15),
+            ]
+        )
 
     logger.info("Connecting to NATS")
     await nats_manager.connect()
@@ -192,7 +179,7 @@ async def main():
         logger.info("Shutting down...")
     finally:
         await nats_manager.disconnect()
-        # await mongo_manager.disconnect()
+        await mongo_manager.disconnect()
         logger.info("Shutdown complete.")
 
 
