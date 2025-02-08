@@ -461,11 +461,13 @@ async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
 @app.get("/dd/{data_type}/{name}")
 async def _fetch_dynamic_data(
     data_type: str,
+    record_type: Literal["like", "repost", "post"],
     name: Literal["author", "subject"],
 ):
     doc = await app.db.get_collection(config.DYNAMIC_COLLECTION).find_one(
         filter={
             "type": data_type,
+            "record_type": record_type,
             "name": name,
         },
         sort={"_id": -1},
