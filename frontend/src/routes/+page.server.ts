@@ -18,7 +18,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
     const top_interactions: Record<string, Record<string, any>> = {}
     for (const name of NAMES) {
         top_interactions[name] = {}
-        console.log(name)
         for (const record_type of RECORDS) {
             try {
                 const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&record_type=${record_type}&name=${name}`)
