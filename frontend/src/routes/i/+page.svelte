@@ -41,15 +41,12 @@ Very Soon™
   <h2>Results for @{data.actor}</h2>
 
   <details class="collapse bg-base-200">
-    <summary
-      class="collapse-title text-xl text-center font-medium text-secondary bg-primary"
+    <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary"
       >↠ {$t("features.interactions.bolas.title")} ↞</summary
     >
     <div class="collapse-content">
       <div class="flex flex-col justify-center items-center gap-4">
-        <div
-          class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3"
-        >
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3">
           <div>
             {$t("features.interactions.bolas.include")}:
             <label class="label cursor-pointer gap-x-3 justify-start">
@@ -58,9 +55,7 @@ Very Soon™
                 type="checkbox"
                 bind:checked={circlesOptions.include_sent}
               />
-              <span class="label-text"
-                >{$t("features.interactions.bolas.sent")}</span
-              >
+              <span class="label-text">{$t("features.interactions.bolas.sent")}</span>
             </label>
             <label class="label cursor-pointer gap-x-3 justify-start">
               <input
@@ -68,9 +63,7 @@ Very Soon™
                 type="checkbox"
                 bind:checked={circlesOptions.include_rcvd}
               />
-              <span class="label-text"
-                >{$t("features.interactions.bolas.received")}</span
-              >
+              <span class="label-text">{$t("features.interactions.bolas.received")}</span>
             </label>
           </div>
           <div>
@@ -81,9 +74,7 @@ Very Soon™
                 type="checkbox"
                 bind:checked={circlesOptions.add_date}
               />
-              <span class="label-text"
-                >{$t("features.interactions.bolas.add_date")}</span
-              >
+              <span class="label-text">{$t("features.interactions.bolas.add_date")}</span>
             </label>
             <label class="label cursor-pointer gap-x-3 justify-start">
               <input
@@ -91,9 +82,7 @@ Very Soon™
                 type="checkbox"
                 bind:checked={circlesOptions.add_watermark}
               />
-              <span class="label-text"
-                >{$t("features.interactions.bolas.add_watermark")}</span
-              >
+              <span class="label-text">{$t("features.interactions.bolas.add_watermark")}</span>
             </label>
           </div>
           <div>
@@ -109,11 +98,7 @@ Very Soon™
             </div>
             <div>
               {$t("features.interactions.bolas.bg_color")}:
-              <input
-                type="color"
-                style="width:100%;"
-                bind:value={circlesOptions.bg_color}
-              />
+              <input type="color" style="width:100%;" bind:value={circlesOptions.bg_color} />
             </div>
             <div>
               <label class="flex items-center space-x-2">
@@ -124,22 +109,14 @@ Very Soon™
                 />
                 <p>{$t("features.interactions.bolas.border_color")}:</p>
               </label>
-              <input
-                type="color"
-                style="width:100%;"
-                bind:value={circlesOptions.border_color}
-              />
+              <input type="color" style="width:100%;" bind:value={circlesOptions.border_color} />
             </div>
           </div>
         </div>
 
         <div>
           {#key data}{#key circlesOptions}
-              <Circles
-                profile={data.interactions}
-                data={data.interactions}
-                options={circlesOptions}
-              />
+              <Circles profile={data.interactions} data={data.interactions} options={circlesOptions} />
             {/key}{/key}
         </div>
       </div>

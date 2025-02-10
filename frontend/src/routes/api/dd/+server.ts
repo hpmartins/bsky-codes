@@ -19,11 +19,11 @@ export const GET: RequestHandler = async ({ fetch, url }) => {
     }
   );
 
-    const data = await response.json();
+  const data = await response.json();
 
-    return new Response(JSON.stringify(data), {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+  return new Response(JSON.stringify(data), {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
 };
