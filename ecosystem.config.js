@@ -18,5 +18,14 @@ module.exports = {
       interpreter: "./.venv/bin/python",
       time: true,
     },
+    {
+      name: "FART",
+      script: "./backend/FART/main.py",
+      instances: "1",
+      autorestart: true,
+      interpreter: "./.venv/bin/fastapi",
+      interpreter_args: "run",
+      time: true,
+    },
   ],
 };
