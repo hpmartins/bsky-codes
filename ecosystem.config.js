@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "enjoyer",
       script: "./backend/firehose_enjoyer.py",
-      args: [],
+      args: ["--log=DEBUG"],
       instances: "1",
       autorestart: true,
       interpreter: "./.venv/bin/python",
@@ -12,7 +12,7 @@ module.exports = {
     {
       name: "indexer",
       script: "./backend/indexer.py",
-      args: [],
+      args: ["--log=DEBUG"],
       instances: "1",
       autorestart: true,
       interpreter: "./.venv/bin/python",

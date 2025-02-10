@@ -7,7 +7,7 @@ services:
       - '4222:4222'
     restart: always
     volumes:
-      - nats-data:/data
+      - ${NATS_DATA_FOLDER}:/data
     command: "-js -sd /data --http_port 8222"
 
   mongo:
@@ -16,7 +16,7 @@ services:
     ports:
       - '27017:27017'
     volumes:
-      - mongo-data:/data/db
+      - ${MONGO_DATA_FOLDER}:/data/db
 
   nats_exporter:
     image: natsio/prometheus-nats-exporter
@@ -37,9 +37,3 @@ services:
       - --collect-all
     depends_on:
       - mongo
-
-volumes:
-  nats-data:
-  mongo-data:
-  grafana-data:
-  prometheus-data:
