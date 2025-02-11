@@ -7,10 +7,7 @@ from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy
 from nats.js.errors import NotFoundError
 from collections import defaultdict
-from atproto import (
-    models,
-    AtUri,
-)
+from atproto import models
 import argparse
 
 from utils.nats import NATSManager
@@ -57,6 +54,39 @@ async def main():
 
         if not _config.INDEXER_ENABLE:
             return {}
+
+        if event["kind"] == "account":
+            db_ops[models.ids.AppBskyActorProfile].append(
+                UpdateOne(
+                    {"_id": event["account"].did},
+                    {
+                        "$set": {
+                            "active": event["account"].active,
+                            "status": event["account"].status,
+                            "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                        },
+                        "$setOnInsert": {
+                            "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                        },
+                    },
+                    upsert=True,
+                )
+            )
+
+        if event["kind"] == "identity":
+            db_ops[models.AppBskyActorProfile].append(
+                {"_id": event["identity"].did},
+                {
+                    "$set": {
+                        "handle": event["identity"].handle,
+                        "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                    },
+                    "$setOnInsert": {
+                        "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                    },
+                },
+                upsert=True,
+            )
 
         if event["kind"] == "commit":
             commit = event["commit"]
