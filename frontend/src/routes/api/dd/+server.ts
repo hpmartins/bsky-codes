@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { FART_URL, FART_KEY } from '$env/static/private';
+import { FART_URL } from '$env/static/private';
 
 export const GET: RequestHandler = async ({ fetch, url }) => {
   let data_type = url.searchParams.get('data_type');
@@ -12,11 +12,11 @@ export const GET: RequestHandler = async ({ fetch, url }) => {
 
   const response = await fetch(
     `${FART_URL}/dd/${data_type}/${record_type}/${name}`,
-    {
-      headers: {
-        Authorization: `Bearer ${FART_KEY}`,
-      },
-    }
+    // {
+    //   headers: {
+    //     Authorization: `Bearer ${FART_KEY}`,
+    //   },
+    // }
   );
 
   const data = await response.json();
