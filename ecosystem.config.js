@@ -27,5 +27,13 @@ module.exports = {
       interpreter_args: "run",
       time: true,
     },
+    {
+      name: "wolfgang",
+      script: "./server.js",
+      cwd: "./frontend",
+      instances: "1",
+      autorestart: true,
+      time: true,
+    },
   ],
 };
