@@ -19,6 +19,14 @@ module.exports = {
       time: true,
     },
     {
+      name: "chrono_trigger",
+      script: "./backend/chrono_trigger.py",
+      instances: "1",
+      autorestart: true,
+      interpreter: "./.venv/bin/python",
+      time: true,
+    },
+    {
       name: "FART",
       script: "./backend/FART/main.py",
       instances: "1",
