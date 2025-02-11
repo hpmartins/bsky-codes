@@ -19,7 +19,7 @@
 
   <div>
     <a href="/" role="button" class="btn btn-sm btn-primary">home</a>
-    <a href="/i" role="button" class="btn btn-sm btn-primary">interactions</a>
+    <!-- <a href="/i" role="button" class="btn btn-sm btn-primary">interactions</a> -->
   </div>
 
   <div class="mt-2">
