@@ -77,17 +77,19 @@ async def main():
         if event["kind"] == "identity":
             identity = models.ComAtprotoSyncSubscribeRepos.Identity.model_validate(event["identity"])
             db_ops[models.AppBskyActorProfile].append(
-                {"_id": identity.did},
-                {
-                    "$set": {
-                        "handle": identity.handle,
-                        "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                UpdateOne(
+                    {"_id": identity.did},
+                    {
+                        "$set": {
+                            "handle": identity.handle,
+                            "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                        },
+                        "$setOnInsert": {
+                            "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                        },
                     },
-                    "$setOnInsert": {
-                        "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                    },
-                },
-                upsert=True,
+                    upsert=True,
+                )
             )
 
         if event["kind"] == "commit":
