@@ -94,7 +94,7 @@ async def subscribe_to_firehose(nm: NATSManager):
 
         if isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Account):
             await nm.publish(
-                get_nats_subject("account"), EventAccount(kind="account", identity=parsed_message.model_dump())
+                get_nats_subject("account"), EventAccount(kind="account", account=parsed_message.model_dump())
             )
             counters["account"].labels(parsed_message.active, parsed_message.status).inc()
 
