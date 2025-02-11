@@ -56,13 +56,14 @@ async def main():
             return {}
 
         if event["kind"] == "account":
+            account = models.ComAtprotoSyncSubscribeRepos.Account.model_validate(event["account"])
             db_ops[models.ids.AppBskyActorProfile].append(
                 UpdateOne(
-                    {"_id": event["account"].did},
+                    {"_id": account.did},
                     {
                         "$set": {
-                            "active": event["account"].active,
-                            "status": event["account"].status,
+                            "active": account.active,
+                            "status": account.status,
                             "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
                         },
                         "$setOnInsert": {
@@ -74,11 +75,12 @@ async def main():
             )
 
         if event["kind"] == "identity":
+            identity = models.ComAtprotoSyncSubscribeRepos.Identity.model_validate(event["identity"])
             db_ops[models.AppBskyActorProfile].append(
-                {"_id": event["identity"].did},
+                {"_id": identity.did},
                 {
                     "$set": {
-                        "handle": event["identity"].handle,
+                        "handle": identity.handle,
                         "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
                     },
                     "$setOnInsert": {

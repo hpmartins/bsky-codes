@@ -80,12 +80,12 @@ Commit = Union[CommitCreate, CommitUpdate, CommitDelete]
 
 class EventAccount(TypedDict):
     kind: Literal["account"]
-    account: models.ComAtprotoSyncSubscribeRepos.Account
+    account: dict
 
 
 class EventIdentity(TypedDict):
     kind: Literal["identity"]
-    identity: models.ComAtprotoSyncSubscribeRepos.Identity
+    identity: dict
 
 
 class EventCommit(TypedDict):
