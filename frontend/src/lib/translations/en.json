@@ -19,6 +19,7 @@
     "top": {
         "authorDesc": "top interactions by author",
         "subjectDesc": "top interactions by subject",
+        "updateDesc": "updated every few hours (timestamp under tables)",
         "like": "likes",
         "repost": "reposts",
         "post": "replies/quotes"

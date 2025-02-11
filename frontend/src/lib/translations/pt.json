@@ -19,6 +19,7 @@
     "top": {
         "authorDesc": "top interações enviadas",
         "subjectDesc": "top interações recebidas",
+        "updateDesc": "atualizado a cada poucas horas (data e horário embaixo das tabelas)",
         "like": "curtidas",
         "repost": "repostagens",
         "post": "respostas/citações"

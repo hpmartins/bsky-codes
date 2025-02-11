@@ -19,12 +19,12 @@ export const config: Config<
     {
       locale: "en",
       key: "stuff",
-      loader: async () => (await import("./en/stuff.json")).default,
+      loader: async () => (await import("./en.json")).default,
     },
     {
       locale: "pt",
       key: "stuff",
-      loader: async () => (await import("./pt/stuff.json")).default,
+      loader: async () => (await import("./pt.json")).default,
     },
   ],
 };
