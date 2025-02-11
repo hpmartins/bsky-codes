@@ -1,5 +1,3 @@
-import aiohttp
-from aiohttp import ClientSession
 import datetime
 import asyncio
 from typing import Literal
@@ -9,7 +7,6 @@ from apscheduler.triggers.cron import CronTrigger
 
 from utils.core import Config
 from utils.database import MongoDBManager
-from utils.interactions import get_date
 
 from atproto import (
     AsyncClient,
@@ -158,6 +155,7 @@ async def update_top_blocks():
         )
 
     log("update_top_blocks: end")
+
 
 async def main():
     """Main function to schedule and run the updates."""
