@@ -11,7 +11,7 @@
 </svelte:head>
 
 <div class="flex flex-col items-center pt-2 gap-y-2 min-h-screen text-center">
-  <h1 class="text-2xl">Wolfgang</h1>
+  <h1 class="text-2xl text-primary">{$t('stuff.homepage.title')}</h1>
 
   <div class="logo w-25 h-40 rounded-xl overflow-hidden">
     <img src="/logo.jpg" alt="Logo" class="w-full h-full object-cover" />
@@ -22,7 +22,7 @@
     <!-- <a href="/i" role="button" class="btn btn-sm btn-primary">interactions</a> -->
   </div>
 
-  <div class="mt-2">
+  <div class="mt-2 border rounded-md">
     {@render children()}
   </div>
 
