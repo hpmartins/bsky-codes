@@ -56,7 +56,7 @@ async def main():
             return {}
 
         if event["kind"] == "account":
-            account = models.ComAtprotoSyncSubscribeRepos.Account.model_validate(event["account"])
+            account = models.ComAtprotoSyncSubscribeRepos.Account.model_validate(event["account"], strict=False)
             db_ops[models.ids.AppBskyActorProfile].append(
                 UpdateOne(
                     {"_id": account.did},
@@ -75,8 +75,8 @@ async def main():
             )
 
         if event["kind"] == "identity":
-            identity = models.ComAtprotoSyncSubscribeRepos.Identity.model_validate(event["identity"])
-            db_ops[models.AppBskyActorProfile].append(
+            identity = models.ComAtprotoSyncSubscribeRepos.Identity.model_validate(event["identity"], strict=False)
+            db_ops[models.ids.AppBskyActorProfile].append(
                 UpdateOne(
                     {"_id": identity.did},
                     {
