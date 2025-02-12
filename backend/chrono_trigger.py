@@ -45,19 +45,17 @@ async def update_top_interactions():
     db = mongo_manager.client.get_database(config.FART_DB)
     start_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=1)
 
-    async def update_data(record_type: Literal["like", "repost", "post"], name: Literal["author", "subject"]):
-        log(f"update_top_interactions: start: {record_type}/{name}")
+    async def _fetch(key: Literal["like", "repost", "post"], subkey: Literal["author", "subject"]):
+        log(f"update_top_interactions: start: {key}/{subkey}")
 
-        collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, record_type)
-        doc_name = name[0]
-
+        collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, key)
         agg_group = {
             "$group": {
-                "_id": f"${doc_name}",
+                "_id": f"${subkey[0]}",
                 "count": {"$sum": 1},
             }
         }
-        if record_type == "post":
+        if key == "post":
             agg_group["$group"]["c"] = {"$sum": "$c"}
 
         pipeline = [
@@ -73,33 +71,32 @@ async def update_top_interactions():
             {"$limit": 25},
         ]
 
-        data = []
+        items = []
         try:
             async for doc in db.get_collection(collection).aggregate(pipeline):
-                data.append(doc)
-            if data:
-                log(f"update_top_interactions: end: {record_type}/{name}")
-                return {"record_type": record_type, "name": name, "data": data}
+                items.append(doc)
+            if items:
+                log(f"update_top_interactions: end: {key}/{subkey}")
+                return {"key": key, "subkey": subkey, "items": items}
         except Exception as e:
-            log(f"update_top_interactions: error: {record_type}/{name}: {e}")
+            log(f"update_top_interactions: error: {key}/{subkey}: {e}")
 
     tasks = []
-    for record_type in ["like", "repost", "post"]:
-        for name in ["author", "subject"]:
-            tasks.append(update_data(record_type, name))
+    for key in ["like", "repost", "post"]:
+        for subkey in ["author", "subject"]:
+            tasks.append(_fetch(key, subkey))
 
     data = await asyncio.gather(*tasks)
     did_list = []
     for item in data:
-        did_list.extend([x.get("_id") for x in item["data"]])
+        did_list.extend([x.get("_id") for x in item["items"]])
     did_list = list(set(did_list))
+
     profiles = await fetch_profiles(did_list)
     for item in data:
-        item["data"] = [{**x, "profile": profiles.get(x["_id"], None)} for x in item["data"]]
+        item["items"] = [{**x, "profile": profiles.get(x["_id"], None)} for x in item["items"]]
 
-        await db[config.DYNAMIC_COLLECTION].insert_one(
-            {"type": "top", "record_type": item["record_type"], "name": item["name"], "data": item["data"]}
-        )
+    await db[config.DYNAMIC_COLLECTION].insert_one({"name": "top_interactions", "data": data})
 
     log("update_top_interactions: end")
 
@@ -108,8 +105,8 @@ async def update_top_blocks():
     db = mongo_manager.client.get_database(config.FART_DB)
     start_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=1)
 
-    async def update_data(name: Literal["author", "subject"]):
-        log(f"update_top_blocks: start: block/{name}")
+    async def update_data(key: Literal["author", "subject"]):
+        log(f"update_top_blocks: start: block/{key}")
         pipeline = [
             {
                 "$match": {
@@ -120,7 +117,7 @@ async def update_top_blocks():
             },
             {
                 "$group": {
-                    "_id": f"${name}",
+                    "_id": f"${key}",
                     "count": {"$sum": 1},
                 }
             },
@@ -128,31 +125,30 @@ async def update_top_blocks():
             {"$limit": 25},
         ]
 
-        data = []
+        items = []
         try:
             async for doc in db.get_collection("app.bsky.graph.block").aggregate(pipeline):
-                data.append(doc)
-            if data:
-                log(f"update_top_blocks: end: block/{name}")
-                return {"name": name, "data": data}
+                items.append(doc)
+            if items:
+                log(f"update_top_blocks: end: block/{key}")
+                return {"key": key, "items": items}
         except Exception as e:
-            log(f"update_top_blocks: error: block/{name}: {e}")
+            log(f"update_top_blocks: error: block/{key}: {e}")
 
     tasks = []
-    for name in ["author", "subject"]:
-        tasks.append(update_data(name))
+    for key in ["author", "subject"]:
+        tasks.append(update_data(key))
     data = await asyncio.gather(*tasks)
 
     did_list = []
     for item in data:
-        did_list.extend([x.get("_id") for x in item["data"]])
+        did_list.extend([x.get("_id") for x in item["items"]])
     did_list = list(set(did_list))
     profiles = await fetch_profiles(did_list)
     for item in data:
-        item["data"] = [{**x, "profile": profiles.get(x["_id"], None)} for x in item["data"]]
-        await db[config.DYNAMIC_COLLECTION].insert_one(
-            {"type": "top", "record_type": "block", "name": item["name"], "data": item["data"]}
-        )
+        item["items"] = [{**x, "profile": profiles.get(x["_id"], None)} for x in item["items"]]
+
+    await db[config.DYNAMIC_COLLECTION].insert_one({"name": "top_blocks", "data": data})
 
     log("update_top_blocks: end")
 
@@ -160,6 +156,8 @@ async def update_top_blocks():
 async def main():
     """Main function to schedule and run the updates."""
     await mongo_manager.connect()
+
+    await update_top_interactions()
 
     async with AsyncScheduler() as scheduler:
         await scheduler.add_schedule(

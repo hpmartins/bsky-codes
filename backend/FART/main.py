@@ -458,16 +458,12 @@ async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
     return responses.StreamingResponse(stream, media_type="image/png")
 
 
-@app.get("/dd/{data_type}/{record_type}/{name}")
+@app.get("/dd/{name}")
 async def _fetch_dynamic_data(
-    data_type: str,
-    record_type: Literal["like", "repost", "post", "block"],
-    name: Literal["author", "subject"],
+    name: Literal["top_blocks", "top_interactions"],
 ):
     doc = await app.db.get_collection(config.DYNAMIC_COLLECTION).find_one(
         filter={
-            "type": data_type,
-            "record_type": record_type,
             "name": name,
         },
         sort={"_id": -1},
