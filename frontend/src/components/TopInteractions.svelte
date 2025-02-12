@@ -20,12 +20,12 @@
 </script>
 
 {#each NAMES as subkey}
-    <p class="pt-2 text-xl text-primary">{$t(`stuff.top.${subkey}Desc`)}</p>
-    <p>{date}</p>
-    <div class="flex flex-row py-3">
+    <p class="pt-2 text-xl text-primary text-center">{$t(`stuff.top.${subkey}Desc`)}</p>
+    <p class="text-center">{date}</p>
+    <div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         {#each RECORDS as key}
-            {@const tdata = data.filter(x => (x.key == key) && (x.subkey == subkey))[0]}
-            <div class="flex flex-col items-center px-3">
+            {@const tdata = data.filter((x) => x.key == key && x.subkey == subkey)[0]}
+            <div class="flex flex-col items-center">
                 <div class="badge badge-secondary">
                     <i class="bi {BADGES[key]}"></i>
                     {$t(`stuff.top.${key}`)}
@@ -60,6 +60,7 @@
                 </div>
             </div>
         {/each}
+        <!-- </div> -->
     </div>
     <hr />
 {/each}

@@ -7,8 +7,8 @@
     import TopBlocks from "#/TopBlocks.svelte";
 </script>
 
-<div class="my-2 border rounded-md">
-    <p class="text-md text-primary">{$t("stuff.top.updateDesc")}</p>
+<div class="border rounded-md">
+    <p class="text-md text-primary text-center">{$t("stuff.top.updateDesc")}</p>
     <hr />
     {#if data.top_interactions}
         <TopInteractions src={data.top_interactions} />
