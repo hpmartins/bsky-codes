@@ -24,8 +24,8 @@
   <title>Wolfgang - {$t("features.interactions.pagetitle")}</title>
 </svelte:head>
 
-Very Soon™
-<form>
+Soon™
+<!-- <form>
   <div class="join">
     <input
       class="input input-primary join-item"
@@ -36,7 +36,7 @@ Very Soon™
     />
     <button class="btn btn-primary join-item" type="submit">Search</button>
   </div>
-</form>
+</form> -->
 {#if data.interactions}
   <h2>Results for @{data.actor}</h2>
 
