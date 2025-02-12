@@ -22,9 +22,7 @@
     <!-- <a href="/i" role="button" class="btn btn-sm btn-primary">interactions</a> -->
   </div>
 
-  <div class="mt-2 border rounded-md">
-    {@render children()}
-  </div>
+  {@render children()}
 
   <!-- <footer class="footer footer-center p-4 mt-auto text-base-content">
     <aside>
