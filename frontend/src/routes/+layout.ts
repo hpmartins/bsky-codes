@@ -1,12 +1,14 @@
-import { loadTranslations } from '$lib/translations';
+import { addTranslations, setLocale, setRoute } from '$lib/translations';
 import type { LayoutLoad } from './$types';
 
-export const load: LayoutLoad = async ({ url }) => {
-  const { pathname } = url;
+export const load: LayoutLoad = async ({ data }) => {
+  const { i18n, translations } = data;
+  const { locale, route } = i18n;
 
-  const initLocale = 'en';
+  addTranslations(translations);
 
-  await loadTranslations(initLocale, pathname);
+  await setRoute(route);
+  await setLocale(locale);
 
-  return {};
+  return i18n;
 }
