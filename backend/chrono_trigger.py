@@ -157,8 +157,6 @@ async def main():
     """Main function to schedule and run the updates."""
     await mongo_manager.connect()
 
-    await update_top_interactions()
-
     async with AsyncScheduler() as scheduler:
         await scheduler.add_schedule(
             update_top_interactions, CronTrigger.from_crontab(config.CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL)
