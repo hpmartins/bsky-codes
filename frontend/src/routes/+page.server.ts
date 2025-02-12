@@ -17,7 +17,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
     try {
         const response = await fetch(`${FART_URL}/dd/top_blocks`)
-        console.log(response)
         if (response.ok) {
             top_blocks = await response.json()
         }
