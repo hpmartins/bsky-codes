@@ -24,7 +24,7 @@
   </div>
 </header>
 
-<main class="container mx-auto px-2 py-2">
+<main class="container mx-auto p-2 max-w-6xl">
   {@render children()}
 </main>
 
