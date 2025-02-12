@@ -35,3 +35,31 @@ export type CirclesOptionsType = {
   add_border: boolean;
   border_color: string;
 };
+
+export type TopBlocksResponse = {
+  _id: string;
+  name: string;
+  data: {
+    key: string;
+    items: {
+      _id: string;
+      count: number;
+      profile: SimpleProfileType
+    }[]
+  }[]
+}
+
+export type TopInteractionsResponse = {
+  _id: string;
+  name: string;
+  data: {
+    key: string;
+    subkey: string;
+    items: {
+      _id: string;
+      count: number;
+      c?: number;
+      profile: SimpleProfileType
+    }[]
+  }[]
+}

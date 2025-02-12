@@ -1,5 +1,6 @@
 <script lang="ts">
-    let { data }: { data: { top_interactions: any; top_blocks: any } } = $props();
+    import type { TopBlocksResponse, TopInteractionsResponse } from "$lib/types";
+    let { data }: { data: { top_interactions: TopInteractionsResponse; top_blocks: TopBlocksResponse } } = $props();
 
     import { t } from "$lib/translations";
     import TopInteractions from "#/TopInteractions.svelte";
@@ -10,13 +11,10 @@
     <p class="text-md text-primary">{$t("stuff.top.updateDesc")}</p>
     <hr />
     {#if data.top_interactions}
-        <TopInteractions data={data.top_interactions} />
+        <TopInteractions src={data.top_interactions} />
     {/if}
 
     {#if data.top_blocks}
-        <p class="pt-5 text-xl text-primary">blocks</p>
-        <div class="flex flex-row justify-center py-3">
-            <TopBlocks data={data.top_blocks} />
-        </div>
+        <TopBlocks src={data.top_blocks} />
     {/if}
 </div>

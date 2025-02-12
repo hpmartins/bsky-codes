@@ -1,50 +1,29 @@
 import type { PageServerLoad } from './$types';
-
-const DATA_TYPE = 'top'
-
-const RECORDS = [
-    "like",
-    "repost",
-    "post",
-]
-
-const NAMES = [
-    "author",
-    "subject",
-]
+import { FART_URL } from '$env/static/private';
 
 export const load: PageServerLoad = async ({ fetch }) => {
+    let top_interactions: Record<string, any> = {}
+    let top_blocks: Record<string, any> = {}
 
-    const top_interactions: Record<string, Record<string, any>> = {}
-    for (const name of NAMES) {
-        top_interactions[name] = {}
-        for (const record_type of RECORDS) {
-            try {
-                const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&record_type=${record_type}&name=${name}`)
-                if (response.ok) {
-                    const data = await response.json()
-                    top_interactions[name][record_type] = data
-                }
-            } catch (error) {
-                console.error('error fetching data')
-                top_interactions[name][record_type] = {}
-            }
+    try {
+        const response = await fetch(`${FART_URL}/dd/top_interactions`)
+        if (response.ok) {
+            top_interactions = await response.json()
         }
-
+    } catch (error) {
+        console.error('error fetching data')
+        top_interactions = {}
     }
 
-    const top_blocks: Record<string, any> = {}
-    for (const name of NAMES) {
-        try {
-            const response = await fetch(`/api/dd?data_type=${DATA_TYPE}&record_type=block&name=${name}`)
-            if (response.ok) {
-                const data = await response.json()
-                top_blocks[name] = data
-            }
-        } catch (error) {
-            console.error('error fetching data')
-            top_blocks[name] = {}
+    try {
+        const response = await fetch(`${FART_URL}/dd/top_blocks`)
+        console.log(response)
+        if (response.ok) {
+            top_blocks = await response.json()
         }
+    } catch (error) {
+        console.error('error fetching data')
+        top_blocks = {}
     }
 
     return {
