@@ -6,7 +6,7 @@
     import UserRow from "#/UserRow.svelte";
 
     const RECORDS = ["like", "repost", "post"];
-    const NAMES = ["author", "subject"];
+    const NAMES = ["subject", "author"];
 
     const BADGES: Record<string, string> = {
         like: "bi-heart-fill",
