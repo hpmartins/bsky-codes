@@ -10,7 +10,7 @@
     $: start = currentPage * perPage;
     $: end = currentPage === totalPages - 1 ? totalRows - 1 : start + perPage - 1;
 
-    $: trimmedRows = rows.slice(start, end + 1);
+    $: trimmedRows = rows.map((x, idx) => ({idx: idx, ...x})).slice(start, end + 1);
 
     $: totalRows, (currentPage = 0);
     $: currentPage, start, end;
