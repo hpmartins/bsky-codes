@@ -68,7 +68,7 @@ async def update_top_interactions():
             },
             agg_group,
             {"$sort": {"count": -1}},
-            {"$limit": 25},
+            {"$limit": 100},
         ]
 
         items = []
@@ -122,7 +122,7 @@ async def update_top_blocks():
                 }
             },
             {"$sort": {"count": -1}},
-            {"$limit": 25},
+            {"$limit": 100},
         ]
 
         items = []
