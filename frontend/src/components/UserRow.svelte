@@ -1,11 +1,9 @@
 <script lang="ts">
     import type { SimpleProfileType } from "$lib/types";
-    export let did: string;
-    export let profile: SimpleProfileType | null;
-    export let blocked: boolean = false;
+    let { did, profile } : { did: string, profile: SimpleProfileType } = $props();
 
-    const handle = profile?.handle ?? "";
-    const displayName = profile?.display_name ?? profile?.handle ?? "";
+    let handle: string = $derived(profile?.handle ?? "");
+    let displayName: string  = $derived(profile?.display_name ?? profile?.handle ?? "");
 </script>
 
 <div class="flex items-center space-x-2">
@@ -21,7 +19,7 @@
         {/if}
     </div>
     <div>
-        <div class="font-bold text-xs truncate {blocked ? 'line-through' : ''}">{displayName}&nbsp;</div>
+        <div class="font-bold text-xs truncate">{displayName}&nbsp;</div>
         <div class="truncate"><a href="https://bsky.app/profile/{did}" class="text-xs opacity-50">@{handle}</a></div>
     </div>
 </div>

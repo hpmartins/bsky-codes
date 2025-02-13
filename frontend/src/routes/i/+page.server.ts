@@ -1,13 +1,17 @@
 import type { PageServerLoad } from './$types';
+import { FART_URL } from '$env/static/private';
+import type { InteractionsDataType } from '$lib/types';
 
 export const load: PageServerLoad = async ({ fetch, url }) => {
   const actor = url.searchParams.get('actor');
 
+  let interactions: InteractionsDataType = {from: [], to: []}
+
   if (actor) {
     try {
-      const response = await fetch(`/api/interactions?actor=${encodeURIComponent(actor)}`);
+      const response = await fetch(`${FART_URL}/interactions?actor=${encodeURIComponent(actor)}&source=both`);
       if (response.ok) {
-        const interactions = await response.json();
+        interactions = await response.json();
         return {
           interactions: interactions,
           actor: actor,

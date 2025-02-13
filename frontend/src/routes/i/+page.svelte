@@ -1,12 +1,15 @@
 <script lang="ts">
   import type { PageProps } from "./$types";
-  import type { CirclesOptionsType } from "$lib/types";
+  import type { CirclesOptionsType, InteractionsDataType } from "$lib/types";
 
   import { t } from "$lib/translations";
-  import Table from "#/Table.svelte";
-  import Circles from "#/Circles.svelte";
+  import InteractionsTable from "#/InteractionsTable.svelte";
 
   let { data }: PageProps = $props();
+
+  let modifiedData: InteractionsDataType | undefined = $state();
+  let groupedIds: string[][] = []; // Array to hold blocks of 25 IDs
+  let fetchedData: Record<string, any> = {}; // Store fetched data by ID
 
   let circlesOptions: CirclesOptionsType = $state({
     orbits: 2,
@@ -18,32 +21,103 @@
     add_border: true,
     border_color: "#FFC72C",
   });
+
+  $effect(() => {
+    if (data.interactions) {
+    modifiedData = JSON.parse(JSON.stringify(data.interactions));
+
+    const allIds = new Set<string>();
+    data.interactions.from.forEach(item => allIds.add(item._id));
+    data.interactions.to.forEach(item => allIds.add(item._id));
+    const uniqueIds = Array.from(allIds);
+
+    groupedIds = [];
+    for (let i = 0; i < uniqueIds.length; i += 25) {
+      groupedIds.push(uniqueIds.slice(i, i + 25));
+    }
+
+    const fetchPromises = groupedIds.map(async idBlock => {
+      const url = new URL('https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles');
+      idBlock.forEach(id => url.searchParams.append('actors', id));
+      try {
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const { profiles } = await response.json();
+
+        profiles.forEach((profile: {[key: string]: any}) => {
+          fetchedData[profile.did] = {
+            avatar: profile.avatar,
+            display_name: profile.displayName,
+            handle: profile.handle,
+          }
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    });
+
+    Promise.all(fetchPromises).then(() => {
+      if (modifiedData) {
+        modifiedData.from.forEach(item => {
+          if (fetchedData[item._id]) {
+            item.profile = fetchedData[item._id];
+          }
+        });
+
+        modifiedData.to.forEach(item => {
+          if (fetchedData[item._id]) {
+            item.profile = fetchedData[item._id];
+          }
+        });
+      }
+    }).catch(error => {
+      console.error("Error in Promise.all:", error);
+    });
+  }
+
+  })
 </script>
 
 <svelte:head>
-  <title>Wolfgang - {$t("features.interactions.pagetitle")}</title>
+  <title>Wolfgang - {$t("stuff.interactions.pagetitle")}</title>
 </svelte:head>
 
-Soon™
-<!-- <form>
-  <div class="join">
-    <input
-      class="input input-primary join-item"
-      type="text"
-      name="actor"
-      placeholder="Enter handle or did"
-      value={data.actor ?? ""}
-    />
-    <button class="btn btn-primary join-item" type="submit">Search</button>
-  </div>
-</form> -->
-{#if data.interactions}
-  <h2>Results for @{data.actor}</h2>
+<div class="p-2 flex flex-col items-center border rounded-md w-full">
+  <form>
+    <div class="join">
+      <input
+        class="input input-primary join-item"
+        type="text"
+        name="actor"
+        placeholder={$t("stuff.common.handle")}
+        value={data.actor ?? ""}
+      />
+      <button class="btn btn-primary join-item" type="submit">{$t("stuff.common.search")}</button>
+    </div>
+  </form>
 
-  <details class="collapse bg-base-200">
-    <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary"
-      >↠ {$t("features.interactions.bolas.title")} ↞</summary
-    >
+  {#if modifiedData}
+    <h2>Results for @{data.actor}</h2>
+    <div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
+      <div class="flex flex-col items-center">
+        <InteractionsTable data={modifiedData.from} perPage={10} />
+      </div>
+      <div class="flex flex-col items-center">
+        <InteractionsTable data={modifiedData.to} perPage={10} />
+      </div>
+    </div>
+  {:else if data.error}
+    <p>Error: {data.error}</p>
+  {:else if data.actor}
+    <p>No results found for: {data.actor}</p>
+  {/if}
+</div>
+<!-- <details class="collapse bg-base-200">
+    <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary">
+      {$t("features.interactions.bolas.title")}
+    </summary>
     <div class="collapse-content">
       <div class="flex flex-col justify-center items-center gap-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3">
@@ -121,9 +195,4 @@ Soon™
         </div>
       </div>
     </div>
-  </details>
-{:else if data.error}
-  <p>Error: {data.error}</p>
-{:else if data.actor}
-  <p>No results found for: {data.actor}</p>
-{/if}
+  </details> -->

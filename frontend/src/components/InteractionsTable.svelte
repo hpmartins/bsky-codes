@@ -25,23 +25,23 @@
                 <th title={$t('stuff.common.replies')}
                     ><i class="bi bi-chat-square-text-fill"></i></th
                 >
-                <th title={$t('features.common.likes')}><i class="bi bi-repeat"></i></th>
-                <th title={$t('features.common.reposts')}><i class="bi bi-heart-fill"></i></th>
-                <th title={$t('features.common.total')}>{$t('features.common.total')}</th>
+                <th title={$t('stuff.common.likes')}><i class="bi bi-repeat"></i></th>
+                <th title={$t('stuff.common.reposts')}><i class="bi bi-heart-fill"></i></th>
+                <th title={$t('stuff.common.total')}>{$t('stuff.common.total')}</th>
             </tr>
         </thead>
         <tbody>
-            {#each paginatedData as row (row._id)}
+            {#each paginatedData as row, idx (row._id)}
                 <tr class="text-center">
-                    <td>{row.idx}</td>
+                    <td>{idx+1}</td>
                     <td class="text-left">
-                        <UserRow did={row._id} profile={row} blocked={row.blocked} />
+                        <UserRow did={row._id} profile={row.profile} />
                     </td>
-                    <td>{row.characters}</td>
-                    <td>{row.replies}</td>
-                    <td>{row.reposts}</td>
-                    <td>{row.likes}</td>
-                    <td>{row.points}</td>
+                    <td>{row.l}</td>
+                    <td>{row.r}</td>
+                    <td>{row.p}</td>
+                    <td>{row.c}</td>
+                    <td>{row.t}</td>
                 </tr>
             {/each}
         </tbody>

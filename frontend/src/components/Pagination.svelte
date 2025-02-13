@@ -30,7 +30,7 @@
             </button>
             <div class="btn btn-sm btn-primary text-secondary join-item">
                 {start + 1} - {end + 1}
-                {$t('features.common.of')}
+                {$t('stuff.common.of')}
                 {totalRows}
             </div>
 

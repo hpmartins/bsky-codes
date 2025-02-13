@@ -7,22 +7,17 @@ export type SimpleProfileType = {
 
 export type InteractionsType = {
   _id: string;
-  idx?: number;
-  blocked: boolean;
-  characters: number;
-  replies: number;
-  likes: number;
-  reposts: number;
-  total: number;
-  points: number;
-  profile: SimpleProfileType;
+  l: number;
+  r: number;
+  p: number;
+  c: number;
+  t: number;
+  profile?: SimpleProfileType
 };
 
 export type InteractionsDataType = {
-  found: boolean;
-  sent?: InteractionsType[];
-  rcvd?: InteractionsType[];
-  both?: InteractionsType[];
+  from: InteractionsType[]
+  to: InteractionsType[]
 };
 
 export type CirclesOptionsType = {
