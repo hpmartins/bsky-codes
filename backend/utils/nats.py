@@ -83,7 +83,7 @@ class NATSManager:
                 logger.error(f"Error creating or updating stream {self.stream}: {e}")
                 raise
 
-    async def get_or_create_kv_store(self, bucket_name: str) -> nats.js.kv.KeyValue:
+    async def get_or_create_kv_store(self, bucket_name: str, ttl: float | None = None) -> nats.js.kv.KeyValue:
         try:
             kv = await self.js.key_value(bucket_name)
             logger.info(f"Using existing key-value store: {bucket_name}")
@@ -91,7 +91,7 @@ class NATSManager:
         except nats.js.errors.NotFoundError:
             logger.info(f"Key-value store not found. Creating {bucket_name}...")
             try:
-                kv = await self.js.create_key_value(bucket=bucket_name)
+                kv = await self.js.create_key_value(bucket=bucket_name, ttl=ttl)
                 logger.info(f"Key-value store created successfully: {bucket_name}")
                 return kv
             except Exception as e:
