@@ -364,7 +364,7 @@ async def _get_interactions(
                 }
             }
             if record_type == models.ids.AppBskyFeedPost:
-                agg_group["$group"]["c"] = {"$sum": {"$ifNull": ["$c", "$$REMOVE"]}}
+                agg_group["$group"]["c"] = {"$sum": "$c"}
 
             pipeline = [
                 {
@@ -380,11 +380,11 @@ async def _get_interactions(
                 {"$limit": 100},
             ]
 
-            print(pipeline)
-
             logger.info(f"starting for {did}: {record_type}")
             async for doc in app.db.get_collection(collection).aggregate(pipeline):
-                res[doc["_id"]] = {record_initial: doc[record_initial], "c": doc.get("c", 0), **res.get(doc["_id"], {})}
+                res[doc["_id"]] = {**res.get(doc["_id"], {}), record_initial: doc[record_initial]}
+                if record_type == models.ids.AppBskyFeedPost:
+                    res[doc["_id"]]["c"] = doc.get("c", 0)
 
         agg_res: list[Interaction] = []
         for _id, values in res.items():
