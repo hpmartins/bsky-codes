@@ -355,7 +355,7 @@ async def _get_interactions(
         res = {}
         for record_type in INTERACTION_RECORDS:
             collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, record_type.split('.')[-1])
-            record_initial = record_type.split('.')[-1]
+            record_initial = record_type.split(".")[-1][0]
 
             agg_group = {
                 "$group": {
