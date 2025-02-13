@@ -1,8 +1,7 @@
 <script lang="ts">
-  let { children } = $props();
   import "../app.css";
-
   import { t, locale } from "$lib/translations";
+  let { children } = $props();
 </script>
 
 <svelte:head>
@@ -21,8 +20,9 @@
       </a>
     </div>
     <div class="pt-2">
-      <a href="/top" role="button" class="btn btn-sm btn-primary">{$t('stuff.layout.navbar.top')}</a>
-      <a href="/i" role="button" class="btn btn-sm btn-primary">{$t('stuff.layout.navbar.interactions')}</a>
+      <a href="/top/interactions" role="button" class="btn btn-sm btn-primary">{$t("stuff.layout.navbar.top_interactions")}</a>
+      <a href="/top/blocks" role="button" class="btn btn-sm btn-primary">{$t("stuff.layout.navbar.top_blocks")}</a>
+      <a href="/i" role="button" class="btn btn-sm btn-primary">{$t("stuff.layout.navbar.interactions")}</a>
     </div>
   </div>
 </header>

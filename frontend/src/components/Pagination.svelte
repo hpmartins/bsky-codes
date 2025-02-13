@@ -20,7 +20,7 @@
     <div class="flex justify-center">
         <div class="join">
             <button
-                class="btn btn-sm btn-primary text-secondary disabled:text-gray disabled:btn-primary join-item"
+                class="btn btn-xs btn-primary text-secondary disabled:text-gray disabled:btn-primary join-item"
                 on:click={() => (currentPage -= 1)}
                 disabled={currentPage === 0 ? true : false}
                 aria-label="left arrow icon"
@@ -28,14 +28,14 @@
             >
                 <i class="bi bi-chevron-double-left"></i>
             </button>
-            <div class="btn btn-sm btn-primary text-secondary join-item">
+            <div class="btn btn-xs btn-primary text-secondary join-item">
                 {start + 1} - {end + 1}
                 {$t('stuff.common.of')}
                 {totalRows}
             </div>
 
             <button
-                class="btn btn-sm btn-primary text-secondary disabled:text-gray disabled:btn-primary join-item"
+                class="btn btn-xs btn-primary text-secondary disabled:text-gray disabled:btn-primary join-item"
                 on:click={() => (currentPage += 1)}
                 disabled={currentPage === totalPages - 1 ? true : false}
                 aria-label="right arrow icon"

@@ -5,7 +5,8 @@
         "contact": "contact",
 
         "navbar": {
-            "top": "top stats",
+            "top_interactions": "top interações",
+            "top_blocks": "top blocks",
             "interactions": "interactions"
         }
     },
@@ -30,7 +31,7 @@
         "total": "total",
         "search": "procurar",
         "language": "idioma",
-        "last_updated": "Atualizado em: {{date}}",
+        "last_updated": "atualizado em: {{date}}",
         "prev": "anterior",
         "next": "próximo",
         "characters": "número de caracters",
@@ -40,7 +41,6 @@
         "account404": "A conta não foi encontrada."
     },
     "interactions": {
-        "pagetitle": "Interações",
         "title": "Interações",
         "choose_week": "Escolha uma semana",
         "choose_range": "... ou um período específico",

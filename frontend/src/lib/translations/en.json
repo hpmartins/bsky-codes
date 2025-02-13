@@ -5,7 +5,8 @@
         "contact": "contact",
 
         "navbar": {
-            "top": "top stats",
+            "top_interactions": "top interactions",
+            "top_blocks": "top blocks",
             "interactions": "interactions"
         }
     },
@@ -16,7 +17,7 @@
     "top": {
         "authorDesc": "top interactions by author",
         "subjectDesc": "top interactions by subject",
-        "updateDesc": "data from the last 24h, updated every few hours",
+        "updateDesc": "data from the last 24h",
         "like": "likes",
         "repost": "reposts",
         "post": "replies/quotes"
@@ -30,7 +31,7 @@
         "total": "total",
         "search": "search",
         "language": "language",
-        "last_updated": "Last updated: {{date}}",
+        "last_updated": "last updated: {{date}}",
         "prev": "prev",
         "next": "next",
         "characters": "number of characters",
@@ -40,7 +41,6 @@
         "account404": "Could not find the account"
     },
     "interactions": {
-        "pagetitle": "Interactions",
         "title": "Interactions",
         "choose_week": "Choose a week",
         "choose_range": "... or a specific date range",

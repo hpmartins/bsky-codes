@@ -3,7 +3,6 @@ import { FART_URL } from '$env/static/private';
 
 export const load: PageServerLoad = async ({ fetch }) => {
     let top_interactions: Record<string, any> = {}
-    let top_blocks: Record<string, any> = {}
 
     try {
         const response = await fetch(`${FART_URL}/dd/top_interactions`)
@@ -15,18 +14,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
         top_interactions = {}
     }
 
-    try {
-        const response = await fetch(`${FART_URL}/dd/top_blocks`)
-        if (response.ok) {
-            top_blocks = await response.json()
-        }
-    } catch (error) {
-        console.error('error fetching data')
-        top_blocks = {}
-    }
-
     return {
         top_interactions: top_interactions,
-        top_blocks: top_blocks
     }
 };

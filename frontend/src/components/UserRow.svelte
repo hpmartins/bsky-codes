@@ -18,7 +18,7 @@
             </div>
         {/if}
     </div>
-    <div>
+    <div style="max-width: 200px">
         <div class="font-bold text-xs truncate">{displayName}&nbsp;</div>
         <div class="truncate"><a href="https://bsky.app/profile/{did}" class="text-xs opacity-50">@{handle}</a></div>
     </div>
