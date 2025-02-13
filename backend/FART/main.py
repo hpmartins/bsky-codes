@@ -354,7 +354,7 @@ async def _get_interactions(
 
         res = {}
         for record_type in INTERACTION_RECORDS:
-            collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, record_type.split('.')[-1])
+            collection = "{}.{}".format(config.INTERACTIONS_COLLECTION, record_type.split(".")[-1])
             record_initial = record_type.split(".")[-1][0]
 
             agg_group = {
@@ -473,6 +473,22 @@ async def _fetch_dynamic_data(
     if doc:
         doc["_id"] = doc["_id"].generation_time
         return doc
+
+
+@app.get("/collStats")
+async def _get_collstats():
+    collStats = {}
+    for collection in [
+        "app.bsky.actor.profile",
+        "app.bsky.graph.block",
+        "interactions.like",
+        "interactions.post",
+        "interactions.repost",
+    ]:
+        async for doc in app.db.get_collection(collection).aggregate([{"$collStats": {"count": {}}}]):
+            collStats[collection] = doc["count"]
+
+    return collStats
 
 
 @app.get("/interactions")
