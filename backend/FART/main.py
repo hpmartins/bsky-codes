@@ -14,6 +14,7 @@ import logging
 from collections import defaultdict
 import math
 import nats.js.kv
+import json
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -63,7 +64,7 @@ async def lifespan(app: EnhancedFastAPI):
         raise
 
     await app.nats.connect()
-    app.kv = await app.nats.get_or_create_kv_store("cache")
+    app.kv = await app.nats.get_or_create_kv_store("cache", ttl=600)
 
     yield
 
@@ -353,10 +354,14 @@ async def _get_interactions(
     did: str,
     source: Literal["from", "to", "both"],
     start_date: datetime.datetime = None,
+    semaphore: bool = False,
 ) -> dict[str, list[Interaction]]:
     end_date = datetime.datetime.now(tz=datetime.timezone.utc)
     if start_date is None:
         start_date = end_date - datetime.timedelta(days=7)
+
+    if semaphore:
+        await cache_set(f"semaphore:interactions:{did}:{source}", {})
 
     async def _aggregate_interactions(direction: Literal["from", "to"]) -> list[Interaction]:
         author_field = "a" if direction == "from" else "s"
@@ -412,12 +417,16 @@ async def _get_interactions(
         return agg_res
 
     if source == "both":
-        return {
+        out = {
             "from": await _aggregate_interactions("from"),
             "to": await _aggregate_interactions("to"),
         }
     else:
-        return {source: await _aggregate_interactions(source)}
+        out = {source: await _aggregate_interactions(source)}
+
+    if semaphore:
+        await cache_del(f"semaphore:interactions:{did}:{source}")
+    return out
 
 
 @app.get("/circles")
@@ -501,13 +510,42 @@ async def _get_collstats():
     return collStats
 
 
+async def cache_get(key: str) -> str | None:
+    try:
+        entry = await app.kv.get(key)
+        return json.loads(entry.value.decode())
+    except nats.js.errors.KeyNotFoundError:
+        return
+
+
+async def cache_set(key: str, value: dict):
+    await app.kv.create(key, json.dumps(value).encode())
+
+
+async def cache_del(key: str):
+    await app.kv.purge(key)
+
+
 @app.get("/interactions")
 async def _interactions(actor: str, source: Literal["from", "to", "both"] = "from") -> dict[str, list[Interaction]]:
     handle, did = await _get_did(actor)
     if did is None:
         raise HTTPException(status_code=404, detail=f"user not found: {actor}")
-    logger.info(f"[interactions] getting interactions: {handle}@{did}")
-    return await _get_interactions(did, source)
+
+    semaphore_check = await cache_get(f"semaphore:interactions:{did}:{source}")
+    if semaphore_check:
+        logger.info(f"[interactions] semaphore: {handle}@{did}")
+        return {"success": False, "error": "check again later"}
+
+    cached_data = await cache_get(f"interactions:{did}:{source}")
+    if cached_data:
+        logger.info(f"[interactions] cache: {handle}@{did}")
+        return cached_data
+
+    logger.info(f"[interactions] fetching: {handle}@{did}")
+    data = await _get_interactions(did, source, semaphore=True)
+    await cache_set(f"interactions:{did}:{source}", data)
+    return data
 
 
 if __name__ == "__main__":
