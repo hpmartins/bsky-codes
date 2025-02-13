@@ -68,11 +68,9 @@
         "separate": "Split",
         "consolidate": "Join",
         "table": {
-            "title": {
-                "both": "Sent + Received",
-                "sent": "Sent",
-                "rcvd": "Received"
-            }
+            "both": "Sent + Received",
+            "sent": "sent",
+            "rcvd": "received"
         }
     }
 }

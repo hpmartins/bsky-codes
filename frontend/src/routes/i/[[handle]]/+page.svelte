@@ -4,12 +4,15 @@
 
   import { t } from "$lib/translations";
   import InteractionsTable from "#/InteractionsTable.svelte";
+  import { goto } from "$app/navigation";
 
   let { data }: PageProps = $props();
 
+  let inputHandle: string = $state(data.handle ?? "");
+
   let modifiedData: InteractionsDataType | undefined = $state();
-  let groupedIds: string[][] = []; // Array to hold blocks of 25 IDs
-  let fetchedData: Record<string, any> = {}; // Store fetched data by ID
+  let groupedIds: string[][] = [];
+  let fetchedData: Record<string, any> = {};
 
   let circlesOptions: CirclesOptionsType = $state({
     orbits: 2,
@@ -23,95 +26,105 @@
   });
 
   $effect(() => {
-    if (data.interactions) {
-    modifiedData = JSON.parse(JSON.stringify(data.interactions));
+    if (data.success && data.interactions) {
+      modifiedData = JSON.parse(JSON.stringify(data.interactions));
 
-    const allIds = new Set<string>();
-    data.interactions.from.forEach(item => allIds.add(item._id));
-    data.interactions.to.forEach(item => allIds.add(item._id));
-    const uniqueIds = Array.from(allIds);
+      const allIds = new Set<string>();
+      data.interactions.from.forEach((item) => allIds.add(item._id));
+      data.interactions.to.forEach((item) => allIds.add(item._id));
+      const uniqueIds = Array.from(allIds);
 
-    groupedIds = [];
-    for (let i = 0; i < uniqueIds.length; i += 25) {
-      groupedIds.push(uniqueIds.slice(i, i + 25));
-    }
+      groupedIds = [];
+      for (let i = 0; i < uniqueIds.length; i += 25) {
+        groupedIds.push(uniqueIds.slice(i, i + 25));
+      }
 
-    const fetchPromises = groupedIds.map(async idBlock => {
-      const url = new URL('https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles');
-      idBlock.forEach(id => url.searchParams.append('actors', id));
-      try {
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+      const fetchPromises = groupedIds.map(async (idBlock) => {
+        const url = new URL("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles");
+        idBlock.forEach((id) => url.searchParams.append("actors", id));
+        try {
+          const response = await fetch(url.toString());
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const { profiles } = await response.json();
+
+          profiles.forEach((profile: { [key: string]: any }) => {
+            fetchedData[profile.did] = {
+              avatar: profile.avatar,
+              display_name: profile.displayName,
+              handle: profile.handle,
+            };
+          });
+        } catch (error) {
+          console.error("Error fetching data:", error);
         }
-        const { profiles } = await response.json();
+      });
 
-        profiles.forEach((profile: {[key: string]: any}) => {
-          fetchedData[profile.did] = {
-            avatar: profile.avatar,
-            display_name: profile.displayName,
-            handle: profile.handle,
-          }
-        });
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    });
+      Promise.all(fetchPromises)
+        .then(() => {
+          if (modifiedData) {
+            modifiedData.from.forEach((item) => {
+              if (fetchedData[item._id]) {
+                item.profile = fetchedData[item._id];
+              }
+            });
 
-    Promise.all(fetchPromises).then(() => {
-      if (modifiedData) {
-        modifiedData.from.forEach(item => {
-          if (fetchedData[item._id]) {
-            item.profile = fetchedData[item._id];
+            modifiedData.to.forEach((item) => {
+              if (fetchedData[item._id]) {
+                item.profile = fetchedData[item._id];
+              }
+            });
           }
+        })
+        .catch((error) => {
+          console.error("Error in Promise.all:", error);
         });
+    }
+  });
 
-        modifiedData.to.forEach(item => {
-          if (fetchedData[item._id]) {
-            item.profile = fetchedData[item._id];
-          }
-        });
-      }
-    }).catch(error => {
-      console.error("Error in Promise.all:", error);
-    });
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    if (inputHandle && inputHandle.length > 0) {
+      goto(`/i/${inputHandle.trim().replace(/^@/, "")}`, { invalidateAll: true });
+    }
   }
-
-  })
 </script>
 
 <svelte:head>
-  <title>Wolfgang - {$t("stuff.interactions.pagetitle")}</title>
+  <title>Wolfgang - {$t("stuff.layout.navbar.interactions")}</title>
 </svelte:head>
 
 <div class="p-2 flex flex-col items-center border rounded-md w-full">
-  <form>
+  <form onsubmit={handleSubmit}>
     <div class="join">
       <input
         class="input input-primary join-item"
         type="text"
-        name="actor"
+        name="handle"
         placeholder={$t("stuff.common.handle")}
-        value={data.actor ?? ""}
+        bind:value={inputHandle}
       />
-      <button class="btn btn-primary join-item" type="submit">{$t("stuff.common.search")}</button>
+      <button class="btn btn-primary join-item">{$t("stuff.common.search")}</button>
     </div>
   </form>
 
-  {#if modifiedData}
-    <h2>Results for @{data.actor}</h2>
-    <div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
-      <div class="flex flex-col items-center">
-        <InteractionsTable data={modifiedData.from} perPage={10} />
+  {#if data.success}
+    {#if modifiedData}
+      <h2>Results for @{data.handle}</h2>
+      <div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
+        <div class="flex flex-col items-center">
+          <p class="text-xl text-primary text-bold">{$t('stuff.interactions.table.sent')}</p>
+          <InteractionsTable data={modifiedData.from} perPage={10} />
+        </div>
+        <div class="flex flex-col items-center">
+          <p class="text-xl text-primary text-bold">{$t('stuff.interactions.table.rcvd')}</p>
+          <InteractionsTable data={modifiedData.to} perPage={10} />
+        </div>
       </div>
-      <div class="flex flex-col items-center">
-        <InteractionsTable data={modifiedData.to} perPage={10} />
-      </div>
-    </div>
-  {:else if data.error}
-    <p>Error: {data.error}</p>
-  {:else if data.actor}
-    <p>No results found for: {data.actor}</p>
+    {/if}
+  {:else}
+    <p>{data.error}</p>
   {/if}
 </div>
 <!-- <details class="collapse bg-base-200">

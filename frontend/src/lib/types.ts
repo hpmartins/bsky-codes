@@ -20,6 +20,14 @@ export type InteractionsDataType = {
   to: InteractionsType[]
 };
 
+export type InteractionsInternalDataType = {
+  success: boolean,
+  did?: string,
+  handle?: string,
+  interactions?: InteractionsDataType,
+  error?: string,
+}
+
 export type CirclesOptionsType = {
   orbits: number;
   include_sent: boolean;
