@@ -5,9 +5,10 @@ from typing import List, Callable, Any
 from nats.js.api import StreamConfig
 import json
 
-from utils.core import Logger
+from backend.utils.core import Logger
 
 logger = Logger("nats")
+
 
 class BytesJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -21,8 +22,9 @@ class BytesJSONEncoder(json.JSONEncoder):
                     return obj.hex()  # Finally return hex if all else fails
         return json.JSONEncoder.default(self, obj)
 
+
 class NATSManager:
-    def __init__(self, uri: str, stream: str):
+    def __init__(self, uri: str, stream: str | None = None):
         self.uri = uri
         self.stream = stream
         self.nc = None
@@ -56,6 +58,10 @@ class NATSManager:
             logger.info("NATS connection closed.")
 
     async def create_stream(self, prefixes: List[str], max_age: int, max_size: int):
+        if not self.stream:
+            logger.error("create_stream: null stream name")
+            return
+
         config = StreamConfig(
             name=self.stream,
             subjects=[f"{prefix}.>" for prefix in prefixes],
@@ -92,9 +98,7 @@ class NATSManager:
                 logger.error(f"Error creating key-value store {bucket_name}: {e}")
                 raise
 
-    async def pull_subscribe(
-        self, stream: str, consumer: str, callback: Callable[[Any], None], batch_size: int = 100
-    ):
+    async def pull_subscribe(self, stream: str, consumer: str, callback: Callable[[Any], None], batch_size: int = 100):
         if self.js is None:
             raise nats.errors.NoServersError("Not connected to NATS server")
 
@@ -132,8 +136,6 @@ class NATSManager:
     async def publish(self, subject: str, data: str):
         try:
             ack = await self.js.publish(subject, json.dumps(data, cls=BytesJSONEncoder).encode())
-            logger.debug(
-                f"Published message to {subject} - Stream: {ack.stream}, Sequence: {ack.seq}"
-            )
+            logger.debug(f"Published message to {subject} - Stream: {ack.stream}, Sequence: {ack.seq}")
         except Exception as e:
             logger.error(f"Error publishing to NATS subject {subject}: {e}")

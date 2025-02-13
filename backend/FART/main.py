@@ -13,6 +13,7 @@ from pymongo.errors import ConnectionFailure
 import logging
 from collections import defaultdict
 import math
+import nats.js.kv
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -21,6 +22,7 @@ from backend.utils.interactions import (
     Interaction,
     INTERACTION_RECORDS,
 )
+from backend.utils.nats import NATSManager
 
 from atproto import (
     models,
@@ -42,23 +44,31 @@ class EnhancedFastAPI(FastAPI):
 
         cache = AsyncDidInMemoryCache()
         self.resolver = AsyncIdResolver(cache=cache)
-        self.bsky_client = AsyncClient(base_url="https://public.api.bsky.app/")
-        self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URI, compressors="zstd")
-        self.db = self.mongo_client.get_database(config.FART_DB)
+        self.bsky = AsyncClient(base_url="https://public.api.bsky.app/")
+
+        self.mongo = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URI, compressors="zstd")
+        self.db = self.mongo.get_database(config.FART_DB)
+
+        self.nats = NATSManager(config.NATS_URI)
+        self.kv: nats.js.kv.KeyValue | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: EnhancedFastAPI):
     try:
-        await app.mongo_client.admin.command("ping")
+        await app.mongo.admin.command("ping")
         logger.info(f"Connected to MongoDB at {config.FART_DB}")
     except ConnectionFailure as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         raise
 
+    await app.nats.connect()
+    app.kv = await app.nats.get_or_create_kv_store("cache")
+
     yield
 
-    app.mongo_client.close()
+    app.mongo.close()
+    await app.nats.disconnect()
 
 
 app = EnhancedFastAPI(lifespan=lifespan)
@@ -283,7 +293,7 @@ async def _get_profile(did: str) -> models.AppBskyActorDefs.ProfileViewDetailed:
 
     if have_to_update:
         try:
-            new_profile = await app.bsky_client.app.bsky.actor.get_profile(params=dict(actor=did))
+            new_profile = await app.bsky.app.bsky.actor.get_profile(params=dict(actor=did))
         except Exception:
             logger.info(f"error getting profile: {did}")
             return
