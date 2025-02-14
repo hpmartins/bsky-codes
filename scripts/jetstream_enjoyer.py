@@ -1,3 +1,4 @@
+# old way, using jetstream
 import asyncio
 import signal
 import time
