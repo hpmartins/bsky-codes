@@ -39,7 +39,7 @@ Backend services and frontend for my bluesky stuff.
 
 Interactions are likes, reposts, quotes and replies from an user (_author_) to a different user (_subject_). They are stored in collections named `interactions.like`, `interactions.repost`, `interactions.post` and have the following schema:
 
-```json
+```jsonc
 {
   "_id": "did:plc:u7vvvlww74nstj6vnunr3u6x/3lhu4uknfnk27",
   "a": "did:plc:u7vvvlww74nstj6vnunr3u6x", // author
