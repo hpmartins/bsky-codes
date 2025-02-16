@@ -37,7 +37,7 @@ module.exports = {
     },
     {
       name: "wolfgang",
-      script: "./server.js",
+      script: "node -r dotenv/config build/index.js",
       cwd: "./frontend",
       instances: "1",
       autorestart: true,
