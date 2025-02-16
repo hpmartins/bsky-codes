@@ -110,8 +110,8 @@
 
   {#if data.success}
     {#if modifiedData}
-      <h2>Results for @{data.handle}</h2>
-      <div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
+      <p class="pt-2 font-bold text-lg">{$t('stuff.interactions.dates.week')}</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
         <div class="flex flex-col items-center">
           <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
           <InteractionsTable data={modifiedData.sent} perPage={10} />
