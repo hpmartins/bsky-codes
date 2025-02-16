@@ -1,6 +1,5 @@
 import datetime
 
-from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
 from atproto import (
@@ -22,14 +21,6 @@ class Interaction(TypedDict):
     p: int
     c: int
     t: int | float
-
-
-class InteractionsResponse(BaseModel):
-    from_: list[Interaction] = Field(alias="from")
-    to: list[Interaction]
-
-    class Config:
-        populate_by_name = True
 
 
 def get_date(created_at: str | None = None):

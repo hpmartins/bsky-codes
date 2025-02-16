@@ -15,6 +15,7 @@ from collections import defaultdict
 import math
 import nats.js.kv
 import json
+from pydantic import BaseModel
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -318,6 +319,9 @@ async def _get_profile(did: str) -> models.AppBskyActorDefs.ProfileViewDetailed:
 
 
 async def _get_did(actor: str) -> tuple[str | None, str | None]:
+    if not actor:
+        return None, None
+
     try:
         if actor.startswith("did:"):
             doc = await app.resolver.did.ensure_resolve(actor)
@@ -352,20 +356,19 @@ def _generate_image_interactions(
 
 async def _get_interactions(
     did: str,
-    source: Literal["from", "to", "both"],
     start_date: datetime.datetime = None,
     semaphore: bool = False,
-) -> dict[str, list[Interaction]]:
+) -> dict[Literal["sent", "rcvd"], list[Interaction]]:
     end_date = datetime.datetime.now(tz=datetime.timezone.utc)
     if start_date is None:
         start_date = end_date - datetime.timedelta(days=7)
 
     if semaphore:
-        await cache_set(f"semaphore:interactions:{did}:{source}", {})
+        await cache_set(f"semaphore:interactions:{did}", {})
 
-    async def _aggregate_interactions(direction: Literal["from", "to"]) -> list[Interaction]:
-        author_field = "a" if direction == "from" else "s"
-        subject_field = "s" if direction == "from" else "a"
+    async def _aggregate_interactions(direction: Literal["sent", "rcvd"]) -> list[Interaction]:
+        author_field = "a" if direction == "sent" else "s"
+        subject_field = "s" if direction == "sent" else "a"
 
         res = {}
         for record_type in INTERACTION_RECORDS:
@@ -416,21 +419,16 @@ async def _get_interactions(
         agg_res.sort(key=lambda x: x["t"], reverse=True)
         return agg_res
 
-    if source == "both":
-        out = {
-            "from": await _aggregate_interactions("from"),
-            "to": await _aggregate_interactions("to"),
-        }
-    else:
-        out = {source: await _aggregate_interactions(source)}
-
+    sent = await _aggregate_interactions("sent")
+    rcvd = await _aggregate_interactions("rcvd")
     if semaphore:
-        await cache_del(f"semaphore:interactions:{did}:{source}")
-    return out
+        await cache_del(f"semaphore:interactions:{did}")
+
+    return dict(sent=sent, rcvd=rcvd)
 
 
 @app.get("/circles")
-async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
+async def _circles(actor: str, source: Literal["sent", "rcvd", "both"] = "rcvd"):
     handle, did = await _get_did(actor)
     if did is None:
         raise HTTPException(status_code=404, detail=f"user not found: {actor}")
@@ -438,7 +436,7 @@ async def _circles(actor: str, source: Literal["from", "to", "both"] = "from"):
     logger.info(f"[circles] getting interactions: {handle}@{did}")
     try:
         start_date = datetime.datetime.now() - datetime.timedelta(days=7)
-        interactions = await _get_interactions(did, source, start_date)
+        interactions = await _get_interactions(did, start_date)
         image_interactions = _generate_image_interactions(interactions)
     except Exception:
         raise HTTPException(status_code=500, detail=f"error generating interactions {handle}@{did}")
@@ -526,26 +524,37 @@ async def cache_del(key: str):
     await app.kv.purge(key)
 
 
-@app.get("/interactions")
-async def _interactions(actor: str, source: Literal["from", "to", "both"] = "from") -> dict[str, list[Interaction]]:
-    handle, did = await _get_did(actor)
-    if did is None:
-        raise HTTPException(status_code=404, detail=f"user not found: {actor}")
+class InteractionsBody(BaseModel):
+    handle: str
 
-    semaphore_check = await cache_get(f"semaphore:interactions:{did}:{source}")
+
+class InteractionsResponse(BaseModel):
+    did: str
+    handle: str
+    interactions: dict[Literal["sent", "rcvd"], list[Interaction]]
+
+
+@app.post("/interactions")
+async def _interactions(body: InteractionsBody) -> InteractionsResponse:
+    handle, did = await _get_did(body.handle)
+    if did is None:
+        raise HTTPException(status_code=400, detail=f"user not found: {body.handle}")
+
+    semaphore_check = await cache_get(f"semaphore:interactions:{did}")
     if semaphore_check:
         logger.info(f"[interactions] semaphore: {handle}@{did}")
-        return {"success": False, "error": "check again later"}
+        raise HTTPException(status_code=400, detail="check again later")
 
-    cached_data = await cache_get(f"interactions:{did}:{source}")
+    cached_data = await cache_get(f"interactions:{did}")
     if cached_data:
         logger.info(f"[interactions] cache: {handle}@{did}")
-        return cached_data
+        return InteractionsResponse(did=did, handle=handle, interactions=cached_data)
 
     logger.info(f"[interactions] fetching: {handle}@{did}")
-    data = await _get_interactions(did, source, semaphore=True)
-    await cache_set(f"interactions:{did}:{source}", data)
-    return data
+    data = await _get_interactions(did, semaphore=True)
+    await cache_set(f"interactions:{did}", data)
+
+    return InteractionsResponse(did=did, handle=handle, interactions=data)
 
 
 if __name__ == "__main__":
