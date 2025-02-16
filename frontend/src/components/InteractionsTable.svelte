@@ -11,8 +11,6 @@
 
     let { data, perPage = 15 }: Props = $props();
     let paginatedData: Array<any> = $state([]);
-
-    console.log(data)
 </script>
 
 <Pagination rows={data ?? []} {perPage} bind:trimmedRows={paginatedData} />
