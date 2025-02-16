@@ -25,6 +25,7 @@ dependencies = [
     "prometheus_client",
     "pydantic",
     "python-dotenv",
+    "redis",
     "uvicorn",
     "websockets",
     "zstandard"

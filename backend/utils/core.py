@@ -105,6 +105,8 @@ class Config:
     NATS_STREAM: str = "bsky"
     NATS_STREAM_MAX_AGE: int = 7  # days
     NATS_STREAM_MAX_SIZE: int = 5  # GB
+    # redis
+    REDIS_URI: str = "redis://redis:6379"
     # mongo
     MONGO_URI: str = "mongodb://mongodb:27017"
     # FART

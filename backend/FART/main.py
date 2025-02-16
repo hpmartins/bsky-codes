@@ -13,9 +13,9 @@ from pymongo.errors import ConnectionFailure
 import logging
 from collections import defaultdict
 import math
-import nats.js.kv
 import json
 from pydantic import BaseModel
+import redis.asyncio as redis
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -24,8 +24,6 @@ from backend.utils.interactions import (
     Interaction,
     INTERACTION_RECORDS,
 )
-from backend.utils.nats import NATSManager
-
 from atproto import (
     models,
     AsyncDidInMemoryCache,
@@ -51,26 +49,29 @@ class EnhancedFastAPI(FastAPI):
         self.mongo = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URI, compressors="zstd")
         self.db = self.mongo.get_database(config.FART_DB)
 
-        self.nats = NATSManager(config.NATS_URI)
-        self.kv: nats.js.kv.KeyValue | None = None
+        self.redis = redis.from_url(config.REDIS_URI, decode_responses=True)
 
 
 @asynccontextmanager
 async def lifespan(app: EnhancedFastAPI):
     try:
         await app.mongo.admin.command("ping")
-        logger.info(f"Connected to MongoDB at {config.FART_DB}")
+        logger.info(f"Connected to MongoDB at {config.MONGO_URI} and db {config.FART_DB}")
     except ConnectionFailure as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
+        raise ConnectionFailure
 
-    await app.nats.connect()
-    app.kv = await app.nats.get_or_create_kv_store("cache", ttl=600)
+    try:
+        await app.redis.ping()
+        logger.info(f"Connected to Redis at {config.REDIS_URI}")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+        raise Exception
 
     yield
 
     app.mongo.close()
-    await app.nats.disconnect()
+    await app.redis.aclose()
 
 
 app = EnhancedFastAPI(lifespan=lifespan)
@@ -357,14 +358,10 @@ def _generate_image_interactions(
 async def _get_interactions(
     did: str,
     start_date: datetime.datetime = None,
-    semaphore: bool = False,
 ) -> dict[Literal["sent", "rcvd"], list[Interaction]]:
     end_date = datetime.datetime.now(tz=datetime.timezone.utc)
     if start_date is None:
         start_date = end_date - datetime.timedelta(days=7)
-
-    if semaphore:
-        await cache_set(f"semaphore:interactions:{did}", {})
 
     async def _aggregate_interactions(direction: Literal["sent", "rcvd"]) -> list[Interaction]:
         author_field = "a" if direction == "sent" else "s"
@@ -421,8 +418,6 @@ async def _get_interactions(
 
     sent = await _aggregate_interactions("sent")
     rcvd = await _aggregate_interactions("rcvd")
-    if semaphore:
-        await cache_del(f"semaphore:interactions:{did}")
 
     return dict(sent=sent, rcvd=rcvd)
 
@@ -507,21 +502,23 @@ async def _get_collstats():
 
     return collStats
 
+async def cache_hexists(name: str, key: str) -> bool:
+    return await app.redis.hexists(name, key)
 
-async def cache_get(key: str) -> str | None:
-    try:
-        entry = await app.kv.get(key)
-        return json.loads(entry.value.decode())
-    except nats.js.errors.KeyNotFoundError:
-        return
-
-
-async def cache_set(key: str, value: dict):
-    await app.kv.create(key, json.dumps(value).encode())
+async def cache_hget(name: str, key: str) -> dict | None:
+    data = await app.redis.hget(name, key)
+    if data:
+        return json.loads(data)
 
 
-async def cache_del(key: str):
-    await app.kv.purge(key)
+async def cache_hset(name: str, key: str, value: dict, ttl: int | None = None):
+    await app.redis.hset(name, key, json.dumps(value))
+    if ttl:
+        await app.redis.hexpire(name, ttl, key)
+
+
+async def cache_hdel(name: str, key: str):
+    await app.redis.hdel(name, key)
 
 
 class InteractionsBody(BaseModel):
@@ -541,19 +538,22 @@ async def _interactions(body: InteractionsBody) -> InteractionsResponse:
         logger.info(f"[interactions] attempt: {body.handle}")
         raise HTTPException(status_code=400, detail=f"user not found: {body.handle}")
 
-    semaphore_check = await cache_get(f"semaphore:interactions:{did}")
+    semaphore_check = await cache_hexists("interactions:semaphore", did)
     if semaphore_check:
         logger.info(f"[interactions] semaphore: {handle}@{did}")
         raise HTTPException(status_code=400, detail="check again later")
 
-    cached_data = await cache_get(f"interactions:{did}")
+    cached_data = await cache_hget("interactions:data", did)
     if cached_data:
         logger.info(f"[interactions] cache: {handle}@{did}")
         return InteractionsResponse(did=did, handle=handle, interactions=cached_data)
 
     logger.info(f"[interactions] fetching: {handle}@{did}")
-    data = await _get_interactions(did, semaphore=True)
-    await cache_set(f"interactions:{did}", data)
+
+    await cache_hset("interactions:semaphore", did, {}, ttl=600)
+    data = await _get_interactions(did)
+    await cache_hset("interactions:data", did, data, ttl=600)
+    await cache_hdel("interactions:semaphore", did)
 
     return InteractionsResponse(did=did, handle=handle, interactions=data)
 
