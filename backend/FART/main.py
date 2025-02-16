@@ -538,6 +538,7 @@ class InteractionsResponse(BaseModel):
 async def _interactions(body: InteractionsBody) -> InteractionsResponse:
     handle, did = await _get_did(body.handle)
     if did is None:
+        logger.info(f"[interactions] attempt: {body.handle}")
         raise HTTPException(status_code=400, detail=f"user not found: {body.handle}")
 
     semaphore_check = await cache_get(f"semaphore:interactions:{did}")
