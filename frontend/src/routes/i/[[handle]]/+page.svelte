@@ -7,7 +7,6 @@
   import { goto } from "$app/navigation";
 
   let { data }: PageProps = $props();
-
   let inputHandle: string = $state(data.handle ?? "");
 
   let modifiedData: InteractionsDataType | undefined = $state();
@@ -30,8 +29,8 @@
       modifiedData = JSON.parse(JSON.stringify(data.interactions));
 
       const allIds = new Set<string>();
-      data.interactions.from.forEach((item) => allIds.add(item._id));
-      data.interactions.to.forEach((item) => allIds.add(item._id));
+      data.interactions.sent.forEach((item) => allIds.add(item._id));
+      data.interactions.rcvd.forEach((item) => allIds.add(item._id));
       const uniqueIds = Array.from(allIds);
 
       groupedIds = [];
@@ -64,13 +63,13 @@
       Promise.all(fetchPromises)
         .then(() => {
           if (modifiedData) {
-            modifiedData.from.forEach((item) => {
+            modifiedData.sent.forEach((item) => {
               if (fetchedData[item._id]) {
                 item.profile = fetchedData[item._id];
               }
             });
 
-            modifiedData.to.forEach((item) => {
+            modifiedData.rcvd.forEach((item) => {
               if (fetchedData[item._id]) {
                 item.profile = fetchedData[item._id];
               }
@@ -114,12 +113,12 @@
       <h2>Results for @{data.handle}</h2>
       <div class="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
         <div class="flex flex-col items-center">
-          <p class="text-xl text-primary text-bold">{$t('stuff.interactions.table.sent')}</p>
-          <InteractionsTable data={modifiedData.from} perPage={10} />
+          <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
+          <InteractionsTable data={modifiedData.sent} perPage={10} />
         </div>
         <div class="flex flex-col items-center">
-          <p class="text-xl text-primary text-bold">{$t('stuff.interactions.table.rcvd')}</p>
-          <InteractionsTable data={modifiedData.to} perPage={10} />
+          <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.rcvd")}</p>
+          <InteractionsTable data={modifiedData.rcvd} perPage={10} />
         </div>
       </div>
     {/if}

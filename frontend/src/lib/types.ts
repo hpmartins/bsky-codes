@@ -16,16 +16,15 @@ export type InteractionsType = {
 };
 
 export type InteractionsDataType = {
-  from: InteractionsType[]
-  to: InteractionsType[]
+  sent: InteractionsType[]
+  rcvd: InteractionsType[]
 };
 
-export type InteractionsInternalDataType = {
-  success: boolean,
+export type InteractionsResponse = {
   did?: string,
   handle?: string,
   interactions?: InteractionsDataType,
-  error?: string,
+  detail?: string,
 }
 
 export type CirclesOptionsType = {
