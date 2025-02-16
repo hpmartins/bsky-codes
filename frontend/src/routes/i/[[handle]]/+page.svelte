@@ -110,7 +110,8 @@
 
   {#if data.success}
     {#if modifiedData}
-      <p class="pt-2 font-bold text-lg">{$t('stuff.interactions.dates.week')}</p>
+    <p class="pt-2 font-bold text-lg">@{data.handle}</p>
+    <p class="font-bold text-lg">{$t('stuff.interactions.dates.week')}</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
         <div class="flex flex-col items-center">
           <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
