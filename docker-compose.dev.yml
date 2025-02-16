@@ -26,25 +26,13 @@ services:
     volumes:
       - ${REDIS_DATA_FOLDER}:/data
   
-  nats_exporter:
-    image: natsio/prometheus-nats-exporter
+  redis-insight:
+    image: redis/redisinsight:latest
     restart: always
     ports:
-      - '7777:7777'
-    command: "-channelz -connz_detailed -healthz -gatewayz -accstatz -leafz -jsz all -routez -serverz -subz -varz http://nats:8222/"
-    depends_on:
-      - nats
-
-  mongodb_exporter:
-    image: percona/mongodb_exporter:0.43.1
-    restart: always
-    ports:
-      - '9216:9216'
-    command:
-      - --mongodb.uri=mongodb://mongo:27017/
-      - --collect-all
-    depends_on:
-      - mongo
+      - "5540:5540"
+    volumes:
+      - redis-insight:/data
 
 volumes:
   redis-insight:
