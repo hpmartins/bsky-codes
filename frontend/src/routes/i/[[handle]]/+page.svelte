@@ -165,8 +165,17 @@
   {#if data.success && modifiedData && mainProfile}
     <p class="pt-2 font-bold text-lg">@{data.handle}</p>
     <p class="font-bold text-lg">{$t("stuff.interactions.dates.week")}</p>
-    <Circles data={modifiedData} profile={mainProfile} />
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+
+    <details class="collapse bg-base-200 max-w-xl">
+      <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary">
+        {$t("stuff.interactions.bolas.title")}
+      </summary>
+      <div class="collapse-content">
+        <Circles data={modifiedData} profile={mainProfile} />
+      </div>
+    </details>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
       <div class="flex flex-col items-center">
         <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
         <InteractionsTable data={modifiedData.sent} perPage={10} />

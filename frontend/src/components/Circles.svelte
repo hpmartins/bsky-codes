@@ -21,79 +21,75 @@
     let { data, profile }: Props = $props();
 </script>
 
-<details class="collapse bg-base-200">
-    <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary">
-        {$t("stuff.interactions.bolas.title")}
-    </summary>
-    <div class="collapse-content">
-        <div class="flex flex-col items-center gap-2 p-2">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 border-4 p-2 border-secondary rounded">
-                <div class="flex flex-col gap-2">
-                    <p class="font-medium">{$t("stuff.interactions.bolas.include")}:</p>
-                    <label class="label cursor-pointer gap-x-3 justify-start">
-                        <input
-                            class="checkbox checkbox-sm checkbox-secondary"
-                            type="checkbox"
-                            bind:checked={options.include_sent}
-                        />
-                        <span class="label-text">{$t("stuff.interactions.bolas.sent")}</span>
-                    </label>
-                    <label class="label cursor-pointer gap-x-3 justify-start">
-                        <input
-                            class="checkbox checkbox-sm checkbox-secondary"
-                            type="checkbox"
-                            bind:checked={options.include_rcvd}
-                        />
-                        <span class="label-text">{$t("stuff.interactions.bolas.received")}</span>
-                    </label>
-                </div>
+<div class="flex flex-col items-center gap-2 p-2">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4 border-4 p-2 border-secondary rounded">
+        <div class="flex flex-col gap-2">
+            <p class="font-medium">{$t("stuff.interactions.bolas.include")}:</p>
+            <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={options.include_sent}
+                />
+                <span class="label-text">{$t("stuff.interactions.bolas.sent")}</span>
+            </label>
+            <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={options.include_rcvd}
+                />
+                <span class="label-text">{$t("stuff.interactions.bolas.received")}</span>
+            </label>
+        </div>
 
-                <div class="flex flex-col gap-2">
-                    <p class="font-medium">{$t("stuff.interactions.bolas.options")}:</p>
-                    <label class="label cursor-pointer gap-x-3 justify-start">
-                        <input
-                            class="checkbox checkbox-sm checkbox-secondary"
-                            type="checkbox"
-                            bind:checked={options.add_date}
-                        />
-                        <span class="label-text">{$t("stuff.interactions.bolas.add_date")}</span>
-                    </label>
-                    <label class="label cursor-pointer gap-x-3 justify-start">
-                        <input
-                            class="checkbox checkbox-sm checkbox-secondary"
-                            type="checkbox"
-                            bind:checked={options.add_watermark}
-                        />
-                        <span class="label-text">{$t("stuff.interactions.bolas.add_watermark")}</span>
-                    </label>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <p class="font-medium">{$t("stuff.interactions.bolas.orbits")}:</p>
-                    <input
-                        type="range"
-                        class="range range-xs range-primary w-full"
-                        min="1"
-                        max="3"
-                        bind:value={options.orbits}
-                    />
-
-                    <p class="font-medium">{$t("stuff.interactions.bolas.bg_color")}:</p>
-                    <input type="color" class="w-full" bind:value={options.bg_color} />
-
-                    <div class="flex items-center space-x-2">
-                        <input
-                            class="checkbox checkbox-sm checkbox-secondary"
-                            type="checkbox"
-                            bind:checked={options.add_border}
-                        />
-                        <p class="font-medium">{$t("stuff.interactions.bolas.border_color")}:</p>
-                    </div>
-                    <input type="color" class="w-full" bind:value={options.border_color} />
-                </div>
+        <div class="flex flex-col gap-2">
+            <p class="font-medium">{$t("stuff.interactions.bolas.options")}:</p>
+            <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={options.add_date}
+                />
+                <span class="label-text">{$t("stuff.interactions.bolas.add_date")}</span>
+            </label>
+            <label class="label cursor-pointer gap-x-3 justify-start">
+                <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={options.add_watermark}
+                />
+                <span class="label-text">{$t("stuff.interactions.bolas.add_watermark")}</span>
+            </label>
+        </div>
+        <div class="flex flex-col gap-2">
+            <div class="flex items-center space-x-2">
+                <p class="font-medium">{$t("stuff.interactions.bolas.bg_color")}:</p>
+                <input type="color" class="w-full" bind:value={options.bg_color} />
             </div>
 
-            <CirclesImage {data} {profile} {options} />
+            <div class="flex items-center space-x-2">
+                <input
+                    class="checkbox checkbox-sm checkbox-secondary"
+                    type="checkbox"
+                    bind:checked={options.add_border}
+                />
+                <p class="font-medium">{$t("stuff.interactions.bolas.border_color")}:</p>
+                <input type="color" class="w-full" bind:value={options.border_color} />
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <p class="font-medium">{$t("stuff.interactions.bolas.orbits")}:</p>
+            <input
+                type="range"
+                class="range range-xs range-primary w-full"
+                min="1"
+                max="3"
+                bind:value={options.orbits}
+            />
         </div>
     </div>
-</details>
+
+    <CirclesImage {data} {profile} {options} />
+</div>

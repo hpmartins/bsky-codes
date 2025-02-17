@@ -27,6 +27,9 @@
     }
     const toRad = (x: number) => x * (Math.PI / 180);
 
+    const dateNow = DateTime.now().setLocale(locale.get());
+    const textFrom = dateNow.minus(Duration.fromObject({ days: 7 })).toLocaleString(DateTime.DATE_SHORT);
+    const textTo = dateNow.toLocaleString(DateTime.DATE_SHORT);
     // this runs every time the Circles component is remounted,
     // which happens every time any of the inputs change
     $effect(() => {
@@ -101,14 +104,11 @@
         context.imageSmoothingQuality = "medium";
 
         // date on top left corner
-        if (options.add_date) { // DateTime.fromISO(_id).setLocale(locale.get()).toLocaleString(DateTime.DATETIME_SHORT);
-            const dateNow = DateTime.now().setLocale(locale.get())
-            const textFrom = dateNow.minus(Duration.fromObject({days: 7})).toLocaleString(DateTime.DATE_SHORT)
-            const textTo = dateNow.toLocaleString(DateTime.DATE_SHORT);
-            const textFull = `${textFrom} - ${textTo}`;
-            context.font = '20px Arial';
+        if (options.add_date) {
+            context.font = "20px Arial";
             context.fillStyle = textColor;
-            context.fillText(textFull, 12, 28);
+            context.textAlign = "left";
+            context.fillText(`${textFrom} - ${textTo}`, 12, 28);
         }
 
         // site watermark on top right corner
