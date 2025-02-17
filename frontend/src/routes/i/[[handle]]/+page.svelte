@@ -14,7 +14,6 @@
   let groupedIds: string[][] = [];
   let fetchedData: Record<string, any> = {};
 
-
   const SHOW_LOADING_DELAY_MS = 300;
   let showLoadingRef: number;
   let showLoading = $state(false);
@@ -106,6 +105,30 @@
       goto(`/i/${inputHandle.trim().replace(/^@/, "")}`, { invalidateAll: true });
     }
   }
+
+  let actorsTypeahead: { did: string; handle: string; display_name: string }[] = $state([]);
+  async function handleInputTypeahead(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+    event.preventDefault();
+
+    const url = new URL("https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead");
+    url.searchParams.append("q", event.currentTarget.value);
+    url.searchParams.append("limit", "10");
+
+    try {
+      const response = await fetch(url.toString());
+
+      if (response.ok) {
+        const { actors } = await response.json();
+        actorsTypeahead = actors.map((x: Record<string, string>) => ({
+          did: x.did,
+          handle: x.handle,
+          display_name: x.displayName,
+        }));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -113,7 +136,7 @@
 </svelte:head>
 
 <div class="p-2 flex flex-col items-center border rounded-md w-full">
-  <p class="pb-2 text-xl font-bold">{$t('stuff.interactions.title')}</p>
+  <p class="pb-2 text-xl font-bold">{$t("stuff.interactions.title")}</p>
   <form onsubmit={handleSubmit}>
     <div class="join">
       <input
@@ -121,15 +144,22 @@
         type="text"
         name="handle"
         placeholder={$t("stuff.common.handle")}
+        list="actors"
         bind:value={inputHandle}
+        oninput={handleInputTypeahead}
       />
       <button class="btn btn-primary join-item">{$t("stuff.common.search")}</button>
     </div>
   </form>
+  <datalist id="actors">
+    {#each actorsTypeahead as actor}
+      <option value={actor.handle}>{actor.display_name}</option>
+    {/each}
+  </datalist>
 
   {#if showLoading}
-  <p class="pt-2">{$t('stuff.interactions.loading')}</p>
-  <p class="pt-2">{$t('stuff.interactions.loadingMsg')}</p>
+    <p class="pt-2">{$t("stuff.interactions.loading")}</p>
+    <p class="pt-2">{$t("stuff.interactions.loadingMsg")}</p>
     <span class="loading loading-infinity loading-lg"></span>
   {/if}
   {#if data.success && modifiedData}
