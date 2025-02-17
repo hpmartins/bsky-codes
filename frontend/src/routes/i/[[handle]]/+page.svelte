@@ -1,15 +1,17 @@
 <script lang="ts">
   import type { PageProps } from "./$types";
-  import type { CirclesOptionsType, InteractionsDataType } from "$lib/types";
+  import type { InteractionsDataType, SimpleProfileType } from "$lib/types";
 
   import { t } from "$lib/translations";
   import InteractionsTable from "#/InteractionsTable.svelte";
   import { goto } from "$app/navigation";
   import { navigating } from "$app/state";
+  import Circles from "#/Circles.svelte";
 
   let { data }: PageProps = $props();
   let inputHandle: string = $state(data.handle ?? "");
 
+  let mainProfile: SimpleProfileType | null = $state(null);
   let modifiedData: InteractionsDataType | null = $state(null);
   let groupedIds: string[][] = [];
   let fetchedData: Record<string, any> = {};
@@ -30,25 +32,15 @@
     }
   });
 
-  let circlesOptions: CirclesOptionsType = $state({
-    orbits: 2,
-    include_sent: true,
-    include_rcvd: false,
-    add_watermark: true,
-    add_date: true,
-    bg_color: "#1D428A",
-    add_border: true,
-    border_color: "#FFC72C",
-  });
-
   $effect(() => {
-    if (data.success && data.interactions) {
+    if (data.success && data.interactions && data.did) {
       modifiedData = JSON.parse(JSON.stringify(data.interactions));
 
       const allIds = new Set<string>();
       data.interactions.sent.forEach((item) => allIds.add(item._id));
       data.interactions.rcvd.forEach((item) => allIds.add(item._id));
       const uniqueIds = Array.from(allIds);
+      uniqueIds.push(data.did);
 
       groupedIds = [];
       for (let i = 0; i < uniqueIds.length; i += 25) {
@@ -79,6 +71,14 @@
 
       Promise.all(fetchPromises)
         .then(() => {
+          if (data.did && data.handle) {
+            mainProfile = {
+              did: data.did,
+              handle: data.handle,
+              display_name: fetchedData[data.did].display_name,
+              avatar: fetchedData[data.did].avatar,
+            };
+          }
           if (modifiedData) {
             modifiedData.sent.forEach((item) => {
               if (fetchedData[item._id]) {
@@ -162,9 +162,10 @@
     <p class="pt-2">{$t("stuff.interactions.loadingMsg")}</p>
     <span class="loading loading-infinity loading-lg"></span>
   {/if}
-  {#if data.success && modifiedData}
+  {#if data.success && modifiedData && mainProfile}
     <p class="pt-2 font-bold text-lg">@{data.handle}</p>
     <p class="font-bold text-lg">{$t("stuff.interactions.dates.week")}</p>
+    <Circles data={modifiedData} profile={mainProfile} />
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
       <div class="flex flex-col items-center">
         <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
@@ -179,85 +180,3 @@
     <p>{data.error}</p>
   {/if}
 </div>
-<!-- <details class="collapse bg-base-200">
-    <summary class="collapse-title text-xl text-center font-medium text-secondary bg-primary">
-      {$t("features.interactions.bolas.title")}
-    </summary>
-    <div class="collapse-content">
-      <div class="flex flex-col justify-center items-center gap-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center p-4 border-4 border-secondary rounded mt-3">
-          <div>
-            {$t("features.interactions.bolas.include")}:
-            <label class="label cursor-pointer gap-x-3 justify-start">
-              <input
-                class="checkbox checkbox-sm checkbox-secondary"
-                type="checkbox"
-                bind:checked={circlesOptions.include_sent}
-              />
-              <span class="label-text">{$t("features.interactions.bolas.sent")}</span>
-            </label>
-            <label class="label cursor-pointer gap-x-3 justify-start">
-              <input
-                class="checkbox checkbox-sm checkbox-secondary"
-                type="checkbox"
-                bind:checked={circlesOptions.include_rcvd}
-              />
-              <span class="label-text">{$t("features.interactions.bolas.received")}</span>
-            </label>
-          </div>
-          <div>
-            {$t("features.interactions.bolas.options")}:
-            <label class="label cursor-pointer gap-x-3 justify-start">
-              <input
-                class="checkbox checkbox-sm checkbox-secondary"
-                type="checkbox"
-                bind:checked={circlesOptions.add_date}
-              />
-              <span class="label-text">{$t("features.interactions.bolas.add_date")}</span>
-            </label>
-            <label class="label cursor-pointer gap-x-3 justify-start">
-              <input
-                class="checkbox checkbox-sm checkbox-secondary"
-                type="checkbox"
-                bind:checked={circlesOptions.add_watermark}
-              />
-              <span class="label-text">{$t("features.interactions.bolas.add_watermark")}</span>
-            </label>
-          </div>
-          <div>
-            <div>
-              {$t("features.interactions.bolas.orbits")}:
-              <input
-                type="range"
-                class="range range-xs range-primary"
-                min="1"
-                max="3"
-                bind:value={circlesOptions.orbits}
-              />
-            </div>
-            <div>
-              {$t("features.interactions.bolas.bg_color")}:
-              <input type="color" style="width:100%;" bind:value={circlesOptions.bg_color} />
-            </div>
-            <div>
-              <label class="flex items-center space-x-2">
-                <input
-                  class="checkbox checkbox-sm checkbox-secondary"
-                  type="checkbox"
-                  bind:checked={circlesOptions.add_border}
-                />
-                <p>{$t("features.interactions.bolas.border_color")}:</p>
-              </label>
-              <input type="color" style="width:100%;" bind:value={circlesOptions.border_color} />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          {#key data}{#key circlesOptions}
-              <Circles profile={data.interactions} data={data.interactions} options={circlesOptions} />
-            {/key}{/key}
-        </div>
-      </div>
-    </div>
-  </details> -->
