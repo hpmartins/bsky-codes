@@ -474,6 +474,10 @@ async def _circles(actor: str, source: Literal["sent", "rcvd", "both"] = "rcvd")
 async def _fetch_dynamic_data(
     name: Literal["top_blocks", "top_interactions"],
 ):
+    cached_data = await cache_hget("dynamic_data", name)
+    if cached_data:
+        return cached_data
+
     doc = await app.db.get_collection(config.DYNAMIC_COLLECTION).find_one(
         filter={
             "name": name,
@@ -483,7 +487,8 @@ async def _fetch_dynamic_data(
     )
 
     if doc:
-        doc["_id"] = doc["_id"].generation_time
+        doc["_id"] = doc["_id"].generation_time.isoformat()
+        await cache_hset("dynamic_data", name, doc, ttl=600)
         return doc
 
 
