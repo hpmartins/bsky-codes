@@ -63,11 +63,12 @@
             "copy": "Copiar imagem",
             "copyPeople": "Copiar arrobas"
         },
+        "separate": "separar",
+        "consolidate": "juntar",
         "table": {
-            "title": {
-                "sent": "Interações enviadas",
-                "rcvd": "Interações recebidas"
-            }
+            "both": "enviadas + recebidas",
+            "sent": "enviadas",
+            "rcvd": "recebidas"
         }
     }
 }

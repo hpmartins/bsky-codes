@@ -39,15 +39,15 @@
         if (!data || !options) return;
 
         // decides which interactions to use based on the options
-        let interactionsList: InteractionsType[];
-        // if (options.include_sent && options.include_rcvd) {
-        //     interactionsList = data.both;
-        // } else if (options.include_sent) {
-        //     interactionsList = data.sent;
-        // } else if (options.include_rcvd) {
-        //     interactionsList = data.rcvd;
-        // }
-        interactionsList = data.rcvd;
+        let interactionsList: InteractionsType[] | undefined;
+        if (options.include_sent && options.include_rcvd) {
+            interactionsList = data.both;
+        } else if (options.include_sent) {
+            interactionsList = data.sent;
+        } else {
+            // default is received
+            interactionsList = data.rcvd;
+        }
 
         // no image if no data
         if (!interactionsList || interactionsList.length === 0) return;

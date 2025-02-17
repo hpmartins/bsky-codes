@@ -63,7 +63,10 @@
             "copy": "Copy image",
             "copyPeople": "Copy people list"
         },
+        "separate": "split",
+        "consolidate": "join",
         "table": {
+            "both": "sent + received",
             "sent": "sent",
             "rcvd": "received"
         }

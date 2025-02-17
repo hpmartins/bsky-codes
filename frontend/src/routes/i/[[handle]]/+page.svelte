@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageProps } from "./$types";
-  import type { InteractionsDataType, SimpleProfileType } from "$lib/types";
+  import type { InteractionsDataType, InteractionsType, SimpleProfileType } from "$lib/types";
 
   import { t } from "$lib/translations";
   import InteractionsTable from "#/InteractionsTable.svelte";
@@ -15,6 +15,7 @@
   let modifiedData: InteractionsDataType | null = $state(null);
   let groupedIds: string[][] = [];
   let fetchedData: Record<string, any> = {};
+  let toggleGroupData: boolean = $state(false);
 
   const SHOW_LOADING_DELAY_MS = 300;
   let showLoadingRef: number;
@@ -99,6 +100,35 @@
     }
   });
 
+  $effect(() => {
+    if (modifiedData) {
+      let both = modifiedData.sent.concat(modifiedData.rcvd);
+      const summed: { [key: string]: InteractionsType } = {};
+      both.forEach((x) => {
+        if (x._id in summed) {
+          summed[x._id].c += x.c;
+          summed[x._id].p += x.p;
+          summed[x._id].l += x.l;
+          summed[x._id].r += x.r;
+          summed[x._id].t += x.t;
+        } else {
+          summed[x._id] = {
+            _id: x._id,
+            profile: x.profile,
+            c: x.c,
+            p: x.p,
+            l: x.l,
+            r: x.r,
+            t: x.t,
+          };
+        }
+      });
+      modifiedData.both = Object.values(summed).sort((a, b) => {
+        return (b.t as number) - (a.t as number);
+      });
+    }
+  });
+
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     if (inputHandle && inputHandle.length > 0) {
@@ -175,16 +205,34 @@
       </div>
     </details>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
-      <div class="flex flex-col items-center">
-        <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
-        <InteractionsTable data={modifiedData.sent} perPage={10} />
-      </div>
-      <div class="flex flex-col items-center">
-        <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.rcvd")}</p>
-        <InteractionsTable data={modifiedData.rcvd} perPage={10} />
-      </div>
+    <div class="flex justify-center items-center py-3">
+      <span class="label-text text-md pr-2">{$t("stuff.interactions.separate")}</span>
+      <label class="relative inline-flex cursor-pointer items-center">
+        <input id="switch" type="checkbox" class="peer sr-only" bind:checked={toggleGroupData} />
+        <label for="switch" class="hidden"></label>
+        <div
+          class="peer h-6 w-11 rounded-full border bg-primary after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-secondary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-green-300"
+        ></div>
+      </label>
+      <span class="label-text text-md pl-2">{$t("stuff.interactions.consolidate")}</span>
     </div>
+    {#if toggleGroupData}
+      <div class="flex flex-col items-center">
+        <p class="text-xl text-primary font-bold">{$t("stuff.interactions.table.both")}</p>
+        <InteractionsTable data={modifiedData.both} perPage={10} />
+      </div>
+    {:else}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+        <div class="flex flex-col items-center">
+          <p class="text-xl text-primary font-bold">{$t("stuff.interactions.table.sent")}</p>
+          <InteractionsTable data={modifiedData.sent} perPage={10} />
+        </div>
+        <div class="flex flex-col items-center">
+          <p class="text-xl text-primary font-bold">{$t("stuff.interactions.table.rcvd")}</p>
+          <InteractionsTable data={modifiedData.rcvd} perPage={10} />
+        </div>
+      </div>
+    {/if}
   {:else}
     <p>{data.error}</p>
   {/if}

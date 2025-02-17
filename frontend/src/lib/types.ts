@@ -18,6 +18,7 @@ export type InteractionsType = {
 export type InteractionsDataType = {
   sent: InteractionsType[]
   rcvd: InteractionsType[]
+  both?: InteractionsType[]
 };
 
 export type InteractionsResponse = {
