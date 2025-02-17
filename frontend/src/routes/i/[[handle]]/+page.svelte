@@ -5,13 +5,31 @@
   import { t } from "$lib/translations";
   import InteractionsTable from "#/InteractionsTable.svelte";
   import { goto } from "$app/navigation";
+  import { navigating } from "$app/state";
 
   let { data }: PageProps = $props();
   let inputHandle: string = $state(data.handle ?? "");
 
-  let modifiedData: InteractionsDataType | undefined = $state();
+  let modifiedData: InteractionsDataType | null = $state(null);
   let groupedIds: string[][] = [];
   let fetchedData: Record<string, any> = {};
+
+
+  const SHOW_LOADING_DELAY_MS = 300;
+  let showLoadingRef: number;
+  let showLoading = $state(false);
+
+  $effect(() => {
+    clearTimeout(showLoadingRef);
+    if (navigating.complete == null) {
+      showLoading = false;
+    } else {
+      showLoadingRef = setTimeout(() => {
+        modifiedData = null;
+        showLoading = true;
+      }, SHOW_LOADING_DELAY_MS);
+    }
+  });
 
   let circlesOptions: CirclesOptionsType = $state({
     orbits: 2,
@@ -95,6 +113,7 @@
 </svelte:head>
 
 <div class="p-2 flex flex-col items-center border rounded-md w-full">
+  <p class="pb-2 text-xl font-bold">{$t('stuff.interactions.title')}</p>
   <form onsubmit={handleSubmit}>
     <div class="join">
       <input
@@ -108,21 +127,24 @@
     </div>
   </form>
 
-  {#if data.success}
-    {#if modifiedData}
+  {#if showLoading}
+  <p class="pt-2">{$t('stuff.interactions.loading')}</p>
+  <p class="pt-2">{$t('stuff.interactions.loadingMsg')}</p>
+    <span class="loading loading-infinity loading-lg"></span>
+  {/if}
+  {#if data.success && modifiedData}
     <p class="pt-2 font-bold text-lg">@{data.handle}</p>
-    <p class="font-bold text-lg">{$t('stuff.interactions.dates.week')}</p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <div class="flex flex-col items-center">
-          <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
-          <InteractionsTable data={modifiedData.sent} perPage={10} />
-        </div>
-        <div class="flex flex-col items-center">
-          <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.rcvd")}</p>
-          <InteractionsTable data={modifiedData.rcvd} perPage={10} />
-        </div>
+    <p class="font-bold text-lg">{$t("stuff.interactions.dates.week")}</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div class="flex flex-col items-center">
+        <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.sent")}</p>
+        <InteractionsTable data={modifiedData.sent} perPage={10} />
       </div>
-    {/if}
+      <div class="flex flex-col items-center">
+        <p class="text-xl text-primary text-bold">{$t("stuff.interactions.table.rcvd")}</p>
+        <InteractionsTable data={modifiedData.rcvd} perPage={10} />
+      </div>
+    </div>
   {:else}
     <p>{data.error}</p>
   {/if}
