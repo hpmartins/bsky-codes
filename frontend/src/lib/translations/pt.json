@@ -42,8 +42,8 @@
     },
     "interactions": {
         "title": "Interações",
-        "choose_week": "Escolha uma semana",
-        "choose_range": "... ou um período específico",
+        "loading": "Carregando...",
+        "loadingMsg": "Isso pode demorar 1-2 minutos",
         "dates": {
             "all": "Tudo",
             "month": "Últimos 30 dias",
@@ -65,11 +65,8 @@
             "copy": "Copiar imagem",
             "copyPeople": "Copiar arrobas"
         },
-        "separate": "Separar",
-        "consolidate": "Juntar",
         "table": {
             "title": {
-                "both": "Interações enviadas + recebidas",
                 "sent": "Interações enviadas",
                 "rcvd": "Interações recebidas"
             }

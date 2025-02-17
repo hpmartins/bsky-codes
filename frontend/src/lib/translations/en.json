@@ -42,8 +42,8 @@
     },
     "interactions": {
         "title": "Interactions",
-        "choose_week": "Choose a week",
-        "choose_range": "... or a specific date range",
+        "loading": "Loading...",
+        "loadingMsg": "This may take 1-2 minutes",
         "dates": {
             "all": "All time",
             "month": "Last 30 days",
@@ -65,10 +65,7 @@
             "copy": "Copy image",
             "copyPeople": "Copy people list"
         },
-        "separate": "Split",
-        "consolidate": "Join",
         "table": {
-            "both": "Sent + Received",
             "sent": "sent",
             "rcvd": "received"
         }
