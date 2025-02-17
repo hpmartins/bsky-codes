@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { InteractionsType, CirclesOptionsType, InteractionsDataType, SimpleProfileType } from "$lib/types";
-    import { t } from "$lib/translations";
+    import { t, locale } from "$lib/translations";
     import { copy } from "svelte-copy";
+    import { DateTime, Duration } from "luxon";
 
     interface Props {
         profile: SimpleProfileType; // user profile (handle, displayName, avatar)
@@ -47,18 +48,6 @@
 
         // no image if no data
         if (!interactionsList || interactionsList.length === 0) return;
-
-        // filter bots
-        // if (options.remove_bots) {
-        //     interactionsList = interactionsList.filter(
-        //         (x) => !DO_NOT_INCLUDE_THESE.includes(x._id),
-        //     );
-        // }
-
-        // filter blocked
-        // if (options.remove_blocked) {
-        //     interactionsList = interactionsList.filter((x) => !x.blocked);
-        // }
 
         // - radial distances for each number of orbits
         // - i chose this manually
@@ -112,25 +101,15 @@
         context.imageSmoothingQuality = "medium";
 
         // date on top left corner
-        // if (options.add_date) {
-        //     let textFull = '';
-        //     if (date.type === 'weekly') {
-        //         const textFrom = date.start.toDate().toLocaleDateString();
-        //         const textTo = date.end.toDate().toLocaleDateString();
-        //         textFull = `${textFrom} - ${textTo}`;
-        //     } else if (date.type === 'all') {
-        //         textFull = `${new Date().toLocaleDateString()} (all time)`;
-        //     } else if (date.type === 'month') {
-        //         textFull = `${new Date().toLocaleDateString()} (month)`;
-        //     } else if (date.type === 'week') {
-        //         const textFrom = dayjs().subtract(1, 'week').toDate().toLocaleDateString();
-        //         const textTo = new Date().toLocaleDateString();
-        //         textFull = `${textFrom} - ${textTo}`;
-        //     }
-        //     context.font = '20px Arial';
-        //     context.fillStyle = textColor;
-        //     context.fillText(textFull, 12, 28);
-        // }
+        if (options.add_date) { // DateTime.fromISO(_id).setLocale(locale.get()).toLocaleString(DateTime.DATETIME_SHORT);
+            const dateNow = DateTime.now().setLocale(locale.get())
+            const textFrom = dateNow.minus(Duration.fromObject({days: 7})).toLocaleString(DateTime.DATE_SHORT)
+            const textTo = dateNow.toLocaleString(DateTime.DATE_SHORT);
+            const textFull = `${textFrom} - ${textTo}`;
+            context.font = '20px Arial';
+            context.fillStyle = textColor;
+            context.fillText(textFull, 12, 28);
+        }
 
         // site watermark on top right corner
         if (options.add_watermark) {
