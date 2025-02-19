@@ -113,6 +113,7 @@ class Config:
     FART_PORT: int = 8000
     FART_DB: str = "bsky"
     FART_URI: str = "http://localhost:8000"
+    FART_KEY: str = ""  # if empty there is no auth
     # jetstream_enjoyer
     FIREHOSE_ENJOYER_PORT: int = 8888
     FIREHOSE_ENJOYER_CHECKPOINT: int = 1000
