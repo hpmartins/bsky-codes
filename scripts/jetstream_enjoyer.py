@@ -57,6 +57,14 @@ signal.signal(signal.SIGTERM, signal_handler)
 def get_nats_subject(collection: str) -> str:
     return f"{_config.JETSTREAM_ENJOYER_SUBJECT_PREFIX}.{collection}"
 
+def get_date_from_jetstream_cursor(cursor: int):
+    return datetime.datetime.fromtimestamp(cursor / 1000000, tz=datetime.timezone.utc)
+
+
+def check_jetstream_cursor(cursor: int):
+    cursor_date = get_date_from_jetstream_cursor(cursor)
+    now_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(minutes=5)
+    return cursor_date < now_date
 
 async def subscribe_to_jetstream(collections: List[str]):
     kv = await nm.get_or_create_kv_store(_config.NATS_STREAM)

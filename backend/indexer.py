@@ -1,29 +1,22 @@
+import argparse
 import asyncio
 import datetime
-import signal
 import json
-from pymongo import IndexModel
-from nats.aio.msg import Msg
-from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy
-from nats.js.errors import NotFoundError
+import signal
 from collections import defaultdict
-from atproto import models
-import argparse
 
-from utils.nats import NATSManager
-from utils.database import MongoDBManager
-from utils.core import (
-    Config,
-    Logger,
-    Event,
-)
+from atproto import AtUri, models
+from nats.aio.msg import Msg
+from nats.js.api import AckPolicy, ConsumerConfig, DeliverPolicy
+from nats.js.errors import NotFoundError
+from pymongo import DeleteOne, IndexModel, InsertOne, UpdateOne
 
-from utils.interactions import (
-    INTERACTION_RECORDS,
-    parse_interaction,
-)
-
-from pymongo import InsertOne, DeleteOne, UpdateOne
+from core.config import Config
+from core.database import MongoDBManager
+from core.defaults import INTERACTION_RECORDS
+from core.logger import Logger
+from core.nats import NATSManager
+from core.types import Event
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--log", default="INFO")
@@ -41,6 +34,75 @@ def signal_handler(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
+
+def _get_date(created_at: str | None = None):
+    if created_at:
+        dt = datetime.datetime.fromisoformat(created_at)
+    else:
+        dt = datetime.datetime.now(tz=datetime.timezone.utc)
+    return dt.replace(minute=0, second=0, microsecond=0)
+
+
+def _create_interaction(
+    created_at: str,
+    author: str,
+    rkey: str,
+    subject: str,
+    others: dict = {},
+):
+    if author == subject:
+        return None
+
+    return {
+        "_id": f"{author}/{rkey}",
+        "a": author,
+        "s": subject,
+        "t": _get_date(created_at),
+        **others,
+    }
+
+
+def _parse_interaction(author: str, rkey: str, record):
+    if models.is_record_type(record, models.ids.AppBskyFeedLike) or models.is_record_type(
+        record, models.ids.AppBskyFeedRepost
+    ):
+        return _create_interaction(
+            record.created_at,
+            author,
+            rkey,
+            AtUri.from_str(record.subject.uri).host,
+        )
+
+    if models.is_record_type(record, models.ids.AppBskyFeedPost):
+        if record.reply is not None and record.reply.parent is not None:
+            return _create_interaction(
+                record.created_at,
+                author,
+                rkey,
+                AtUri.from_str(record.reply.parent.uri).host,
+                dict(c=len(record.text)),
+            )
+
+        if record.embed is not None:
+            if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecord):
+                return _create_interaction(
+                    record.created_at,
+                    author,
+                    rkey,
+                    AtUri.from_str(record.embed.record.uri).host,
+                    dict(c=len(record.text)),
+                )
+
+            if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecordWithMedia):
+                if models.is_record_type(record.embed.record, models.ids.AppBskyEmbedRecord):
+                    return _create_interaction(
+                        record.created_at,
+                        author,
+                        rkey,
+                        AtUri.from_str(record.embed.record.record.uri).host,
+                        dict(c=len(record.text)),
+                    )
 
 
 async def main():
@@ -137,7 +199,7 @@ async def main():
                     )
 
                 if operation == "create" and collection in INTERACTION_RECORDS:
-                    interaction = parse_interaction(repo, rkey, record)
+                    interaction = _parse_interaction(repo, rkey, record)
                     if interaction:
                         doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
                         db_ops[doc_collection].append(InsertOne(interaction))

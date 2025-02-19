@@ -1,34 +1,33 @@
+import argparse
 import asyncio
 import signal
 import time
-from typing import Any
-import nats
-from prometheus_client import Counter, make_asgi_app
-import uvicorn
 from types import FrameType
-import argparse
+from typing import Any
 
-
+import nats
+import nats.js.errors
+import uvicorn
 from atproto import (
     CAR,
+    AsyncFirehoseSubscribeReposClient,
     AtUri,
     firehose_models,
-    AsyncFirehoseSubscribeReposClient,
     models,
     parse_subscribe_repos_message,
 )
+from prometheus_client import Counter, make_asgi_app
 
-from utils.core import (
-    Logger,
-    Config,
+from core.config import Config
+from core.defaults import INTERESTED_RECORDS
+from core.logger import Logger
+from core.nats import NATSManager
+from core.types import (
     Commit,
     EventAccount,
     EventCommit,
     EventIdentity,
-    INTERESTED_RECORDS,
 )
-
-from utils.nats import NATSManager
 
 app = make_asgi_app()
 _config = Config()

@@ -1,20 +1,18 @@
-import datetime
 import asyncio
+import datetime
 from typing import Literal
 
 from apscheduler import AsyncScheduler
 from apscheduler.triggers.cron import CronTrigger
-
-from utils.core import Config
-from utils.database import MongoDBManager
-
 from atproto import (
     AsyncClient,
 )
 
+from core.config import Config
+from core.database import MongoDBManager
+
 config = Config()
 mongo_manager = MongoDBManager(uri=config.MONGO_URI)
-
 bsky_client = AsyncClient(base_url="https://public.api.bsky.app/")
 
 
