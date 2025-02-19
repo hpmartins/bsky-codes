@@ -3,7 +3,8 @@ import aiohttp
 import asyncio
 from io import BytesIO
 import uvicorn
-from fastapi import FastAPI, responses, HTTPException
+from fastapi import FastAPI, responses, HTTPException, Depends
+from fastapi.security.api_key import APIKeyHeader
 import datetime
 from typing import Literal
 from contextlib import asynccontextmanager
@@ -16,6 +17,8 @@ import math
 import json
 from pydantic import BaseModel
 import redis.asyncio as redis
+
+import backend.FART.auth as auth
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -473,6 +476,7 @@ async def _circles(actor: str, source: Literal["sent", "rcvd", "both"] = "rcvd")
 @app.get("/dd/{name}")
 async def _fetch_dynamic_data(
     name: Literal["top_blocks", "top_interactions"],
+    api_key: APIKeyHeader = Depends(auth.get_api_key)
 ):
     cached_data = await cache_hget("dynamic_data", name)
     if cached_data:
@@ -507,8 +511,10 @@ async def _get_collstats():
 
     return collStats
 
+
 async def cache_hexists(name: str, key: str) -> bool:
     return await app.redis.hexists(name, key)
+
 
 async def cache_hget(name: str, key: str) -> dict | None:
     data = await app.redis.hget(name, key)
@@ -537,7 +543,10 @@ class InteractionsResponse(BaseModel):
 
 
 @app.post("/interactions")
-async def _interactions(body: InteractionsBody) -> InteractionsResponse:
+async def _interactions(
+    body: InteractionsBody,
+    api_key: APIKeyHeader = Depends(auth.get_api_key)
+) -> InteractionsResponse:
     handle, did = await _get_did(body.handle)
     if did is None:
         logger.info(f"[interactions] attempt: {body.handle}")
