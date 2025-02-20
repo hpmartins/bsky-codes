@@ -15,7 +15,7 @@ Backend services and frontend for my bluesky stuff.
 
 ### backend
 
-- firehose_enjoyer
+- enjoyer
     - subscribes to bsky firehose
     - filters incoming data
     - publishes on nats-js
@@ -27,7 +27,7 @@ Backend services and frontend for my bluesky stuff.
         - fetch interactions and create circles
         - fetch dynamic data
         - caches data using nats-kv
-- chrono_trigger
+- trigger
     - scheduled tasks
         - global interaction stats
 
