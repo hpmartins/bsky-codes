@@ -1,6 +1,8 @@
 <script lang="ts">
   import "../app.css";
   import { t, locale } from "$lib/translations";
+  import wolfgang from '$lib/assets/logo.jpg?enhanced';
+
   let { children } = $props();
 </script>
 
@@ -13,9 +15,9 @@
     <div class="grid justify-items-center">
       <div class="flex flex-col items-center gap-y-2">
         <a href="/"><h1 class="text-2xl text-primary">{$t("stuff.homepage.title")}</h1></a>
-        <a href="/">
+        <a href="/" aria-label="Index">
           <div class="logo w-25 h-40 rounded-xl overflow-hidden">
-            <img src="/logo.jpg" alt="Logo" class="w-full h-full object-cover" />
+            <enhanced:img src={wolfgang} alt="Logo" class="w-full h-full object-cover" />
           </div>
         </a>
       </div>
