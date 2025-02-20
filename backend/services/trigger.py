@@ -8,8 +8,8 @@ from atproto import (
     AsyncClient,
 )
 
-from core.config import Config
-from core.database import MongoDBManager
+from backend.config import Config
+from backend.database import MongoDBManager
 
 config = Config()
 mongo_manager = MongoDBManager(uri=config.MONGO_URI)

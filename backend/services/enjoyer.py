@@ -18,11 +18,11 @@ from atproto import (
 )
 from prometheus_client import Counter, make_asgi_app
 
-from core.config import Config
-from core.defaults import INTERESTED_RECORDS
-from core.logger import Logger
-from core.nats import NATSManager
-from core.types import (
+from backend.config import Config
+from backend.defaults import INTERESTED_RECORDS
+from backend.logger import Logger
+from backend.stream import NATSManager
+from backend.types import (
     Commit,
     EventAccount,
     EventCommit,
@@ -163,9 +163,6 @@ def _process_commit(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> list[
             if not record_raw_data:
                 continue
 
-            # record = models.get_or_create(record_raw_data, strict=False)
-            # record_type = INTERESTED_RECORDS.get(uri.collection)
-            # if record_type and models.is_record_type(record, record_type):
             ops.append(
                 {
                     "operation": op.action,

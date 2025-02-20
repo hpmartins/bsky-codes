@@ -4,9 +4,9 @@ from typing import Literal
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from backend.core.config import Config
-from backend.core.defaults import INTERACTION_RECORDS
-from backend.core.types import Interaction
+from backend.config import Config
+from backend.defaults import INTERACTION_RECORDS
+from backend.types import Interaction
 
 config = Config()
 logger = logging.getLogger("uvicorn.error")

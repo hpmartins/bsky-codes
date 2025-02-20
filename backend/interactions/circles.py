@@ -54,7 +54,7 @@ from io import BytesIO
 import aiohttp
 from PIL import Image, ImageDraw, ImageFont
 
-from backend.core.types import Interaction
+from backend.types import Interaction
 
 
 def _hex_is_light(color):

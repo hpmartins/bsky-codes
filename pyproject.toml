@@ -6,9 +6,6 @@ build-backend = "hatchling.build"
 [project]
 name = "bsky-codes"
 version = "2025.0.0"
-authors = [
-    { name="Henrique Martins", email="hpmartins@gmail.com" }
-]
 requires-python = ">=3.13"
 readme = "README.md"
 license = "MIT"

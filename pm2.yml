@@ -1,0 +1,22 @@
+apps:
+
+  - name: 'enjoyer'
+    script: '/bin/bash'
+    args:  ['-c', '.venv/bin/python -m backend.services.enjoyer --log=DEBUG']
+
+  - name: 'indexer'
+    script: '/bin/bash'
+    args:  ['-c', '.venv/bin/python -m backend.services.indexer --log=DEBUG']
+
+  - name: 'trigger'
+    script: '/bin/bash'
+    args:  ['-c', '.venv/bin/python -m backend.services.trigger']
+
+  - name: 'FART'
+    script: '/bin/bash'
+    args:  ['-c', '.venv/bin/fastapi run backend/services/FART/main.py']
+
+  - name: wolfgang
+    script: 'node'
+    cwd: './frontend'
+    args: ['-r', 'dotenv/config', 'build/index.js']

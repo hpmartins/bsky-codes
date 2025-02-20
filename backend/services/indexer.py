@@ -11,12 +11,12 @@ from nats.js.api import AckPolicy, ConsumerConfig, DeliverPolicy
 from nats.js.errors import NotFoundError
 from pymongo import DeleteOne, IndexModel, InsertOne, UpdateOne
 
-from core.config import Config
-from core.database import MongoDBManager
-from core.defaults import INTERACTION_RECORDS
-from core.logger import Logger
-from core.nats import NATSManager
-from core.types import Event
+from backend.config import Config
+from backend.database import MongoDBManager
+from backend.defaults import INTERACTION_RECORDS
+from backend.logger import Logger
+from backend.stream import NATSManager
+from backend.types import Event
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--log", default="INFO")

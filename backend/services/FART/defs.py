@@ -11,7 +11,7 @@ from atproto import (
 from fastapi import FastAPI
 from pymongo.errors import ConnectionFailure
 
-from backend.core.config import Config
+from backend.config import Config
 
 config = Config()
 logger = logging.getLogger("uvicorn.error")

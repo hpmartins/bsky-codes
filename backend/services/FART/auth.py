@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Security
 from fastapi.security import api_key
 
-from backend.core.config import Config
+from backend.config import Config
 
 config = Config()
 api_key_header = api_key.APIKeyHeader(name="X-API-Key")
