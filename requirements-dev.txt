@@ -122,6 +122,8 @@ python-multipart==0.0.20
     # via fastapi
 pyyaml==6.0.2
     # via uvicorn
+redis==5.2.1
+    # via bsky-codes (pyproject.toml)
 rich==13.9.4
     # via
     #   rich-toolkit
