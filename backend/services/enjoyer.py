@@ -55,7 +55,7 @@ async def signal_handler(_: int, __: FrameType) -> None:
 
 
 def get_nats_subject(collection: str) -> str:
-    return f"{_config.FIREHOSE_ENJOYER_SUBJECT_PREFIX}.{collection}"
+    return f"{_config.NATS_STREAM_SUBJECT_PREFIX}.{collection}"
 
 
 async def subscribe_to_firehose(nm: NATSManager):
@@ -106,7 +106,7 @@ async def subscribe_to_firehose(nm: NATSManager):
         if not isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Commit):
             return
 
-        if parsed_message.seq % _config.FIREHOSE_ENJOYER_CHECKPOINT == 0:
+        if parsed_message.seq % _config.ENJOYER_CHECKPOINT == 0:
             client.update_params(models.ComAtprotoSyncSubscribeRepos.Params(cursor=parsed_message.seq))
             logger.debug(f"saving new cursor: {parsed_message.seq}")
             await kv.put("cursor", str(parsed_message.seq).encode())
@@ -190,7 +190,7 @@ async def start_service():
     logger.info("Connecting to NATS and checking stuff")
     await nm.connect()
     await nm.create_stream(
-        prefixes=[_config.FIREHOSE_ENJOYER_SUBJECT_PREFIX],
+        prefixes=[_config.NATS_STREAM_SUBJECT_PREFIX],
         max_age=_config.NATS_STREAM_MAX_AGE,
         max_size=_config.NATS_STREAM_MAX_SIZE,
     )
@@ -201,7 +201,7 @@ async def start_service():
 
 async def start_uvicorn() -> None:
     logger.info("Starting uvicorn")
-    uvicorn_config = uvicorn.config.Config(app, host="0.0.0.0", port=_config.FIREHOSE_ENJOYER_PORT)
+    uvicorn_config = uvicorn.config.Config(app, host="0.0.0.0", port=_config.ENJOYER_PORT)
     server = uvicorn.server.Server(uvicorn_config)
     await server.serve()
 

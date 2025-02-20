@@ -276,7 +276,7 @@ async def main():
             config=ConsumerConfig(
                 name=_config.INDEXER_CONSUMER,
                 durable_name=_config.INDEXER_CONSUMER,
-                filter_subject=f"{_config.FIREHOSE_ENJOYER_SUBJECT_PREFIX}.>",
+                filter_subject=f"{_config.NATS_STREAM_SUBJECT_PREFIX}.>",
                 deliver_policy=DeliverPolicy.ALL,
                 ack_policy=AckPolicy.ALL,
                 ack_wait=60,

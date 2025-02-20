@@ -157,10 +157,10 @@ async def main():
 
     async with AsyncScheduler() as scheduler:
         await scheduler.add_schedule(
-            update_top_interactions, CronTrigger.from_crontab(config.CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL)
+            update_top_interactions, CronTrigger.from_crontab(config.CRON_TOP_INTERACTIONS)
         )
         await scheduler.add_schedule(
-            update_top_blocks, CronTrigger.from_crontab(config.CHRONO_TRIGGER_TOP_INTERACTIONS_INTERVAL)
+            update_top_blocks, CronTrigger.from_crontab(config.CRON_TOP_BLOCKS)
         )
         await scheduler.run_until_stopped()
 
