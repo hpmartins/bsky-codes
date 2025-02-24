@@ -6,6 +6,7 @@ import signal
 from collections import defaultdict
 
 from atproto import AtUri, models
+from atproto_client.models.unknown_type import UnknownRecordType
 from nats.aio.msg import Msg
 from nats.js.api import AckPolicy, ConsumerConfig, DeliverPolicy
 from nats.js.errors import NotFoundError
@@ -16,7 +17,7 @@ from backend.database import MongoDBManager
 from backend.defaults import INTERACTION_RECORDS
 from backend.logger import Logger
 from backend.stream import NATSManager
-from backend.types import Event
+from backend.types import Commit, Event
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--log", default="INFO")
@@ -63,7 +64,7 @@ def _create_interaction(
     }
 
 
-def _parse_interaction(author: str, rkey: str, record):
+def _parse_create_interaction(author: str, rkey: str, record: UnknownRecordType):
     if models.is_record_type(record, models.ids.AppBskyFeedLike) or models.is_record_type(
         record, models.ids.AppBskyFeedRepost
     ):
@@ -103,6 +104,59 @@ def _parse_interaction(author: str, rkey: str, record):
                         AtUri.from_str(record.embed.record.record.uri).host,
                         dict(c=len(record.text)),
                     )
+
+
+def _parse_interaction(commit: Commit) -> InsertOne | DeleteOne | None:
+    if commit["operation"] == "create":
+        record = models.get_or_create(commit["record"], strict=False)
+        interaction = _parse_create_interaction(commit["repo"], commit["rkey"], record)
+        if interaction:
+            return InsertOne(interaction)
+    elif commit["operation"] == "delete":
+        return DeleteOne({"_id": f"{commit['repo']}/{commit['rkey']}"})
+
+
+def _parse_profile(commit: Commit) -> UpdateOne:
+    if commit["operation"] in ["create", "update"]:
+        record = models.get_or_create(commit["record"], strict=False)
+        return UpdateOne(
+            {"_id": commit["repo"]},
+            {
+                "$set": {
+                    **record.model_dump(exclude=["avatar", "banner", "py_type"]),
+                    "created_at": (
+                        datetime.datetime.fromisoformat(record["created_at"]) if record["created_at"] else None
+                    ),
+                    "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                },
+                "$setOnInsert": {
+                    "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                },
+            },
+            upsert=True,
+        )
+    elif commit["operation"] == "delete":
+        return UpdateOne(
+            {"_id": commit["repo"]},
+            {"$set": {"deleted": True}},
+            upsert=True,
+        )
+
+
+def _parse_block(commit: Commit) -> InsertOne | DeleteOne | None:
+    _id = "{}/{}/{}".format(commit["repo"], commit["collection"], commit["rkey"])
+    if commit["operation"] == "create":
+        record = models.get_or_create(commit["record"], strict=False)
+        return InsertOne(
+            {
+                "_id": _id,
+                "author": commit["repo"],
+                "subject": record.subject,
+                "created_at": datetime.datetime.fromisoformat(record.created_at),
+            }
+        )
+    elif commit["operation"] == "delete":
+        return DeleteOne({"_id": _id})
 
 
 async def main():
@@ -156,70 +210,21 @@ async def main():
 
         if event["kind"] == "commit":
             commit = event["commit"]
-            operation = commit["operation"]
-            repo = commit["repo"]
             collection = commit["collection"]
-            rkey = commit["rkey"]
 
-            if operation == "create" or operation == "update":
-                record = models.get_or_create(commit["record"], strict=False)
+            if collection == models.ids.AppBskyActorProfile:
+                db_ops[collection].append(_parse_profile(commit))
 
-                if collection == models.ids.AppBskyActorProfile:
-                    db_ops[collection].append(
-                        UpdateOne(
-                            {"_id": repo},
-                            {
-                                "$set": {
-                                    **record.model_dump(exclude=["avatar", "banner", "py_type"]),
-                                    "created_at": (
-                                        datetime.datetime.fromisoformat(record["created_at"])
-                                        if record["created_at"]
-                                        else None
-                                    ),
-                                    "updated_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                                },
-                                "$setOnInsert": {
-                                    "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                                },
-                            },
-                            upsert=True,
-                        )
-                    )
+            if collection == models.ids.AppBskyGraphBlock:
+                block_op = _parse_block(commit)
+                if block_op:
+                    db_ops[collection].append(block_op)
 
-                if collection == models.ids.AppBskyGraphBlock:
-                    db_ops[collection].append(
-                        InsertOne(
-                            {
-                                "_id": f"{repo}/{collection}/{rkey}",
-                                "author": repo,
-                                "subject": record.subject,
-                                "created_at": datetime.datetime.fromisoformat(record.created_at),
-                            }
-                        )
-                    )
-
-                if operation == "create" and collection in INTERACTION_RECORDS:
-                    interaction = _parse_interaction(repo, rkey, record)
-                    if interaction:
-                        doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
-                        db_ops[doc_collection].append(InsertOne(interaction))
-
-            if operation == "delete":
-                if collection == models.ids.AppBskyActorProfile:
-                    db_ops[collection].append(
-                        UpdateOne(
-                            {"_id": repo},
-                            {"$set": {"deleted": True}},
-                            upsert=True,
-                        )
-                    )
-
-                if collection == models.ids.AppBskyGraphBlock:
-                    db_ops[collection].append(DeleteOne({"_id": f"{repo}/{collection}/{rkey}"}))
-
-                if collection in INTERACTION_RECORDS:
-                    doc_collection = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
-                    db_ops[doc_collection].append(DeleteOne({"_id": f"{repo}/{rkey}"}))
+            if collection in INTERACTION_RECORDS:
+                interaction_op = _parse_interaction(commit)
+                if interaction_op:
+                    coll_name = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
+                    db_ops[coll_name].append(interaction_op)
 
         return db_ops
 
