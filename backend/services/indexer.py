@@ -160,7 +160,7 @@ def _parse_block(commit: Commit) -> InsertOne | DeleteOne | None:
         return DeleteOne({"_id": _id})
 
 
-def update_and_inc(repo, target_uri, field):
+def update_and_inc(repo: str, target_uri: str, field: str):
     full_field = f"tally.self_{field}" if repo in target_uri else f"tally.{field}"
     return UpdateOne({"_id": target_uri}, {"$inc": {full_field: 1}})
 
@@ -205,11 +205,11 @@ def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
             if record.embed:
                 target_uri = None
                 if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecord):
-                    target_uri = record.embed.record.uri
+                    target_uri = str(record.embed.record.uri)
                 if models.is_record_type(
                     record.embed, models.ids.AppBskyEmbedRecordWithMedia
                 ) and models.is_record_type(record.embed.record, models.ids.AppBskyEmbedRecord):
-                    target_uri = record.embed.record.record.uri
+                    target_uri = str(record.embed.record.record.uri)
 
                 if target_uri:
                     ops.append(update_and_inc(repo, target_uri, "quotes"))
