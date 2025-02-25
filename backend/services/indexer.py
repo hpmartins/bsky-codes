@@ -113,11 +113,11 @@ def _parse_interaction(commit: Commit) -> InsertOne | DeleteOne | None:
         if interaction:
             return InsertOne(interaction)
     elif commit["operation"] == "delete":
-        return DeleteOne({"_id": f"{commit['repo']}/{commit['rkey']}"})
+        return DeleteOne({"_id": "{}/{}".format(commit["repo"], commit["rkey"])})
 
 
 def _parse_profile(commit: Commit) -> UpdateOne:
-    if commit["operation"] in ["create", "update"]:
+    if commit["operation"] == "create" or commit["operation"] == "update":
         record = models.get_or_create(commit["record"], strict=False)
         return UpdateOne(
             {"_id": commit["repo"]},
@@ -157,6 +157,54 @@ def _parse_block(commit: Commit) -> InsertOne | DeleteOne | None:
         )
     elif commit["operation"] == "delete":
         return DeleteOne({"_id": _id})
+
+
+def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
+    ops = []
+
+    uri = AtUri.from_str("at://{}/{}/{}".format(commit["repo"], commit["collection"], commit["rkey"]))
+
+    if commit["operation"] == "delete" and uri.collection == models.ids.AppBskyFeedPost:
+        ops.append(DeleteOne({"_id": str(uri)}))
+
+    if commit["operation"] == "create":
+        record = models.get_or_create(commit["record"], strict=False)
+
+        if uri.collection == models.ids.AppBskyFeedPost:
+            ops.append(
+                InsertOne(
+                    {
+                        "_id": str(uri),
+                        "author": commit["repo"],
+                        "created_at": datetime.datetime.fromisoformat(record.created_at),
+                        "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                        **record.model_dump(include=["facets", "labels", "langs", "reply", "tags"]),
+                    }
+                )
+            )
+
+            if record.reply and record.reply.parent:
+                ops.append(UpdateOne({"_id": str(record.reply.parent.uri)}, {"$inc": {"tally.replies": 1}}))
+
+            if record.embed:
+                target_uri = None
+                if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecord):
+                    target_uri = record.embed.record.uri
+                if models.is_record_type(
+                    record.embed, models.ids.AppBskyEmbedRecordWithMedia
+                ) and models.is_record_type(record.embed.record, models.ids.AppBskyEmbedRecord):
+                    target_uri = record.embed.record.record.uri
+
+                if target_uri:
+                    ops.append(UpdateOne({"_id": str(target_uri)}, {"$inc": {"tally.quotes": 1}}))
+
+        if uri.collection == models.ids.AppBskyFeedLike:
+            ops.append(UpdateOne({"_id": str(record.subject)}, {"$inc": {"tally.likes": 1}}))
+
+        if uri.collection == models.ids.AppBskyFeedRepost:
+            ops.append(UpdateOne({"_id": str(record.subject)}, {"$inc": {"tally.reposts": 1}}))
+
+    return ops
 
 
 async def main():
@@ -213,7 +261,9 @@ async def main():
             collection = commit["collection"]
 
             if collection == models.ids.AppBskyActorProfile:
-                db_ops[collection].append(_parse_profile(commit))
+                profile_op = _parse_profile(commit)
+                if profile_op:
+                    db_ops[collection].append(profile_op)
 
             if collection == models.ids.AppBskyGraphBlock:
                 block_op = _parse_block(commit)
@@ -221,6 +271,10 @@ async def main():
                     db_ops[collection].append(block_op)
 
             if collection in INTERACTION_RECORDS:
+                tally_ops = _parse_tally(commit)
+                if len(tally_ops) > 0:
+                    db_ops[models.ids.AppBskyFeedPost].extend(tally_ops)
+
                 interaction_op = _parse_interaction(commit)
                 if interaction_op:
                     coll_name = "{}.{}".format(_config.INTERACTIONS_COLLECTION, collection.split(".")[-1])
@@ -246,6 +300,12 @@ async def main():
         [
             IndexModel(["author", "created_at"]),
             IndexModel(["subject", "created_at"]),
+        ]
+    )
+
+    await db[models.ids.AppBskyFeedPost].create_indexes(
+        [
+            IndexModel("indexed_at", expireAfterSeconds=60 * 60 * 24 * 8),
         ]
     )
 
