@@ -11,6 +11,7 @@ from nats.aio.msg import Msg
 from nats.js.api import AckPolicy, ConsumerConfig, DeliverPolicy
 from nats.js.errors import NotFoundError
 from pymongo import DeleteOne, IndexModel, InsertOne, UpdateOne
+from pymongo.errors import BulkWriteError
 
 from backend.config import Config
 from backend.database import MongoDBManager
@@ -222,7 +223,7 @@ async def main():
         db_ops = defaultdict(list)
 
         if not _config.INDEXER_ENABLE:
-            return {}
+            return db_ops
 
         if event["kind"] == "account":
             account = models.ComAtprotoSyncSubscribeRepos.Account.model_validate(event["account"], strict=False)
@@ -319,6 +320,14 @@ async def main():
 
     logger.info("Starting service")
 
+    async def bulk_write(col: str, ops: list):
+        try:
+            await db[col].bulk_write(ops, ordered=False)
+        except BulkWriteError:
+            logger.error(f"Error writing to {col}: duplicate keys")
+        except Exception as e:
+            logger.error(f"Error writing to {col}: {e}")
+
     async def process_messages(msgs: list[Msg]):
         if not msgs:
             return
@@ -326,15 +335,19 @@ async def main():
         logger.debug("received messages")
         all_ops = defaultdict(list)
         for msg in msgs:
-            db_ops = await _process_data(msg.data.decode())
-            for col, ops in db_ops.items():
-                all_ops[col].extend(ops)
+            try:
+                db_ops = await _process_data(msg.data.decode())
+            except Exception as e:
+                db_ops = None
+                logger.error(f"Error processing message: {e}; msg={msg.data.decode()}")
+                continue
+
+            if db_ops:
+                for col, ops in db_ops.items():
+                    all_ops[col].extend(ops)
         logger.debug("done processing messages")
 
-        tasks = []
-        for col, ops in all_ops.items():
-            tasks.append(db[col].bulk_write(ops, ordered=False))
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*[bulk_write(col, ops) for col, ops in all_ops.items()])
         logger.debug("done writing in db")
         await msg.ack()
 

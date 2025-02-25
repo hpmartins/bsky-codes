@@ -113,9 +113,10 @@ class NATSManager:
 
             async def fetch_and_process(psub, stop_event):
                 while not stop_event.is_set():
+                    msgs = None
+
                     try:
                         msgs = await psub.fetch(batch_size, timeout=1.0, heartbeat=0.2)
-                        await callback(msgs)
                     except nats.js.errors.FetchTimeoutError as e:
                         print(e)
                         continue
@@ -127,6 +128,11 @@ class NATSManager:
                         break
                     except Exception as e:
                         print(f"Error fetching messages: {e}")
+
+                    if not msgs:
+                        continue
+
+                    await callback(msgs)
 
             asyncio.create_task(fetch_and_process(psub, stop_event))
 
