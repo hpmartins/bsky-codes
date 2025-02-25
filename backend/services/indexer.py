@@ -169,6 +169,8 @@ def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
 
     if commit["operation"] == "create":
         record = models.get_or_create(commit["record"], strict=False)
+        if record is None:
+            return []
 
         if uri.collection == models.ids.AppBskyFeedPost:
             ops.append(
@@ -199,10 +201,10 @@ def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
                     ops.append(UpdateOne({"_id": str(target_uri)}, {"$inc": {"tally.quotes": 1}}))
 
         if uri.collection == models.ids.AppBskyFeedLike:
-            ops.append(UpdateOne({"_id": str(record.subject)}, {"$inc": {"tally.likes": 1}}))
+            ops.append(UpdateOne({"_id": str(record.subject.uri)}, {"$inc": {"tally.likes": 1}}))
 
         if uri.collection == models.ids.AppBskyFeedRepost:
-            ops.append(UpdateOne({"_id": str(record.subject)}, {"$inc": {"tally.reposts": 1}}))
+            ops.append(UpdateOne({"_id": str(record.subject.uri)}, {"$inc": {"tally.reposts": 1}}))
 
     return ops
 
