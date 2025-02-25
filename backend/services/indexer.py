@@ -185,8 +185,11 @@ def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
                 )
             )
 
-            if record.reply and record.reply.parent:
-                ops.append(UpdateOne({"_id": str(record.reply.parent.uri)}, {"$inc": {"tally.replies": 1}}))
+            if record.reply:
+                if record.reply.parent:
+                    ops.append(UpdateOne({"_id": str(record.reply.parent.uri)}, {"$inc": {"tally.replies": 1}}))
+                if record.reply.root:
+                    ops.append(UpdateOne({"_id": str(record.reply.root.uri)}, {"$inc": {"tally.root_replies": 1}}))
 
             if record.embed:
                 target_uri = None
