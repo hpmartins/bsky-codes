@@ -160,37 +160,47 @@ def _parse_block(commit: Commit) -> InsertOne | DeleteOne | None:
         return DeleteOne({"_id": _id})
 
 
+def update_and_inc(repo, target_uri, field):
+    full_field = f"tally.self_{field}" if repo in target_uri else f"tally.{field}"
+    return UpdateOne({"_id": target_uri}, {"$inc": {full_field: 1}})
+
+
 def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
     ops = []
 
-    uri = AtUri.from_str("at://{}/{}/{}".format(commit["repo"], commit["collection"], commit["rkey"]))
+    operation = commit["operation"]
+    repo = commit["repo"]
+    collection = commit["collection"]
+    rkey = commit["rkey"]
+    uri = AtUri.from_str("at://{}/{}/{}".format(repo, collection, rkey))
 
-    if commit["operation"] == "delete" and uri.collection == models.ids.AppBskyFeedPost:
+    if operation == "delete" and collection == models.ids.AppBskyFeedPost:
         ops.append(DeleteOne({"_id": str(uri)}))
 
-    if commit["operation"] == "create":
+    if operation == "create":
         record = models.get_or_create(commit["record"], strict=False)
         if record is None:
             return []
 
-        if uri.collection == models.ids.AppBskyFeedPost:
+        if collection == models.ids.AppBskyFeedPost:
             ops.append(
                 InsertOne(
                     {
                         "_id": str(uri),
-                        "author": commit["repo"],
+                        "author": repo,
                         "created_at": datetime.datetime.fromisoformat(record.created_at),
                         "indexed_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                        **record.model_dump(include=["facets", "labels", "langs", "reply", "tags"]),
+                        "langs": commit["record"].get("langs", None),
+                        "reply": commit["record"].get("reply", None),
                     }
                 )
             )
 
             if record.reply:
                 if record.reply.parent:
-                    ops.append(UpdateOne({"_id": str(record.reply.parent.uri)}, {"$inc": {"tally.replies": 1}}))
+                    ops.append(update_and_inc(repo, str(record.reply.parent.uri), "replies"))
                 if record.reply.root:
-                    ops.append(UpdateOne({"_id": str(record.reply.root.uri)}, {"$inc": {"tally.root_replies": 1}}))
+                    ops.append(update_and_inc(repo, str(record.reply.root.uri), "root_replies"))
 
             if record.embed:
                 target_uri = None
@@ -202,13 +212,13 @@ def _parse_tally(commit: Commit) -> list[InsertOne | UpdateOne | DeleteOne]:
                     target_uri = record.embed.record.record.uri
 
                 if target_uri:
-                    ops.append(UpdateOne({"_id": str(target_uri)}, {"$inc": {"tally.quotes": 1}}))
+                    ops.append(update_and_inc(repo, target_uri, "quotes"))
 
-        if uri.collection == models.ids.AppBskyFeedLike:
-            ops.append(UpdateOne({"_id": str(record.subject.uri)}, {"$inc": {"tally.likes": 1}}))
+        if collection == models.ids.AppBskyFeedLike:
+            ops.append(update_and_inc(repo, str(record.subject.uri), "likes"))
 
-        if uri.collection == models.ids.AppBskyFeedRepost:
-            ops.append(UpdateOne({"_id": str(record.subject.uri)}, {"$inc": {"tally.reposts": 1}}))
+        if collection == models.ids.AppBskyFeedRepost:
+            ops.append(update_and_inc(repo, str(record.subject.uri), "reposts"))
 
     return ops
 
