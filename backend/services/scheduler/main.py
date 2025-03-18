@@ -8,8 +8,8 @@ from atproto import (
     AsyncClient,
 )
 
-from backend.config import Config
-from backend.database import MongoDBManager
+from backend.core.config import Config
+from backend.core.database import MongoDBManager
 
 config = Config()
 mongo_manager = MongoDBManager(uri=config.MONGO_URI)
@@ -18,7 +18,7 @@ bsky_client = AsyncClient(base_url="https://public.api.bsky.app/")
 
 def log(text: str):
     """Logs the given text with a timestamp."""
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] [chrono-trigger] {text}")
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] [scheduler] {text}")
 
 
 async def fetch_profiles(did_list: list[str]):
@@ -168,4 +168,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main()) 

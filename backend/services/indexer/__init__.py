@@ -1,0 +1,1 @@
+"""Indexer service that processes and stores data from the Bluesky network.""" 

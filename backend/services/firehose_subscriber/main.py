@@ -18,11 +18,11 @@ from atproto import (
 )
 from prometheus_client import Counter, make_asgi_app
 
-from backend.config import Config
-from backend.defaults import INTERESTED_RECORDS
-from backend.logger import Logger
-from backend.stream import NATSManager
-from backend.types import (
+from backend.core.config import Config
+from backend.core.defaults import INTERESTED_RECORDS
+from backend.core.logger import Logger
+from backend.core.stream import NATSManager
+from backend.core.types import (
     Commit,
     EventAccount,
     EventCommit,
@@ -46,7 +46,7 @@ counters = dict(
 parser = argparse.ArgumentParser()
 parser.add_argument("--log", default="INFO")
 args = parser.parse_args()
-logger = Logger("indexer", level=args.log.upper())
+logger = Logger("firehose_subscriber", level=args.log.upper())
 
 
 async def signal_handler(_: int, __: FrameType) -> None:
@@ -106,7 +106,7 @@ async def subscribe_to_firehose(nm: NATSManager):
         if not isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Commit):
             return
 
-        if parsed_message.seq % _config.ENJOYER_CHECKPOINT == 0:
+        if parsed_message.seq % _config.FIREHOSE_CHECKPOINT == 0:
             client.update_params(models.ComAtprotoSyncSubscribeRepos.Params(cursor=parsed_message.seq))
             logger.debug(f"saving new cursor: {parsed_message.seq}")
             await kv.put("cursor", str(parsed_message.seq).encode())
@@ -195,13 +195,13 @@ async def start_service():
         max_size=_config.NATS_STREAM_MAX_SIZE,
     )
 
-    logger.info("Starting firehose enjoyer")
+    logger.info("Starting firehose subscriber")
     await subscribe_to_firehose(nm)
 
 
 async def start_uvicorn() -> None:
     logger.info("Starting uvicorn")
-    uvicorn_config = uvicorn.config.Config(app, host="0.0.0.0", port=_config.ENJOYER_PORT)
+    uvicorn_config = uvicorn.config.Config(app, host="0.0.0.0", port=_config.FIREHOSE_PORT)
     server = uvicorn.server.Server(uvicorn_config)
     await server.serve()
 
@@ -222,4 +222,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, lambda _, __: asyncio.create_task(signal_handler(_, __)))
     signal.signal(signal.SIGTERM, lambda _, __: asyncio.create_task(signal_handler(_, __)))
     logger.info("INIT")
-    asyncio.run(main())
+    asyncio.run(main()) 

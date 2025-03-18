@@ -1,0 +1,1 @@
+"""Firehose subscriber service that processes the Bluesky firehose data stream.""" 

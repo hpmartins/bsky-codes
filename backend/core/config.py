@@ -2,7 +2,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Config(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="allow")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="allow"
+    )
 
     # dev
     DEVEL: bool = True
@@ -12,6 +14,7 @@ class Config(BaseSettings):
     NATS_STREAM_SUBJECT_PREFIX: str = "firehose"
     NATS_STREAM_MAX_AGE: int = 7  # days
     NATS_STREAM_MAX_SIZE: int = 5  # GB
+    NATS_CONSUMER: str = "indexer"
     # redis
     REDIS_URI: str = "redis://redis:6379"
     # mongo
@@ -21,11 +24,10 @@ class Config(BaseSettings):
     FART_DB: str = "bsky"
     FART_KEY: str = "secret"  # if empty there is no auth
     # enjoyer
-    ENJOYER_PORT: int = 8888
-    ENJOYER_CHECKPOINT: int = 1000
+    FIREHOSE_PORT: int = 8001
+    FIREHOSE_CHECKPOINT: int = 1000
     # indexer
     INDEXER_ENABLE: bool = False
-    INDEXER_CONSUMER: str = "indexer"
     INDEXER_BATCH_SIZE: int = 1000
     INDEXER_DB: str = "bsky"
     # misc

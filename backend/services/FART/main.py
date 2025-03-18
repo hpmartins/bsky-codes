@@ -8,8 +8,8 @@ from fastapi import Depends, HTTPException
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
 
-from backend.config import Config
-from backend.types import Interaction
+from backend.core.config import Config
+from backend.core.types import Interaction
 from backend.interactions.data import get_interactions
 
 from . import aux

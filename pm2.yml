@@ -1,18 +1,18 @@
 apps:
 
-  - name: 'enjoyer'
+  - name: 'firehose_subscriber'
     script: '/bin/bash'
-    args:  ['-c', '.venv/bin/python -m backend.services.enjoyer --log=DEBUG']
+    args:  ['-c', '.venv/bin/python -m backend.services.firehose_subscriber.main --log=DEBUG']
 
   - name: 'indexer'
     script: '/bin/bash'
-    args:  ['-c', '.venv/bin/python -m backend.services.indexer --log=DEBUG']
+    args:  ['-c', '.venv/bin/python -m backend.services.indexer.main --log=DEBUG']
 
-  - name: 'trigger'
+  - name: 'scheduler'
     script: '/bin/bash'
-    args:  ['-c', '.venv/bin/python -m backend.services.trigger']
+    args:  ['-c', '.venv/bin/python -m backend.services.scheduler.main']
 
-  - name: 'FART'
+  - name: 'fart_api'
     script: '/bin/bash'
     args:  ['-c', '.venv/bin/fastapi run backend/services/FART/main.py']
 
