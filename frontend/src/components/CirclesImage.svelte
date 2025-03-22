@@ -188,9 +188,9 @@
                 // final angle for this user at this orbit
                 const t = toRad(i * angleSize + offset);
 
-                if (orbitIndex > 0) {
+                if (orbitIndex > 0 && users[i].handle) {
                     setTimeout(() => {
-                        peopleList.push(`@${users[i]?.handle}`);
+                        peopleList.push(`@${users[i].handle}`);
                     }, 0);
                 }
 
