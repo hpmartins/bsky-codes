@@ -3,20 +3,30 @@ apps:
   - name: 'firehose_subscriber'
     script: '/bin/bash'
     args:  ['-c', '.venv/bin/python -m backend.services.firehose_subscriber.main --log=DEBUG']
+    env:
+      NODE_ENV: production
 
   - name: 'indexer'
     script: '/bin/bash'
     args:  ['-c', '.venv/bin/python -m backend.services.indexer.main --log=DEBUG']
+    env:
+      NODE_ENV: production
 
   - name: 'scheduler'
     script: '/bin/bash'
     args:  ['-c', '.venv/bin/python -m backend.services.scheduler.main']
+    env:
+      NODE_ENV: production
 
   - name: 'fart_api'
     script: '/bin/bash'
-    args:  ['-c', '.venv/bin/fastapi run backend/services/FART/main.py']
+    args:  ['-c', '.venv/bin/python -m backend.services.FART.main']
+    env:
+      NODE_ENV: production
 
   - name: wolfgang
     script: 'node'
     cwd: './frontend'
     args: ['-r', 'dotenv/config', 'build/index.js']
+    env:
+      NODE_ENV: production

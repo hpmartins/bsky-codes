@@ -33,40 +33,87 @@ app = FARTAPI(lifespan=lifespan)
 
 @app.get("/dd/{name}")
 async def _fetch_dynamic_data(
-    name: Literal["top_blocks", "top_interactions"], api_key: APIKeyHeader = Depends(get_api_key)
+    name: Literal["top_interactions", "top_blocks"], api_key: APIKeyHeader = Depends(get_api_key)
 ):
+    """Fetch dynamic data from Redis."""
+    # Try to get from cache first
     cached_data = await app.ctx.cache_hget("dynamic_data", name)
     if cached_data:
         return cached_data
-
-    doc = await app.ctx.db.get_collection(config.DYNAMIC_COLLECTION).find_one(
-        filter={
-            "name": name,
-        },
-        sort={"_id": -1},
-        limit=1,
-    )
-
-    if doc:
-        doc["_id"] = doc["_id"].generation_time.isoformat()
-        await app.ctx.cache_hset("dynamic_data", name, doc, ttl=600)
-        return doc
+        
+    # Otherwise, get from Redis directly
+    if name in ["top_interactions", "top_blocks"]:
+        data = await app.ctx.redis.get(f"dynamic:{name}")
+        if data:
+            # Store in cache for faster retrieval
+            await app.ctx.cache_hset("dynamic_data", name, data, ttl=600)
+            return data
+            
+    # Return None if not found
+    return None
 
 
 @app.get("/collStats")
 async def _get_collstats():
-    collStats = {}
-    for collection in [
-        "app.bsky.actor.profile",
-        "app.bsky.graph.block",
-        "interactions.like",
-        "interactions.post",
-        "interactions.repost",
-    ]:
-        async for doc in app.ctx.db.get_collection(collection).aggregate([{"$collStats": {"count": {}}}]):
-            collStats[collection] = doc["count"]
+    """Get collection statistics."""
+    # In the Redis implementation, we can get key patterns stats
+    patterns = [
+        "interaction:*",  # individual interactions
+        "agg:*",          # aggregated interactions
+        "hourly:*",       # hourly counters
+        "user:*:sent:*",  # sent interactions
+        "user:*:received:*" # received interactions
+    ]
+    
+    stats = {}
+    for pattern in patterns:
+        # Count keys matching the pattern
+        count = 0
+        cursor = "0"
+        while cursor != 0:
+            cursor, keys = await app.ctx.redis._client.scan(cursor=cursor, match=pattern, count=1000)
+            count += len(keys)
+        stats[pattern] = count
+        
+    return stats
 
-    return collStats
+
+@app.get("/history/{history_type}/dates")
+async def _get_history_dates(
+    history_type: Literal["top_interactions", "top_blocks"], 
+    api_key: APIKeyHeader = Depends(get_api_key)
+):
+    """Get available dates for a history type."""
+    dates = await app.ctx.redis.get_history_dates(history_type)
+    return {"dates": dates}
+
+
+@app.get("/history/{history_type}/{date}")
+async def _get_history_for_date(
+    history_type: Literal["top_interactions", "top_blocks"],
+    date: str,
+    api_key: APIKeyHeader = Depends(get_api_key)
+):
+    """Get historical data for a specific date."""
+    data = await app.ctx.redis.get_history_for_date(history_type, date)
+    if not data:
+        raise HTTPException(status_code=404, detail=f"No data found for {history_type} on {date}")
+    return data
+
+
+@app.get("/history/{history_type}")
+async def _get_history_range(
+    history_type: Literal["top_interactions", "top_blocks"],
+    start_date: str = None,
+    end_date: str = None,
+    limit: int = 30,
+    api_key: APIKeyHeader = Depends(get_api_key)
+):
+    """Get historical data for a range of dates."""
+    data = await app.ctx.redis.get_history_range(
+        history_type, start_date, end_date, limit
+    )
+    return {"history": data}
 
 
 class InteractionsBody(BaseModel):
@@ -99,7 +146,7 @@ async def _interactions(body: InteractionsBody, api_key: APIKeyHeader = Depends(
     logger.info(f"[interactions] fetching: {handle}@{did}")
 
     await app.ctx.cache_hset("interactions:semaphore", did, {}, ttl=600)
-    data = await get_interactions(app.ctx.db, did)
+    data = await get_interactions(app.ctx.redis, did)
     await app.ctx.cache_hset("interactions:data", did, data, ttl=600)
     await app.ctx.cache_hdel("interactions:semaphore", did)
 

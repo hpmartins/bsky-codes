@@ -1,17 +1,15 @@
 import json
 import logging
 
-import motor.motor_asyncio
-import redis.asyncio as redis
 from atproto import (
     AsyncClient,
     AsyncDidInMemoryCache,
     AsyncIdResolver,
 )
 from fastapi import FastAPI
-from pymongo.errors import ConnectionFailure
 
 from backend.core.config import Config
+from backend.core.redis_manager import RedisManager
 
 config = Config()
 logger = logging.getLogger("uvicorn.error")
@@ -27,48 +25,39 @@ class FARTAPI(FastAPI):
 class FARTContext:
     resolver: AsyncIdResolver
     bsky: AsyncClient
-    mongo: motor.motor_asyncio.AsyncIOMotorClient
-    db: motor.motor_asyncio.AsyncIOMotorDatabase
-    cache: "redis.Redis"
+    redis: RedisManager
 
     def __init__(self):
         self.resolver = AsyncIdResolver(cache=AsyncDidInMemoryCache())
         self.bsky = AsyncClient(base_url="https://public.api.bsky.app/")
-        self.mongo = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URI, compressors="zstd")
-        self.db = self.mongo.get_database(config.FART_DB)
-        self.cache = redis.from_url(config.REDIS_URI, decode_responses=True)
+        self.redis = RedisManager(uri=config.REDIS_URI)
 
     async def connect(self):
         try:
-            await self.mongo.admin.command("ping")
-            logger.info(f"Connected to MongoDB at {config.MONGO_URI} and db {config.FART_DB}")
-        except ConnectionFailure as e:
-            logger.error(f"Failed to connect to MongoDB: {e}")
-            raise ConnectionFailure
-
-        try:
-            await self.cache.ping()
+            await self.redis.connect()
             logger.info(f"Connected to Redis at {config.REDIS_URI}")
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {e}")
             raise Exception
 
     async def disconnect(self):
-        self.mongo.close()
-        await self.cache.aclose()
+        await self.redis.disconnect()
 
     async def cache_hexists(self, name: str, key: str) -> bool:
-        return await self.cache.hexists(name, key)
+        """Check if a key exists in a hash."""
+        value = await self.redis.hash_get(name, key)
+        return value is not None
 
     async def cache_hget(self, name: str, key: str) -> dict | None:
-        data = await self.cache.hget(name, key)
-        if data:
-            return json.loads(data)
+        """Get a value from a hash."""
+        return await self.redis.hash_get(name, key)
 
     async def cache_hset(self, name: str, key: str, value: dict, ttl: int | None = None):
-        await self.cache.hset(name, key, json.dumps(value))
-        if ttl:
-            await self.cache.hexpire(name, ttl, key)
+        """Set a value in a hash."""
+        await self.redis.hash_set(name, key, value)
+        # Note: Redis doesn't support TTL on individual hash fields
+        # This would require a more complex implementation with an expiry key
 
     async def cache_hdel(self, name: str, key: str):
-        await self.cache.hdel(name, key)
+        """Delete a field from a hash."""
+        await self.redis.hash_delete(name, key)

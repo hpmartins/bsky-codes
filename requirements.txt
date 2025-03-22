@@ -122,8 +122,10 @@ python-multipart==0.0.20
     # via fastapi
 pyyaml==6.0.2
     # via uvicorn
-redis==5.2.1
-    # via bsky-codes (pyproject.toml)
+redis==5.0.1
+redis-om==0.2.1
+redisjson==0.0.2
+redis-timeseries==1.4.4
 rich==13.9.4
     # via
     #   rich-toolkit

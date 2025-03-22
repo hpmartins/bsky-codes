@@ -1,12 +1,11 @@
 import argparse
 import asyncio
+import json
 import signal
 import time
 from types import FrameType
 from typing import Any
 
-import nats
-import nats.js.errors
 import uvicorn
 from atproto import (
     CAR,
@@ -21,25 +20,21 @@ from prometheus_client import Counter, make_asgi_app
 from backend.core.config import Config
 from backend.core.defaults import INTERESTED_RECORDS
 from backend.core.logger import Logger
-from backend.core.stream import NATSManager
-from backend.core.types import (
-    Commit,
-    EventAccount,
-    EventCommit,
-    EventIdentity,
-)
+from backend.core.redis_manager import RedisManager
+from backend.core.serialization import serialize_data
+from backend.core.types import Commit
 
 app = make_asgi_app()
 _config = Config()
-nm = NATSManager(uri=_config.NATS_URI, stream=_config.NATS_STREAM)
+rm = RedisManager(uri=_config.REDIS_URI)
 client = AsyncFirehoseSubscribeReposClient()
 
 counters = dict(
-    network=Counter("firehose_network", "data received"),
-    events=Counter("firehose_events", "events"),
-    post_langs=Counter("firehose_post_langs", "post languages", ["lang"]),
-    account=Counter("firehose_account_counter", "account updates", ["active", "status"]),
-    identity=Counter("firehose_identity_counter", "identity updates"),
+    network=Counter("network", "data received"),
+    events=Counter("events", "events"),
+    post_langs=Counter("post_langs", "post languages", ["lang"]),
+    account=Counter("account", "account updates", ["active", "status"]),
+    identity=Counter("identity", "identity updates"),
     firehose=Counter("firehose", "firehose", ["operation", "collection"]),
 )
 
@@ -54,20 +49,23 @@ async def signal_handler(_: int, __: FrameType) -> None:
     await client.stop()
 
 
-def get_nats_subject(collection: str) -> str:
-    return f"{_config.NATS_STREAM_SUBJECT_PREFIX}.{collection}"
+STREAM_LENGTHS = {
+    "firehose:account": _config.REDIS_STREAM_MAXLEN_ACCOUNT,
+    "firehose:identity": _config.REDIS_STREAM_MAXLEN_IDENTITY,
+    f"firehose:{models.ids.AppBskyFeedPost}": _config.REDIS_STREAM_MAXLEN_POST,
+    f"firehose:{models.ids.AppBskyFeedLike}": _config.REDIS_STREAM_MAXLEN_LIKE,
+    f"firehose:{models.ids.AppBskyFeedRepost}": _config.REDIS_STREAM_MAXLEN_REPOST,
+    f"firehose:{models.ids.AppBskyActorProfile}": _config.REDIS_STREAM_MAXLEN_PROFILE,
+    f"firehose:{models.ids.AppBskyGraphBlock}": _config.REDIS_STREAM_MAXLEN_BLOCK,
+}
 
 
-async def subscribe_to_firehose(nm: NATSManager):
-    kv = await nm.get_or_create_kv_store(_config.NATS_STREAM)
-
-    async def get_cursor():
-        try:
-            cursor = await kv.get("cursor")
-            cursor = int(cursor.value)
-        except nats.js.errors.KeyNotFoundError:
-            cursor = ""
-        return cursor
+async def subscribe_to_firehose(rm: RedisManager):
+    try:
+        cursor_value = await rm.get("firehose:cursor")
+        cursor = int(cursor_value) if cursor_value else ""
+    except Exception:
+        cursor = ""
 
     def measure_events_per_second(func: callable) -> callable:
         def wrapper(*args) -> Any:
@@ -92,14 +90,18 @@ async def subscribe_to_firehose(nm: NATSManager):
         parsed_message = parse_subscribe_repos_message(message)
 
         if isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Account):
-            await nm.publish(
-                get_nats_subject("account"), EventAccount(kind="account", account=parsed_message.model_dump())
+            await rm.publish_to_stream(
+                "firehose:account",
+                {"data": json.dumps(parsed_message.model_dump())},
+                maxlen=_config.REDIS_STREAM_MAXLEN_ACCOUNT,
             )
             counters["account"].labels(parsed_message.active, parsed_message.status).inc()
 
         if isinstance(parsed_message, models.ComAtprotoSyncSubscribeRepos.Identity):
-            await nm.publish(
-                get_nats_subject("identity"), EventIdentity(kind="identity", identity=parsed_message.model_dump())
+            await rm.publish_to_stream(
+                "firehose:identity",
+                {"data": json.dumps(parsed_message.model_dump())},
+                maxlen=_config.REDIS_STREAM_MAXLEN_IDENTITY,
             )
             counters["identity"].inc()
 
@@ -109,20 +111,21 @@ async def subscribe_to_firehose(nm: NATSManager):
         if parsed_message.seq % _config.FIREHOSE_CHECKPOINT == 0:
             client.update_params(models.ComAtprotoSyncSubscribeRepos.Params(cursor=parsed_message.seq))
             logger.debug(f"saving new cursor: {parsed_message.seq}")
-            await kv.put("cursor", str(parsed_message.seq).encode())
+            await rm.set_key("firehose:cursor", str(parsed_message.seq))
 
         if not parsed_message.blocks:
             return
 
-        commits = _process_commit(parsed_message)
+        commits = _process_ops(parsed_message)
         for commit in commits:
-            subject = get_nats_subject(commit["collection"])
-
+            stream = "firehose:{}".format(commit["collection"])
+            maxlen = STREAM_LENGTHS.get(stream, _config.REDIS_STREAM_MAXLEN_DEFAULT)
             try:
-                await nm.publish(subject, EventCommit(kind="commit", commit=commit))
+                serialized_commit = serialize_data(commit)
+                await rm.publish_to_stream(stream, {"data": json.dumps(serialized_commit)}, maxlen=maxlen)
             except Exception as e:
-                print(f"Error: {e}")
-                print(commit)
+                logger.error(f"Error publishing to stream: {e}")
+                logger.debug(f"Problematic commit: {commit}")
                 continue
 
             counters["firehose"].labels(commit["operation"], commit["collection"]).inc()
@@ -135,7 +138,6 @@ async def subscribe_to_firehose(nm: NATSManager):
                     lang = "none"
                 counters["post_langs"].labels(lang).inc()
 
-    cursor = await get_cursor()
     logger.info(f"Starting at cursor: {cursor}")
 
     params = None
@@ -146,7 +148,7 @@ async def subscribe_to_firehose(nm: NATSManager):
     await client.start(on_message_handler)
 
 
-def _process_commit(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> list[Commit]:
+def _process_ops(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> list[Commit]:
     ops = []
     car = CAR.from_bytes(commit.blocks)
     for op in commit.ops:
@@ -187,16 +189,11 @@ def _process_commit(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> list[
 
 
 async def start_service():
-    logger.info("Connecting to NATS and checking stuff")
-    await nm.connect()
-    await nm.create_stream(
-        prefixes=[_config.NATS_STREAM_SUBJECT_PREFIX],
-        max_age=_config.NATS_STREAM_MAX_AGE,
-        max_size=_config.NATS_STREAM_MAX_SIZE,
-    )
+    logger.info("Connecting to Redis and checking stuff")
+    await rm.connect()
 
     logger.info("Starting firehose subscriber")
-    await subscribe_to_firehose(nm)
+    await subscribe_to_firehose(rm)
 
 
 async def start_uvicorn() -> None:
@@ -214,7 +211,7 @@ async def main() -> None:
         ],
         return_when=asyncio.FIRST_COMPLETED,
     )
-    await nm.disconnect()
+    await rm.disconnect()
     logger.info("Shutdown complete.")
 
 
@@ -222,4 +219,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, lambda _, __: asyncio.create_task(signal_handler(_, __)))
     signal.signal(signal.SIGTERM, lambda _, __: asyncio.create_task(signal_handler(_, __)))
     logger.info("INIT")
-    asyncio.run(main()) 
+    asyncio.run(main())

@@ -1,50 +1,43 @@
 name: bsky
 
 services:
-  nats:
-    image: nats:2-alpine
-    ports:
-      - '4222:4222'
-    restart: always
-    volumes:
-      - ${NATS_DATA_FOLDER}:/data
-    command: "-js -sd /data --http_port 8222"
-
-  mongo:
-    image: mongo
-    restart: always
-    ports:
-      - '27017:27017'
-    volumes:
-      - ${MONGO_DATA_FOLDER}:/data/db
-
   redis:
-    image: redis:7-alpine
+    image: redislabs/redismod
     restart: always
     ports:
       - '6379:6379'
     volumes:
       - ${REDIS_DATA_FOLDER}:/data
+    command: "--loadmodule /usr/lib/redis/modules/rejson.so --loadmodule /usr/lib/redis/modules/redistimeseries.so --save 60 1"
   
-  nats_exporter:
-    image: natsio/prometheus-nats-exporter
+  redis_insight:
+    image: redislabs/redisinsight:latest
     restart: always
     ports:
-      - '7777:7777'
-    command: "-channelz -connz_detailed -healthz -gatewayz -accstatz -leafz -jsz all -routez -serverz -subz -varz http://nats:8222/"
+      - '5540:5540'
+    volumes:
+      - redis-insight:/db
     depends_on:
-      - nats
-
-  mongodb_exporter:
-    image: percona/mongodb_exporter:0.43.1
+      - redis
+      
+  mongodb:
+    image: mongo:latest
     restart: always
     ports:
-      - '9216:9216'
-    command:
-      - --mongodb.uri=mongodb://mongo:27017/
-      - --collect-all
+      - '27017:27017'
+    volumes:
+      - mongodb-data:/data/db
+    
+  mongo-express:
+    image: mongo-express:latest
+    restart: always
+    ports:
+      - '8081:8081'
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
     depends_on:
-      - mongo
+      - mongodb
 
 volumes:
   redis-insight:
+  mongodb-data:

@@ -28,24 +28,6 @@ class CommitDelete(TypedDict):
 Commit = Union[CommitCreate, CommitUpdate, CommitDelete]
 
 
-class EventAccount(TypedDict):
-    kind: Literal["account"]
-    account: dict
-
-
-class EventIdentity(TypedDict):
-    kind: Literal["identity"]
-    identity: dict
-
-
-class EventCommit(TypedDict):
-    kind: Literal["commit"]
-    commit: Commit
-
-
-Event = Union[EventAccount, EventIdentity, EventCommit]
-
-
 # interactions
 class Interaction(TypedDict):
     _id: str

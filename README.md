@@ -4,32 +4,32 @@ Backend services and frontend for my bluesky stuff.
 
 ## TODO
 
-- create tasker that does stuff live off the jetstream (replying, for example)
+- create tasker that does stuff live off the Redis streams (replying, for example)
 
 ## services
 
 ### stuff needed to run
 
-- [nats](https://nats.io/) server
-- mongodb server
+- [redis](https://redis.io/) server with RedisJSON and RedisTimeSeries modules
 
 ### backend
 
-- enjoyer
+- firehose
     - subscribes to bsky firehose
     - filters incoming data
-    - publishes on nats-js
+    - publishes on redis streams
 - indexer
-    - consumes all subjects from nats-js
-    - inserts/updates/deletes records on mongodb
+    - consumes all streams from redis
+    - stores interactions with TTL and aggregates older ones
+- scheduler
+    - runs scheduled tasks
+        - global interaction stats
+        - aggregation of older interactions
 - FART (Feline Area Rapid Transit)
     - API to do stuff
         - fetch interactions and create circles
         - fetch dynamic data
-        - caches data using nats-kv
-- trigger
-    - scheduled tasks
-        - global interaction stats
+        - caches data using redis
 
 ### frontend
 
@@ -37,18 +37,93 @@ Backend services and frontend for my bluesky stuff.
 
 ## interactions
 
-Interactions are likes, reposts, quotes and replies from an user (_author_) to a different user (_subject_). They are stored in collections named `interactions.like`, `interactions.repost`, `interactions.post` and have the following schema:
+Interactions are likes, reposts, posts, quotes and replies from an user (_author_) to a different user (_subject_). 
 
-```jsonc
-{
-  "_id": "did:plc:u7vvvlww74nstj6vnunr3u6x/3lhu4uknfnk27",
-  "a": "did:plc:u7vvvlww74nstj6vnunr3u6x", // author
-  "s": "did:plc:yi2mvxisoytsymujrlpyxk22", // subject
-  "t": {
-    "$date": "2025-02-10T21:00:00.000Z"
-  }, // timestamp
-  "c": 42 // number of characters in the post
+### Individual Interactions (stored for 48 hours)
+
+```
+interaction:<uri> -> {
+  "uri": "at://...",
+  "a": "author_did", 
+  "s": "subject_did", 
+  "type": "like|repost|post|reply|quote",
+  "t": "2023-01-01T12:00:00Z",  # ISO timestamp
+  "h": "2023-01-01T12:00:00Z",  # Hour-level ISO timestamp
+  "pr": "post_rkey",
+  "c": 123  # character count for posts
 }
 ```
 
-where `_id` is in the form `did/rkey`. The `t` timestamp only includes up to the hour. The `like` and `repost` collections have the same schema (minus the characters). The indexes are `_id` (unique), `(author, timestamp)` and `(subject, timestamp)`. There is also a TTL index on the timestamp in order to delete records older than a threshold.
+### Hourly Aggregated Interactions
+
+```
+hourly:<hour>:<type>:<author>:<subject> -> count
+```
+
+### User Interaction Indices
+
+```
+user:<did>:sent:<type> -> sorted set of (subject_did, timestamp)
+user:<did>:received:<type> -> sorted set of (author_did, timestamp)
+```
+
+### Long-term Aggregated Storage
+
+```
+agg:<hour>:<type> -> hash of "<author>:<subject>" -> count
+```
+
+The system automatically aggregates interactions older than 48 hours and maintains both real-time tracking ability and long-term storage efficiency.
+
+## Running the Application
+
+### Setup
+
+1. Make sure you have [Redis](https://redis.io/) with RedisJSON and RedisTimeSeries modules installed, or use the provided Docker setup
+2. Configure your environment variables in `.env`
+3. Install the Python dependencies: `pip install -r requirements.txt`
+4. Install PM2 if not already installed: `npm install -g pm2`
+
+### Starting Services
+
+#### Start Redis Services
+
+```bash
+docker-compose up -d
+```
+
+This will start:
+- Redis with the necessary modules
+- RedisInsight for monitoring (available at http://localhost:5540)
+
+#### Start Python Services with PM2
+
+```bash
+pm2 start pm2.yml
+```
+
+This will start:
+- Firehose Subscriber - Captures data from the Bluesky firehose
+- Indexer - Processes and stores interaction data
+- Scheduler - Runs periodic tasks for aggregation and statistics
+- FART API - Serves interaction data via HTTP API
+- Frontend - Serves the web interface
+
+### Managing Services
+
+```bash
+# Monitor all services
+pm2 monit
+
+# Check logs
+pm2 logs
+
+# Restart a specific service
+pm2 restart firehose_subscriber
+
+# Stop all services
+pm2 stop all
+
+# Stop Redis services
+docker-compose down
+```

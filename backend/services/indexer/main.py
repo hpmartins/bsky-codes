@@ -3,22 +3,24 @@ import asyncio
 import datetime
 import json
 import signal
-from collections import defaultdict
+from typing import Dict, Any, List
 
 from atproto import AtUri, models
 from atproto_client.models.unknown_type import UnknownRecordType
-from nats.aio.msg import Msg
-from nats.js.api import AckPolicy, ConsumerConfig, DeliverPolicy
-from nats.js.errors import NotFoundError
-from pymongo import DeleteOne, IndexModel, InsertOne, UpdateOne
-from pymongo.errors import BulkWriteError
 
 from backend.core.config import Config
-from backend.core.database import MongoDBManager
-from backend.core.defaults import INTERACTION_RECORDS
 from backend.core.logger import Logger
-from backend.core.stream import NATSManager
-from backend.core.types import Commit, Event
+from backend.core.redis_manager import (
+    RedisManager,
+    get_firehose_entry,
+)
+
+from backend.core.mongo_manager import MongoManager
+from backend.core.serialization import deserialize_data, extract_record_from_raw
+from backend.core.defaults import INTERESTED_RECORDS
+from backend.core.types import Commit
+from collections import defaultdict
+from pymongo import UpdateOne, DeleteOne, InsertOne
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--log", default="INFO")
@@ -38,326 +40,404 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def _get_date(created_at: str | None = None):
-    if created_at:
-        dt = datetime.datetime.fromisoformat(created_at)
-    else:
-        dt = datetime.datetime.now(tz=datetime.timezone.utc)
-    return dt.replace(minute=0, second=0, microsecond=0)
+def uri_to_key(uri: AtUri) -> str:
+    return str(uri).replace("at://", "").replace("/", ":")
 
 
-def _create_interaction(
-    created_at: str,
-    author: str,
-    subject: str,
-    post_author: str,
-    rkey: str = "",
-    post_rkey: str = "",
-    langs: list | None = None,
-) -> dict:
-    ts = datetime.datetime.fromisoformat(created_at)
-    date = _get_date(created_at)
-    return {
-        "t": ts,
-        "d": date,
-        "a": author,
-        "s": subject,
-        "pa": post_author,
-        "r": rkey,
-        "pr": post_rkey,
-        "l": langs or [],
-        "c": 1,
-    }
+def key_to_uri(key: str) -> AtUri:
+    return AtUri.from_str("at://{}".format(key.replace(":", "/")))
 
 
-class FirehoseConsumer:
-    def __init__(self, subject: str):
+class IndexerConsumer:
+    def __init__(self):
         self._config = Config()
-        self._subject = subject
-        self._nm = NATSManager(uri=self._config.NATS_URI, stream=self._config.NATS_STREAM)
-        self._mongo = MongoDBManager(uri=self._config.MONGO_URI)
-        self._collections = {
-            "post": {
-                "coll": "",
-                "items": defaultdict(list),
-            },
-            "repost": {
-                "coll": "",
-                "items": defaultdict(list),
-            },
-            "like": {
-                "coll": "",
-                "items": defaultdict(list),
-            },
-            "follow": {
-                "coll": "app.bsky.graph.follow",
-                "items": defaultdict(list),
-            },
-            "block": {
-                "coll": "app.bsky.graph.block",
-                "items": defaultdict(list),
-            },
-        }
+        self._rm = RedisManager(uri=self._config.REDIS_URI)
+        self._mongo = MongoManager(uri=self._config.MONGODB_URI)
+
+        # Define collections and their corresponding stream names
+        self._keys = ["account", "identity", *list(INTERESTED_RECORDS.keys())]
+        self._streams = [get_firehose_entry(key) for key in self._keys]
 
     async def connect(self):
-        logger.info("Connecting to NATS and Mongo")
-        await self._nm.connect()
+        logger.info("Connecting to Redis and MongoDB")
+        await self._rm.connect()
         await self._mongo.connect()
-        self._db = self._mongo.client.get_database(self._config.FART_DB)
 
-        for op in self._collections:
-            self._collections[op]["coll"] = f"{self._config.INTERACTIONS_COLLECTION}.{op}"
+        self._mongo._db["interactions"].create_index([("author", 1), ("subject", 1), ("date", 1)])
 
-        try:
-            await self._nm.jetstream.consumer_info(self._config.NATS_STREAM, self._config.NATS_CONSUMER)
-        except NotFoundError:
-            await self._nm.jetstream.add_consumer(
-                self._config.NATS_STREAM,
-                ConsumerConfig(
-                    name=self._config.NATS_CONSUMER,
-                    durable_name=self._config.NATS_CONSUMER,
-                    ack_policy=AckPolicy.EXPLICIT,
-                    deliver_policy=DeliverPolicy.ALL,
-                    filter_subject=self._subject,
-                    ack_wait=10 * 60 * 1000_1000_000,  # 10 minutes in nanoseconds
-                ),
-            )
-
-        logger.info(f"Starting to consume {self._subject}")
+        # Create consumer groups for each collection
+        for stream in self._streams:
+            # Create consumer group
+            await self._rm.create_consumer_group(stream, self._config.INDEXER_CONSUMER_GROUP)
 
     async def disconnect(self):
-        await self._nm.disconnect()
+        await self._rm.disconnect()
         await self._mongo.disconnect()
 
-    async def consume(self):
-        try:
-            psub = await self._nm.jetstream.pull_subscribe(
-                self._subject, durable=self._config.NATS_CONSUMER, stream=self._config.NATS_STREAM
-            )
-            msgs = await psub.fetch(10)
-            for msg in msgs:
-                await self._handle_message(msg)
-            return len(msgs)
-        except Exception as e:
-            logger.error(f"Error consuming message: {e}")
-            return 0
+    async def start(self):
+        logger.info("Starting indexer")
+        # try:
+        while not is_shutdown:
+            # Process each collection
+            all_db_ops = defaultdict(list)
 
-    async def _flush_ops(self) -> None:
-        c_indexes = {}
-
-        for op, col in self._collections.items():
-            collection_name = col["coll"]
-            bulk_ops = []
-            collection = self._db[collection_name]
-
-            if collection_name not in c_indexes:
-                collection.create_indexes(
-                    [
-                        IndexModel([("t", 1)]),
-                        IndexModel([("d", 1)]),
-                        IndexModel([("a", 1)]),
-                        IndexModel([("s", 1)]),
-                        IndexModel([("pa", 1)]),
-                    ]
+            for key, stream in zip(self._keys, self._streams):
+                # Read messages from stream
+                messages = await self._rm.read_stream(
+                    stream,
+                    self._config.INDEXER_CONSUMER_GROUP,
+                    "indexer",
+                    count=self._config.INDEXER_BATCH_SIZE,
                 )
-                c_indexes[collection_name] = True
+                logger.info(f"Read {len(messages)} messages from {stream}")
 
-            for created_at, items in col["items"].items():
-                for it in items:
-                    record = await self._get_op(op, it, created_at)
-                    if not record:
-                        continue
+                if not messages:
+                    continue
 
-                    if op in INTERACTION_RECORDS:
-                        bulk_ops.append(InsertOne(record))
+                for message in messages:
+                    message_id = message["id"]
+                    message_data = message["data"]
+
+                    # try:
+                    data = json.loads(message_data["data"])
+                    if key == "account":
+                        account = models.ComAtprotoSyncSubscribeRepos.Account.model_validate(data, strict=False)
+                        account_op = self._handle_account(account)
+                        if account_op:
+                            all_db_ops["account"].append(account_op)
+                    elif key == "identity":
+                        identity = models.ComAtprotoSyncSubscribeRepos.Identity.model_validate(data, strict=False)
+                        identity_op = self._handle_identity(identity)
+                        if identity_op:
+                            all_db_ops["identity"].append(identity_op)
                     else:
-                        filter_query = {
-                            "author": record["author"],
-                            "subject": record["subject"],
-                        }
-                        if record["rkey"]:
-                            filter_query["rkey"] = record["rkey"]
+                        commit_data = deserialize_data(data)
+                        commit_ops = await self._handle_commit(commit_data)
+                        for col, ops in commit_ops.items():
+                            all_db_ops[col].extend(ops)
+                    # except Exception as e:
+                    #     logger.error(f"Error processing message {message_id}: {e}")
 
-                        if it.get("operation") in ["create", "update"]:
-                            bulk_ops.append(
-                                UpdateOne(
-                                    filter_query,
-                                    {"$set": record},
-                                    upsert=True,
-                                )
-                            )
-                        if it.get("operation") == "delete":
-                            bulk_ops.append(DeleteOne(filter_query))
+                    await self._rm.ack_message(stream, self._config.INDEXER_CONSUMER_GROUP, message_id)
 
-            try:
-                if bulk_ops:
-                    await collection.bulk_write(bulk_ops)
-            except BulkWriteError as e:
-                logger.error(f"Error in bulk_write: {e.details}")
-            except Exception as e:
-                logger.error(f"Error in bulk_write: {e}")
+            if all_db_ops:
+                await asyncio.gather(*[self._mongo.bulk_write(col, ops) for col, ops in all_db_ops.items()])
 
-            col["items"] = defaultdict(list)
+            # Sleep a bit to avoid consuming too many resources
+            await asyncio.sleep(0.1)
+        # except Exception as e:
+        #     logger.error(f"Error in consumer: {e}")
 
-    async def _get_op(self, _op: str, item: dict, created_at: str) -> dict | None:
-        operation = item.get("operation")
-        repo = item.get("repo")
-        record = item.get("record", {})
-        collection = item.get("collection")
-        rkey = item.get("rkey")
+    def _handle_account(self, account: models.ComAtprotoSyncSubscribeRepos.Account) -> None:
+        pass
 
-        if _op == "post" and collection == models.ids.AppBskyFeedPost:
-            return _create_interaction(
-                created_at=created_at,
-                author=repo,
-                subject=repo,
-                post_author=repo,
-                rkey=rkey,
-                post_rkey=rkey,
-                langs=record.get("langs"),
+    def _handle_identity(self, identity: models.ComAtprotoSyncSubscribeRepos.Identity) -> None:
+        pass
+
+    def get_record(self, commit: Commit) -> UnknownRecordType | None:
+        record_raw = commit.get("record", {})
+        record_dict = extract_record_from_raw(record_raw)
+        record = models.get_or_create(record_dict, strict=False)
+        if record is None:
+            logger.error(f"Failed to create record from {record_raw}")
+        return record
+
+    def parse_profile(self, uri: AtUri, commit: Commit) -> UpdateOne | None:
+        if commit["operation"] in ["create", "update"]:
+            record = self.get_record(commit)
+            if record is None:
+                return None
+
+            timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+            return UpdateOne(
+                {"_id": str(uri)},
+                {
+                    "$set": {
+                        **record.model_dump(exclude=["avatar", "banner", "py_type"]),
+                        "created_at": (
+                            datetime.datetime.fromisoformat(record["created_at"]) if record["created_at"] else None
+                        ),
+                        "updated_at": timestamp,
+                    },
+                    "$setOnInsert": {
+                        "indexed_at": timestamp,
+                    },
+                },
+                upsert=True,
             )
-
-        if _op == "repost" and collection == models.ids.AppBskyFeedRepost:
-            subject_uri = record.get("subject", {}).get("uri", None)
-            if not subject_uri:
-                return None
-
-            try:
-                subject = AtUri.from_str(subject_uri)
-                post_author = subject.host
-                post_rkey = subject.rkey
-            except Exception:
-                subject = record.get("subject", {}).get("uri", "")
-                post_author = ""
-                post_rkey = ""
-
-            return _create_interaction(
-                created_at=created_at,
-                author=repo,
-                subject=post_author,
-                post_author=post_author,
-                rkey=rkey,
-                post_rkey=post_rkey,
+        elif commit["operation"] == "delete":
+            return UpdateOne(
+                {"_id": str(uri)},
+                {"$set": {"deleted_at": timestamp}},
             )
+        return
 
-        if _op == "like" and collection == models.ids.AppBskyFeedLike:
-            subject_uri = record.get("subject", None)
-            if not subject_uri:
-                return None
-
-            try:
-                subject = AtUri.from_str(subject_uri)
-                post_author = subject.host
-                post_rkey = subject.rkey
-            except Exception:
-                subject = record.get("subject", "")
-                post_author = ""
-                post_rkey = ""
-
-            return _create_interaction(
-                created_at=created_at,
-                author=repo,
-                subject=post_author,
-                post_author=post_author,
-                rkey=rkey,
-                post_rkey=post_rkey,
+    def parse_block(self, uri: AtUri, commit: Commit) -> InsertOne | DeleteOne | None:
+        if commit["operation"] == "create":
+            record = self.get_record(commit)
+            if record is None:
+                return
+            timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+            return InsertOne(
+                {
+                    "_id": str(uri),
+                    "author": uri.host,
+                    "subject": str(record.subject),
+                    "created_at": (datetime.datetime.fromisoformat(record.created_at) if record.created_at else None),
+                    "timestamp": timestamp,
+                }
             )
-
-        if _op == "follow" and collection == models.ids.AppBskyGraphFollow:
-            subject_did = record.get("subject", None)
-
-            if not subject_did:
-                return None
-
-            return {
-                "operation": operation,
-                "created_at": datetime.datetime.fromisoformat(created_at),
-                "author": repo,
-                "subject": subject_did,
-                "rkey": rkey,
-            }
-
-        if _op == "block" and collection == models.ids.AppBskyGraphBlock:
-            subject_did = record.get("subject", None)
-            if not subject_did:
-                return None
-
-            return {
-                "operation": operation,
-                "created_at": datetime.datetime.fromisoformat(created_at),
-                "author": repo,
-                "subject": subject_did,
-                "rkey": rkey,
-            }
-
+        elif commit["operation"] == "delete":
+            return DeleteOne({"_id": str(uri)})
         return None
 
-    async def _handle_message(self, msg: Msg) -> None:
-        try:
-            event = json.loads(msg.data)
-            if event.get("kind") != "commit":
-                await msg.ack()
-                return
+    async def _handle_commit(self, commit: Commit) -> Dict[str, List[Any]]:
+        """Handle a commit from the firehose."""
 
-            commit: Commit = event.get("commit")
-            operation = commit.get("operation")
-            record = commit.get("record")
-            repo = commit.get("repo")
-            collection = commit.get("collection")
-            rkey = commit.get("rkey")
+        operation = commit.get("operation")
+        author = commit.get("repo")
+        collection = commit.get("collection")
+        rkey = commit.get("rkey")
+        uri = AtUri.from_str(f"at://{author}/{collection}/{rkey}")
 
-            message = Event(
-                repo=repo,
-                collection=collection,
-                rkey=rkey,
-                operation=operation,
-                record=record,
-            )
+        db_ops = defaultdict(list)
 
-            created_at = record.get("createdAt", datetime.datetime.now(tz=datetime.timezone.utc).isoformat())
+        if collection == models.ids.AppBskyActorProfile:
+            op = self.parse_profile(uri, commit)
+            if op:
+                db_ops[collection].append(op)
 
-            if collection == models.ids.AppBskyFeedPost:
-                logger.debug(f"New post: {repo} rt: {rkey}")
-                self._collections["post"]["items"][created_at].append(message.dict())
-            elif collection == models.ids.AppBskyFeedRepost:
-                logger.debug(f"New repost: {repo} rt: {rkey}")
-                self._collections["repost"]["items"][created_at].append(message.dict())
-            elif collection == models.ids.AppBskyFeedLike:
-                logger.debug(f"New like: {repo} rt: {rkey}")
-                self._collections["like"]["items"][created_at].append(message.dict())
-            elif collection == models.ids.AppBskyGraphFollow:
-                logger.debug(f"New follow: {repo} rt: {rkey}")
-                self._collections["follow"]["items"][created_at].append(message.dict())
-            elif collection == models.ids.AppBskyGraphBlock:
-                logger.debug(f"New block: {repo} rt: {rkey}")
-                self._collections["block"]["items"][created_at].append(message.dict())
+        if collection == models.ids.AppBskyGraphBlock:
+            op = self.parse_block(uri, commit)
+            if op:
+                db_ops[collection].append(op)
 
-            await msg.ack()
-        except Exception as e:
-            logger.error(f"Error handling message: {e}")
-            await msg.nak()
+        timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+        date = timestamp.date().isoformat()
+
+        if collection == models.ids.AppBskyFeedPost:
+            if operation == "update":
+                pass
+            elif operation == "create":
+                record = self.get_record(commit)
+                if record is None:
+                    return db_ops
+
+                # Check for reply parent and root
+                parent_uri = None
+                root_uri = None
+                if record.reply:
+                    try:
+                        parent_uri = AtUri.from_str(record.reply.parent.uri)
+                        root_uri = AtUri.from_str(record.reply.root.uri)
+                    except Exception as e:
+                        logger.error(f"Error parsing reply URI: {e}")
+
+                # Check for quote
+                quote_uri = None
+                n_images = 0
+                has_video = False
+                if record.embed:
+                    if models.is_record_type(record.embed, models.ids.AppBskyEmbedRecord):
+                        quote_uri = AtUri.from_str(record.embed.record.uri)
+                    elif models.is_record_type(record.embed, models.ids.AppBskyEmbedImages):
+                        n_images = len(record.embed.images)
+                    elif models.is_record_type(record.embed, models.ids.AppBskyEmbedVideo):
+                        has_video = True
+                    elif models.is_record_type(record.embed, models.ids.AppBskyEmbedRecordWithMedia):
+                        quote_uri = AtUri.from_str(record.embed.record.record.uri)
+                        if models.is_record_type(record.embed.media, models.ids.AppBskyEmbedImages):
+                            n_images = len(record.embed.media.images)
+                        elif models.is_record_type(record.embed.media, models.ids.AppBskyEmbedVideo):
+                            has_video = True
+
+                post_data = {
+                    "author": author,
+                    "chars": len(record.text),
+                    "langs": record.langs,
+                    "reply_parent": str(parent_uri),
+                    "reply_root": str(root_uri),
+                    "quote_of": str(quote_uri),
+                    "likes": 0,
+                    "replies": 0,
+                    "quotes": 0,
+                    "reposts": 0,
+                    "root_replies": 0,
+                    "n_images": n_images,
+                    "has_video": has_video,
+                    "created_at": (datetime.datetime.fromisoformat(record.created_at) if record.created_at else None),
+                    "timestamp": timestamp,
+                }
+
+                db_ops[collection].append(
+                    InsertOne(
+                        {
+                            "_id": str(uri),
+                            **post_data,
+                        }
+                    )
+                )
+
+                if parent_uri:
+                    db_ops[collection].append(UpdateOne({"_id": str(parent_uri)}, {"$inc": {"replies": 1}}))
+                    if parent_uri.host != uri.host:
+                        db_ops["interactions"].append(
+                            UpdateOne(
+                                {"author": uri.host, "subject": parent_uri.host, "date": date},
+                                {"$inc": {"replies": 1, "chars": len(record.text)}},
+                                upsert=True,
+                            )
+                        )
+
+                if root_uri:
+                    db_ops[collection].append(UpdateOne({"_id": str(root_uri)}, {"$inc": {"root_replies": 1}}))
+                    if root_uri.host != uri.host:
+                        db_ops["interactions"].append(
+                            UpdateOne(
+                                {"author": uri.host, "subject": root_uri.host, "date": date},
+                                {"$inc": {"root_replies": 1}},
+                                upsert=True,
+                            )
+                        )
+
+                if quote_uri:
+                    db_ops[collection].append(UpdateOne({"_id": str(quote_uri)}, {"$inc": {"quotes": 1}}))
+                    if quote_uri.host != uri.host:
+                        db_ops["interactions"].append(
+                            UpdateOne(
+                                {"author": uri.host, "subject": quote_uri.host, "date": date},
+                                {"$inc": {"quotes": 1, "chars": len(record.text)}},
+                                upsert=True,
+                            )
+                        )
+
+            elif operation == "delete":
+                db_ops[collection].append(UpdateOne({"_id": str(uri)}, {"$set": {"deleted_at": timestamp}}))
+
+                post_data = await self._mongo._db[collection].find_one({"_id": str(uri)})
+                if post_data is None:
+                    return db_ops
+
+                if post_data.get("reply_parent"):
+                    db_ops[collection].append(
+                        UpdateOne({"_id": str(post_data["reply_parent"])}, {"$inc": {"replies": -1}})
+                    )
+                    reply_parent_uri = AtUri.from_str(post_data["reply_parent"])
+                    db_ops["interactions"].append(
+                        UpdateOne(
+                            {"author": uri.host, "subject": reply_parent_uri.host, "date": date},
+                            {"$inc": {"replies": -1, "chars": -post_data["chars"]}},
+                        )
+                    )
+                if post_data.get("reply_root"):
+                    db_ops[collection].append(
+                        UpdateOne({"_id": str(post_data["reply_root"])}, {"$inc": {"root_replies": -1}})
+                    )
+                if post_data.get("quote_of"):
+                    db_ops[collection].append(UpdateOne({"_id": str(post_data["quote_of"])}, {"$inc": {"quotes": -1}}))
+                    quote_of_uri = AtUri.from_str(post_data["quote_of"])
+                    db_ops["interactions"].append(
+                        UpdateOne(
+                            {"author": uri.host, "subject": quote_of_uri.host, "date": date},
+                            {"$inc": {"quotes": -1, "chars": -post_data["chars"]}},
+                        )
+                    )
+
+        if collection == models.ids.AppBskyFeedLike:
+            if operation == "create":
+                record = self.get_record(commit)
+                if record is None:
+                    return db_ops
+
+                subject_uri = AtUri.from_str(record.subject.uri)
+
+                # Add like reference to redis
+                await self._rm.set_key(uri_to_key(uri), {"subject": str(subject_uri)})
+
+                # Update post stats
+                db_ops[models.ids.AppBskyFeedPost].append(UpdateOne({"_id": str(subject_uri)}, {"$inc": {"likes": 1}}))
+
+                # add like interaction
+                db_ops["interactions"].append(
+                    UpdateOne(
+                        {"author": uri.host, "subject": subject_uri.host, "date": date},
+                        {"$inc": {"likes": 1}},
+                        upsert=True,
+                    )
+                )
+            elif operation == "delete":
+                like_ref = await self._rm.get(uri_to_key(uri))
+                if like_ref:
+                    db_ops[models.ids.AppBskyFeedPost].append(
+                        UpdateOne({"_id": str(like_ref["subject"])}, {"$inc": {"likes": -1}})
+                    )
+                    like_ref_uri = AtUri.from_str(like_ref["subject"])
+                    db_ops["interactions"].append(
+                        UpdateOne(
+                            {"author": uri.host, "subject": like_ref_uri.host, "date": date},
+                            {"$inc": {"likes": -1}},
+                        )
+                    )
+
+        if collection == models.ids.AppBskyFeedRepost:
+            if operation == "create":
+                record = self.get_record(commit)
+                if record is None:
+                    return db_ops
+
+                subject_uri = AtUri.from_str(record.subject.uri)
+
+                # add reference to redis
+                await self._rm.set_key(uri_to_key(uri), {"subject": str(subject_uri)})
+
+                db_ops[models.ids.AppBskyFeedPost].append(
+                    UpdateOne({"_id": str(subject_uri)}, {"$inc": {"reposts": 1}})
+                )
+
+                # add repost interaction
+                db_ops["interactions"].append(
+                    UpdateOne(
+                        {"author": uri.host, "subject": subject_uri.host, "date": date},
+                        {"$inc": {"reposts": 1}},
+                        upsert=True,
+                    )
+                )
+            elif operation == "delete":
+                repost_ref = await self._rm.get(uri_to_key(uri))
+                if repost_ref:
+                    db_ops[models.ids.AppBskyFeedPost].append(
+                        UpdateOne({"_id": str(repost_ref["subject"])}, {"$inc": {"reposts": -1}})
+                    )
+                    repost_ref_uri = AtUri.from_str(repost_ref["subject"])
+                    db_ops["interactions"].append(
+                        UpdateOne(
+                            {"author": uri.host, "subject": repost_ref_uri.host, "date": date},
+                            {"$inc": {"reposts": -1}},
+                        )
+                    )
+
+        return db_ops
 
 
 async def main():
-    """Main entry point of the application."""
-    _config = Config()
-    consumer = FirehoseConsumer(_config.NATS_STREAM_SUBJECT_PREFIX + ".commit")
+    consumer = IndexerConsumer()
     await consumer.connect()
+    await consumer.start()
+    await consumer.disconnect()
 
-    try:
-        while not is_shutdown:
-            processed = await consumer.consume()
-            if processed:
-                logger.debug(f"Processed {processed} messages")
-                await consumer._flush_ops()
-            else:
-                await asyncio.sleep(1)
+    # try:
+    #     await consumer.connect()
+    #     await consumer.start()
+    # except KeyboardInterrupt:
+    #     pass
+    # except Exception as e:
+    #     logger.error(f"Unexpected error: {e}")
+    # finally:
+    #     await consumer.disconnect()
 
-    except KeyboardInterrupt:
-        pass
-    finally:
-        await consumer.disconnect()
+    logger.info("Indexer stopped")
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    logger.info("INIT")
+    asyncio.run(main())
