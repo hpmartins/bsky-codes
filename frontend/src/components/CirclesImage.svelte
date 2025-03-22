@@ -76,19 +76,19 @@
                 distance: distances[options.orbits][1],
                 count: 10,
                 radius: radiuses[options.orbits][1],
-                users: interactionsList.slice(0, 10).map((x) => x.profile),
+                users: interactionsList.slice(0, 10).map((x) => x.profile ?? { avatar: undefined, handle: undefined }),
             },
             {
                 distance: distances[options.orbits][2],
                 count: 20,
                 radius: radiuses[options.orbits][2],
-                users: interactionsList.slice(10, 30).map((x) => x.profile),
+                users: interactionsList.slice(10, 30).map((x) => x.profile ?? { avatar: undefined, handle: undefined }),
             },
             {
                 distance: distances[options.orbits][3],
                 count: 30,
                 radius: radiuses[options.orbits][3],
-                users: interactionsList.slice(30, 60).map((x) => x.profile),
+                users: interactionsList.slice(30, 60).map((x) => x.profile ?? { avatar: undefined, handle: undefined }),
             },
         ];
         config = config.slice(0, options.orbits + 1);
@@ -147,12 +147,12 @@
         };
 
         // this will create the image, load the avatar and return a promise
-        const preload = (user: { [key: string]: string | undefined }, opt: { [key: string]: number }) =>
+        const preload = (avatar: string | undefined, opt: { [key: string]: number }) =>
             new Promise((resolve, reject) => {
                 const img = new Image();
                 img.setAttribute("crossOrigin", "anonymous");
-                if (user.avatar) {
-                    img.src = "/api/proxy?" + new URLSearchParams({ src: user.avatar });
+                if (avatar) {
+                    img.src = "/api/proxy?" + new URLSearchParams({ src: avatar });
                 } else {
                     img.src = "/person-fill.svg";
                 }
@@ -197,14 +197,11 @@
                 // push a new image loading thingy into the promises list
                 // with the coordinates and radius for that circle
                 promises.push(
-                    preload(
-                        { avatar: users[i]?.avatar, did: users[i]?.did },
-                        {
-                            centerX: Math.cos(t) * distance + width / 2,
-                            centerY: Math.sin(t) * distance + height / 2,
-                            radius: radius,
-                        },
-                    ),
+                    preload(users[i].avatar, {
+                        centerX: Math.cos(t) * distance + width / 2,
+                        centerY: Math.sin(t) * distance + height / 2,
+                        radius: radius,
+                    }),
                 );
             }
         }
